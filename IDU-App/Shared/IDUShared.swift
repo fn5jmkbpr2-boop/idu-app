@@ -39,6 +39,7 @@ struct PlanData: Codable {
     var free: [PlanFree]?
     var hw: [PlanHomework]?
     var me: String?
+    var lang: String?          // "pl" or "en" – language chosen in the app
     var updated: Double?
 }
 

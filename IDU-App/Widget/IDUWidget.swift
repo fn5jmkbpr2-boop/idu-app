@@ -9,6 +9,10 @@ struct NextEntry: TimelineEntry {
     let next: LessonOccurrence?
     let later: [LessonOccurrence]
     let hasData: Bool
+    var en: Bool = false
+
+    /// Polish or English, as chosen in the app
+    func t(_ pl: String, _ english: String) -> String { en ? english : pl }
 
     static func sample(_ date: Date) -> NextEntry {
         let start = date.addingTimeInterval(15 * 60)
@@ -42,14 +46,14 @@ struct NextProvider: TimelineProvider {
     /// One entry now and one at the start of every lesson (then the widget moves on to the lesson after it).
     private func entries(from now: Date, limit: Int) -> [NextEntry] {
         guard let plan = IDUShared.loadPlan() else {
-            return [NextEntry(date: now, next: nil, later: [], hasData: false)]
+            return [NextEntry(date: now, next: nil, later: [], hasData: false, en: Locale.current.languageCode != "pl")]
         }
         let all = IDUShared.occurrences(plan, from: now, days: 15)
         var moments: [Date] = [now]
         for o in all where o.start > now { moments.append(o.start) }
         return moments.prefix(limit).map { moment in
             let found = IDUShared.next(after: moment, in: all)
-            return NextEntry(date: moment, next: found.next, later: found.later, hasData: true)
+            return NextEntry(date: moment, next: found.next, later: found.later, hasData: true, en: plan.lang == "en")
         }
     }
 }
@@ -91,21 +95,21 @@ private func roomDetail(_ o: LessonOccurrence) -> String? {
     return rest.isEmpty ? nil : rest
 }
 
-/// "NASTĘPNA", "JUTRO", "PONIEDZIAŁEK"
-private func dayLabel(_ start: Date, now: Date) -> String {
+/// "NASTĘPNA", "JUTRO", "PONIEDZIAŁEK" (or English)
+private func dayLabel(_ start: Date, entry: NextEntry) -> String {
     let cal = IDUShared.calendar
-    if cal.isDate(start, inSameDayAs: now) { return "Następna" }
-    if let tomorrow = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(start, inSameDayAs: tomorrow) { return "Jutro" }
+    if cal.isDate(start, inSameDayAs: entry.date) { return entry.t("Następna", "Next") }
+    if let tomorrow = cal.date(byAdding: .day, value: 1, to: entry.date), cal.isDate(start, inSameDayAs: tomorrow) { return entry.t("Jutro", "Tomorrow") }
     let f = DateFormatter()
-    f.locale = Locale(identifier: "pl_PL")
+    f.locale = Locale(identifier: entry.en ? "en_GB" : "pl_PL")
     f.dateFormat = "EEEE"
     return f.string(from: start)
 }
 
 /// "10:05 · za 15 min" today, "10:05–10:45" on another day
-private func whenText(_ o: LessonOccurrence, now: Date) -> Text {
-    if IDUShared.calendar.isDate(o.start, inSameDayAs: now) {
-        return Text("\(o.lesson.start) · za ") + Text(o.start, style: .relative)
+private func whenText(_ o: LessonOccurrence, entry: NextEntry) -> Text {
+    if IDUShared.calendar.isDate(o.start, inSameDayAs: entry.date) {
+        return Text("\(o.lesson.start) · " + entry.t("za ", "in ")) + Text(o.start, style: .relative)
     }
     return Text("\(o.lesson.start)–\(o.lesson.end)")
 }
@@ -143,16 +147,17 @@ extension View {
 // MARK: - Home screen
 
 private struct EmptyState: View {
-    let hasData: Bool
+    let entry: NextEntry
+    private var hasData: Bool { entry.hasData }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: hasData ? "sun.max.fill" : "graduationcap.fill")
                 .font(.system(size: 26, weight: .semibold))
                 .foregroundColor(hasData ? .yellow : .white)
             Spacer(minLength: 0)
-            Text(hasData ? "Brak lekcji" : "Otwórz IDU")
+            Text(hasData ? entry.t("Brak lekcji", "No lessons") : entry.t("Otwórz IDU", "Open IDU"))
                 .font(.system(size: 17, weight: .bold)).foregroundColor(.white)
-            Text(hasData ? "w najbliższych dniach" : "Wejdź na Start, a widget pobierze plan.")
+            Text(hasData ? entry.t("w najbliższych dniach", "in the next few days") : entry.t("Wejdź na Start, a widget pobierze plan.", "Open Home and the widget will load your timetable."))
                 .font(.system(size: 12)).foregroundColor(.white.opacity(0.75)).lineLimit(3)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -166,7 +171,7 @@ private struct NextBlock: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 5) {
                 Circle().fill(Color.white).frame(width: 6, height: 6)
-                Text(dayLabel(o.start, now: entry.date).uppercased())
+                Text(dayLabel(o.start, entry: entry).uppercased())
                     .font(.system(size: 11, weight: .heavy)).lineLimit(1)
                 Spacer(minLength: 0)
                 if o.exam != nil {
@@ -175,7 +180,7 @@ private struct NextBlock: View {
             }
             .foregroundColor(.white.opacity(0.8))
             Spacer(minLength: 4)
-            Text(roomDetail(o) ?? "sala").font(.system(size: 12, weight: .semibold)).foregroundColor(.white.opacity(0.7)).lineLimit(1)
+            Text(roomDetail(o) ?? entry.t("sala", "room")).font(.system(size: 12, weight: .semibold)).foregroundColor(.white.opacity(0.7)).lineLimit(1)
             Text(roomText(o))
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.35)
@@ -183,7 +188,7 @@ private struct NextBlock: View {
                 .font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
                 .lineLimit(2).minimumScaleFactor(0.75)
             Spacer(minLength: 4)
-            whenText(o, now: entry.date)
+            whenText(o, entry: entry)
                 .font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.8)).lineLimit(1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -194,7 +199,7 @@ private struct SmallView: View {
     let entry: NextEntry
     var body: some View {
         Group {
-            if let o = entry.next { NextBlock(entry: entry, o: o) } else { EmptyState(hasData: entry.hasData) }
+            if let o = entry.next { NextBlock(entry: entry, o: o) } else { EmptyState(entry: entry) }
         }
         .iduBackground(lessonTint(entry.next))
     }
@@ -208,16 +213,16 @@ private struct MediumView: View {
                 HStack(alignment: .top, spacing: 14) {
                     NextBlock(entry: entry, o: o)
                     VStack(alignment: .leading, spacing: 7) {
-                        Text("POTEM").font(.system(size: 11, weight: .heavy)).foregroundColor(.white.opacity(0.7))
+                        Text(entry.t("POTEM", "THEN")).font(.system(size: 11, weight: .heavy)).foregroundColor(.white.opacity(0.7))
                         if entry.later.isEmpty {
-                            Text("To ostatnia lekcja tego dnia").font(.system(size: 13)).foregroundColor(.white.opacity(0.8))
+                            Text(entry.t("To ostatnia lekcja tego dnia", "Last lesson of the day")).font(.system(size: 13)).foregroundColor(.white.opacity(0.8))
                         }
                         ForEach(entry.later, id: \.self) { l in
                             HStack(spacing: 8) {
                                 RoundedRectangle(cornerRadius: 2).fill(Color(hex: l.lesson.color, fallback: accentBlue)).frame(width: 4, height: 30)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(l.lesson.name).font(.system(size: 13, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                                    Text("\(l.lesson.start) · sala \(roomText(l))").font(.system(size: 11)).foregroundColor(.white.opacity(0.75)).lineLimit(1)
+                                    Text("\(l.lesson.start) · " + entry.t("sala", "room") + " \(roomText(l))").font(.system(size: 11)).foregroundColor(.white.opacity(0.75)).lineLimit(1)
                                 }
                             }
                         }
@@ -226,7 +231,7 @@ private struct MediumView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
             } else {
-                EmptyState(hasData: entry.hasData)
+                EmptyState(entry: entry)
             }
         }
         .iduBackground(lessonTint(entry.next))
@@ -244,16 +249,16 @@ private struct LockScreenView: View {
         switch family {
         case .accessoryInline:
             if let o = entry.next {
-                Text("\(o.lesson.start) \(o.lesson.name) · s. \(roomText(o))").accessoryBackground()
+                Text("\(o.lesson.start) \(o.lesson.name) · " + entry.t("s.", "rm") + " \(roomText(o))").accessoryBackground()
             } else {
-                Text(entry.hasData ? "Brak lekcji" : "Otwórz IDU").accessoryBackground()
+                Text(entry.hasData ? entry.t("Brak lekcji", "No lessons") : entry.t("Otwórz IDU", "Open IDU")).accessoryBackground()
             }
         case .accessoryCircular:
             ZStack {
                 AccessoryWidgetBackground()
                 if let o = entry.next {
                     VStack(spacing: -1) {
-                        Text("sala").font(.system(size: 9, weight: .semibold))
+                        Text(entry.t("sala", "room")).font(.system(size: 9, weight: .semibold))
                         Text(roomText(o)).font(.system(size: 20, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.4)
                         Text(o.lesson.start).font(.system(size: 9, weight: .medium))
                     }
@@ -269,15 +274,15 @@ private struct LockScreenView: View {
                 if let o = entry.next {
                     HStack(spacing: 4) {
                         Image(systemName: "mappin.circle.fill")
-                        Text(roomText(o) == "–" ? o.lesson.name : "Sala \(roomText(o))").font(.headline).lineLimit(1)
+                        Text(roomText(o) == "–" ? o.lesson.name : entry.t("Sala", "Room") + " \(roomText(o))").font(.headline).lineLimit(1)
                         if o.exam != nil { Image(systemName: "exclamationmark.triangle.fill") }
                     }
                     .widgetAccentable()
                     Text(o.lesson.name).font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                    whenText(o, now: entry.date).font(.system(size: 13)).foregroundColor(.secondary).lineLimit(1)
+                    whenText(o, entry: entry).font(.system(size: 13)).foregroundColor(.secondary).lineLimit(1)
                 } else {
-                    Text(entry.hasData ? "Brak lekcji" : "Otwórz IDU").font(.headline)
-                    Text(entry.hasData ? "w najbliższych dniach" : "aby wczytać plan").font(.system(size: 13)).foregroundColor(.secondary)
+                    Text(entry.hasData ? entry.t("Brak lekcji", "No lessons") : entry.t("Otwórz IDU", "Open IDU")).font(.headline)
+                    Text(entry.hasData ? entry.t("w najbliższych dniach", "in the next few days") : entry.t("aby wczytać plan", "to load your timetable")).font(.system(size: 13)).foregroundColor(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

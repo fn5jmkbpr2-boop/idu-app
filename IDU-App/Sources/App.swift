@@ -371,13 +371,14 @@ enum Reminders {
         var exams: Bool
         var homework: Bool
         var hour: Int        // time of the "day before" reminders
+        var english: Bool
     }
 
     static func settings() -> Settings {
         let d = UserDefaults.standard
         let hour = d.object(forKey: "nHour") == nil ? 18 : d.integer(forKey: "nHour")
         return Settings(lessons: d.integer(forKey: "nLessons"), exams: d.bool(forKey: "nExams"),
-                        homework: d.bool(forKey: "nHw"), hour: min(max(hour, 6), 22))
+                        homework: d.bool(forKey: "nHw"), hour: min(max(hour, 6), 22), english: d.string(forKey: "nLang") == "en")
     }
 
     static func saveSettings(_ dict: [String: Any]) {
@@ -386,6 +387,7 @@ enum Reminders {
         d.set((dict["exams"] as? NSNumber)?.boolValue ?? false, forKey: "nExams")
         d.set((dict["hw"] as? NSNumber)?.boolValue ?? false, forKey: "nHw")
         d.set((dict["hour"] as? NSNumber)?.intValue ?? 18, forKey: "nHour")
+        d.set((dict["lang"] as? String) == "en" ? "en" : "pl", forKey: "nLang")
     }
 
     private static func content(_ title: String, _ body: String, path: String, thread: String) -> UNMutableNotificationContent {
@@ -408,6 +410,8 @@ enum Reminders {
             guard s.lessons > 0 || s.exams || s.homework, let plan = IDUShared.loadPlan() else { return }
             let cal = IDUShared.calendar
             let now = Date()
+            let en = s.english
+            func t(_ pl: String, _ english: String) -> String { en ? english : pl }
             var items: [(date: Date, id: String, content: UNMutableNotificationContent)] = []
 
             if s.lessons > 0 {
@@ -416,11 +420,11 @@ enum Reminders {
                     guard fire > now else { continue }
                     let room = o.lesson.room ?? ""
                     var parts: [String] = []
-                    if !room.isEmpty { parts.append("Sala \(room)") }
+                    if !room.isEmpty { parts.append(t("Sala", "Room") + " \(room)") }
                     parts.append("\(o.lesson.start)–\(o.lesson.end)")
-                    if o.exam != nil { parts.append("Sprawdzian!") }
+                    if o.exam != nil { parts.append(t("Sprawdzian!", "Test!")) }
                     items.append((fire, "lesson-\(Int(o.start.timeIntervalSince1970))",
-                                  Reminders.content("Za \(s.lessons) min: \(o.lesson.name)", parts.joined(separator: " · "), path: "/#plan", thread: "lessons")))
+                                  Reminders.content(t("Za", "In") + " \(s.lessons) min: \(o.lesson.name)", parts.joined(separator: " · "), path: "/#plan", thread: "lessons")))
                 }
             }
 
@@ -430,9 +434,9 @@ enum Reminders {
                           let before = cal.date(byAdding: .day, value: -1, to: day),
                           let fire = cal.date(bySettingHour: s.hour, minute: 0, second: 0, of: before),
                           fire > now else { continue }
-                    let name = (e.name ?? "").isEmpty ? "sprawdzian" : e.name!
+                    let name = (e.name ?? "").isEmpty ? t("sprawdzian", "test") : e.name!
                     items.append((fire, "exam-\(e.date)-\(name)",
-                                  Reminders.content("Jutro sprawdzian: \(name)", e.title ?? "Powodzenia!", path: "/#start", thread: "exams")))
+                                  Reminders.content(t("Jutro sprawdzian: ", "Test tomorrow: ") + name, e.title ?? t("Powodzenia!", "Good luck!"), path: "/#start", thread: "exams")))
                 }
             }
 
@@ -445,10 +449,10 @@ enum Reminders {
                     if let before = cal.date(byAdding: .day, value: -1, to: dueDay),
                        let fire = cal.date(bySettingHour: s.hour, minute: 0, second: 0, of: before), fire > now {
                         items.append((fire, "hw-\(h.due)-\(h.title.prefix(20))",
-                                      Reminders.content("Jutro mija termin zadania", "\(h.title)\(subject) · do \(hhmm)", path: "/#start", thread: "homework")))
+                                      Reminders.content(t("Jutro mija termin zadania", "Homework due tomorrow"), "\(h.title)\(subject) · " + t("do", "by") + " \(hhmm)", path: "/#start", thread: "homework")))
                     } else if let today = cal.date(bySettingHour: s.hour, minute: 0, second: 0, of: dueDay), today > now, today < due {
                         items.append((today, "hw-\(h.due)-\(h.title.prefix(20))",
-                                      Reminders.content("Dziś mija termin zadania", "\(h.title)\(subject) · do \(hhmm)", path: "/#start", thread: "homework")))
+                                      Reminders.content(t("Dziś mija termin zadania", "Homework due today"), "\(h.title)\(subject) · " + t("do", "by") + " \(hhmm)", path: "/#start", thread: "homework")))
                     }
                 }
             }

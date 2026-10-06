@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
-// @version     4.0
+// @version     4.1
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // ==/UserScript==
@@ -60,12 +60,24 @@
   const cleanTitle = s => s.replace(/zwiń|rozwiń/g, '').trim();
 
   /* ------------------------------------------------------------------ *
-   *  Dates (Polish)
+   *  Language of the app (IDU's own content stays as it is)
+   * ------------------------------------------------------------------ */
+  const LANG = (() => { try { return JSON.parse(localStorage.getItem('skSettings') || '{}').lang === 'en' ? 'en' : 'pl'; } catch (e) { return 'pl'; } })();
+  const EN = LANG === 'en';
+  const L = (pl, en) => EN ? en : pl;           // inline translation for sentences built in code
+
+  /* ------------------------------------------------------------------ *
+   *  Dates (IDU writes them in Polish – parsing always Polish, display in the app language)
    * ------------------------------------------------------------------ */
   const MONTHS = { sty: 0, lut: 1, mar: 2, kwi: 3, maj: 4, cze: 5, lip: 6, sie: 7, wrz: 8, 'paź': 9, paz: 9, lis: 10, gru: 11 };
-  const MONTH_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
-  const DAY_SHORT = ['Nd', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
-  const DAY_FULL = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+  const MONTH_SHORT = EN ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    : ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+  const DAY_SHORT = EN ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['Nd', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
+  const DAY_FULL = EN ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    : ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+  const TODAY = L('dziś', 'today'), TOMORROW = L('jutro', 'tomorrow');
+  const ST = EN ? { ob: 'P', nb: 'A', sp: 'L', u: 'E' } : { ob: 'OB', nb: 'NB', sp: 'SP', u: 'U' };   // attendance codes
+  const inDays = n => L('za ' + n + ' dni', 'in ' + n + ' days');
 
   function parseDate(s) {
     if (!s) return null;
@@ -82,14 +94,14 @@
     const now = new Date();
     const diffMin = Math.round((now - d) / 60000);
     const dayDiff = Math.round((dayStart(now) - dayStart(d)) / 86400000);
-    if (diffMin >= 0 && diffMin < 1) return 'przed chwilą';
-    if (diffMin >= 0 && diffMin < 60) return diffMin + ' min temu';
-    if (dayDiff === 0 && diffMin >= 0) return Math.round(diffMin / 60) + ' godz. temu';
-    if (dayDiff === 0) return 'dziś';
-    if (dayDiff === 1) return 'wczoraj';
-    if (dayDiff === -1) return 'jutro';
-    if (dayDiff > 1 && dayDiff < 7) return dayDiff + ' dni temu';
-    if (dayDiff < -1 && dayDiff > -7) return 'za ' + (-dayDiff) + ' dni';
+    if (diffMin >= 0 && diffMin < 1) return L('przed chwilą', 'just now');
+    if (diffMin >= 0 && diffMin < 60) return L(diffMin + ' min temu', diffMin + ' min ago');
+    if (dayDiff === 0 && diffMin >= 0) return L(Math.round(diffMin / 60) + ' godz. temu', Math.round(diffMin / 60) + ' h ago');
+    if (dayDiff === 0) return TODAY;
+    if (dayDiff === 1) return L('wczoraj', 'yesterday');
+    if (dayDiff === -1) return TOMORROW;
+    if (dayDiff > 1 && dayDiff < 7) return L(dayDiff + ' dni temu', dayDiff + ' days ago');
+    if (dayDiff < -1 && dayDiff > -7) return inDays(-dayDiff);
     return shortDate(d);
   }
   const shortDate = d => d ? d.getDate() + ' ' + MONTH_SHORT[d.getMonth()] : '';
@@ -116,7 +128,12 @@
     const s = String(n || '').replace(/\([PR]\)\s*$/, '').replace(/\s+1\s*$/, '').trim();
     return s === s.toUpperCase() && s.length > 4 ? s.charAt(0) + s.slice(1).toLowerCase() : s.charAt(0).toUpperCase() + s.slice(1);
   };
-  const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
+  const PLURAL_EN = { ocena: ['grade', 'grades'], wynik: ['result', 'results'], lekcja: ['lesson', 'lessons'], plik: ['file', 'files'],
+    pozycja: ['item', 'items'], 'uczeń': ['student', 'students'], przedmiotu: ['subject', 'subjects'] };
+  const plural = (n, one, few, many) => {
+    if (EN) { const e = PLURAL_EN[one]; return e ? e[n === 1 ? 0 : 1] : (n === 1 ? one : many); }
+    return n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
+  };
   // "06 Piwnica Auerbacha" → "06", "27 (gabinet ps2)" → "27", "gimnastyczna" stays
   const shortRoom = r => { const m = String(r || '').trim().match(/^(\d+[a-z]?)(?=\s|\(|$)/i); return m ? m[1] : String(r || '').trim(); };
   const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -859,8 +876,8 @@
       .filter(f => !box.contains(f) && !f.contains(box) && txt(f));
     const wrap = document.createElement('div');
     wrap.id = 'sk-login';
-    wrap.innerHTML = `<div class="sk-brand"><div class="sk-logo">IDU</div><h1>Zaloguj się</h1>
-      <div class="sk-sub">${esc(txt($('#school-name')) || 'Dziennik IDU')}</div></div><div class="sk-flash"></div><div class="sk-box"></div>`;
+    wrap.innerHTML = `<div class="sk-brand"><div class="sk-logo">IDU</div><h1>${L('Zaloguj się', 'Log in')}</h1>
+      <div class="sk-sub">${esc(txt($('#school-name')) || L('Dziennik IDU', 'IDU school diary'))}</div></div><div class="sk-flash"></div><div class="sk-box"></div>`;
     const fl = wrap.querySelector('.sk-flash');
     flashes.forEach(f => {
       if (txt(f).length > 160) {       // long notices collapse
@@ -889,7 +906,7 @@
   };
   const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, theme: 'dark', radius: 'm', density: 'normal',
     subj: 'vivid', labels: true, startTab: 'start', nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true,
-    haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18 };
+    haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18, lang: 'pl' };
   function loadSettings() {
     let o = {}; try { o = JSON.parse(store.get('skSettings') || '{}'); } catch (e) {}
     return Object.assign({}, DEFAULTS, o);
@@ -916,34 +933,35 @@
     return st;
   }
   // settings the iPhone app needs for reminders
-  const notifyPrefs = st => ({ type: 'notify', lessons: +st.nLesson || 0, exams: !!st.nExam, hw: !!st.nHw, hour: +st.nHour || 18 });
+  const notifyPrefs = st => ({ type: 'notify', lessons: +st.nLesson || 0, exams: !!st.nExam, hw: !!st.nHw, hour: +st.nHour || 18, lang: st.lang === 'en' ? 'en' : 'pl' });
 
   function openSettings(root, app) {
     const st = loadSettings();
     const seg = (key, opts) => `<div class="seg" data-k="${key}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(st[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     const tgl = (key, label) => `<label class="tgl"><span>${label}</span><input type="checkbox" data-t="${key}" ${st[key] ? 'checked' : ''}><i></i></label>`;
-    const L = t => `<div class="lbl" style="--c:var(--muted)">${t}</div>`;
+    const LB = t => `<div class="lbl" style="--c:var(--muted)">${t}</div>`;
     const sh = openSheet(root, `<h2>Ustawienia</h2><div class="muted small" style="margin-bottom:6px">Zmiany działają od razu i zapisują się w apce.</div>
+      ${LB('Język / Language')}${seg('lang', [['pl', 'Polski'], ['en', 'English']])}
       <div class="sgroup">Profil</div>
       <div class="card avrow" style="margin-top:10px"><div id="avprev">${meAvatar()}</div>
         <div class="grow"><div class="b">Twoje zdjęcie</div><div class="btns" style="margin-top:8px">
           <label class="btn-s">${I('image', 'sm')}<span>Wybierz</span><input type="file" id="avfile" accept="image/*"></label>
           <button class="btn-s" id="avdel" style="${store.get('skAvatar') ? '' : 'display:none'}">${I('trash', 'sm')}Usuń</button></div></div></div>
       <div class="note2">Zdjęcie zostaje tylko w tym telefonie — nie jest wysyłane do IDU i nikt inny go nie zobaczy.</div>
-      ${L('Imię w powitaniu')}<div class="search" style="margin:0"><input id="nick" placeholder="np. Janek" value="${esc(st.nick)}" maxlength="24" autocomplete="off"></div>
+      ${LB('Imię w powitaniu')}<div class="search" style="margin:0"><input id="nick" placeholder="np. Janek" value="${esc(st.nick)}" maxlength="24" autocomplete="off"></div>
       <div class="sgroup">Wygląd</div>
-      ${L('Motyw')}<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button data-theme="${k}" class="${st.theme === k ? 'on' : ''}" style="--b:${t.bg};--c2:${t.card}"><i></i><span>${t.label}</span></button>`).join('')}</div>
-      ${L('Kolor akcentu')}<div class="swatches">${Object.entries(ACCENTS).map(([k, c]) => `<button data-acc="${k}" class="${st.accent === k ? 'on' : ''}" style="--c:${c}" aria-label="${k}"></button>`).join('')}</div>
-      ${L('Kolory przedmiotów')}${seg('subj', [['vivid', 'Żywe'], ['muted', 'Stonowane'], ['mono', 'Jeden kolor']])}
-      ${L('Zaokrąglenie')}${seg('radius', [['s', 'Małe'], ['m', 'Średnie'], ['l', 'Duże']])}
-      ${L('Gęstość')}${seg('density', [['compact', 'Kompaktowa'], ['normal', 'Normalna']])}
-      ${L('Rozmiar tekstu')}${seg('size', [['s', 'A−'], ['m', 'A'], ['l', 'A+'], ['xl', 'A++']])}
-      ${L('Czcionka')}${seg('font', [['system', 'Standardowa'], ['rounded', 'Zaokrąglona']])}
+      ${LB('Motyw')}<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button data-theme="${k}" class="${st.theme === k ? 'on' : ''}" style="--b:${t.bg};--c2:${t.card}"><i></i><span>${t.label}</span></button>`).join('')}</div>
+      ${LB('Kolor akcentu')}<div class="swatches">${Object.entries(ACCENTS).map(([k, c]) => `<button data-acc="${k}" class="${st.accent === k ? 'on' : ''}" style="--c:${c}" aria-label="${k}"></button>`).join('')}</div>
+      ${LB('Kolory przedmiotów')}${seg('subj', [['vivid', 'Żywe'], ['muted', 'Stonowane'], ['mono', 'Jeden kolor']])}
+      ${LB('Zaokrąglenie')}${seg('radius', [['s', 'Małe'], ['m', 'Średnie'], ['l', 'Duże']])}
+      ${LB('Gęstość')}${seg('density', [['compact', 'Kompaktowa'], ['normal', 'Normalna']])}
+      ${LB('Rozmiar tekstu')}${seg('size', [['s', 'A−'], ['m', 'A'], ['l', 'A+'], ['xl', 'A++']])}
+      ${LB('Czcionka')}${seg('font', [['system', 'Standardowa'], ['rounded', 'Zaokrąglona']])}
       <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('motion', 'Animacje')}${tgl('glass', 'Efekt szkła (rozmycie)')}${tgl('haptics', 'Wibracje przy dotyku')}</div>
       <div class="sgroup">Powiadomienia</div>
-      ${L('Przypomnienie przed lekcją')}${seg('nLesson', [['0', 'Wył.'], ['5', '5 min'], ['10', '10 min'], ['15', '15 min']])}
+      ${LB('Przypomnienie przed lekcją')}${seg('nLesson', [['0', 'Wył.'], ['5', '5 min'], ['10', '10 min'], ['15', '15 min']])}
       <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('nExam', 'Sprawdzian — dzień wcześniej')}${tgl('nHw', 'Termin zadania — dzień wcześniej')}</div>
-      ${L('Godzina przypomnień „dzień wcześniej”')}${seg('nHour', [['16', '16:00'], ['18', '18:00'], ['20', '20:00']])}
+      ${LB('Godzina przypomnień „dzień wcześniej”')}${seg('nHour', [['16', '16:00'], ['18', '18:00'], ['20', '20:00']])}
       <div class="note2 ${NATIVE_IDU ? '' : 'warn'}" id="nnote">${NATIVE_IDU ? 'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Nowych ocen i wiadomości iPhone nie może sprawdzać w tle.' : 'Powiadomienia działają tylko w aplikacji IDU na iPhonie.'}</div>
       <div class="sgroup">Widget</div>
       <div class="card row" style="margin-top:10px;align-items:flex-start"><div style="color:var(--accent)">${I('widget', 'fill')}</div><div class="grow small">
@@ -953,8 +971,8 @@
       <div class="sgroup">Ekran Start</div>
       <div class="card" style="padding:2px 14px;margin-top:10px">${tgl('showNow', 'Karta bieżącej lekcji')}${tgl('showDue', 'Zadania z bliskim terminem')}${tgl('showExams', 'Sprawdziany')}${tgl('showEvents', 'Nadchodzące wydarzenia')}${tgl('showFeed', 'Co nowego')}</div>
       <div class="sgroup">Nawigacja</div>
-      ${L('Po otwarciu apki pokaż')}${seg('startTab', [['start', 'Start'], ['plan', 'Plan'], ['grades', 'Oceny'], ['mail', 'Poczta']])}
-      ${L('Plan lekcji domyślnie')}${seg('plan', [['day', 'Dzień'], ['week', 'Tydzień']])}
+      ${LB('Po otwarciu apki pokaż')}${seg('startTab', [['start', 'Start'], ['plan', 'Plan'], ['grades', 'Oceny'], ['mail', 'Poczta']])}
+      ${LB('Plan lekcji domyślnie')}${seg('plan', [['day', 'Dzień'], ['week', 'Tydzień']])}
       <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('labels', 'Podpisy w dolnym pasku')}</div>
       <button class="btn-s" id="sreset" style="margin-top:18px;width:100%;justify-content:center;color:var(--bad)">Przywróć domyślne</button>
       <div class="muted small" style="text-align:center;margin-top:14px">IDU Skin ${esc(SKIN_VERSION)}</div>`);
@@ -965,6 +983,7 @@
       store.set('skSettings', JSON.stringify(cur)); applySettings(app);
       if (k === 'subj' || k === 'startTab') needsRedraw = needsRedraw || k === 'subj';
       if (k === 'startTab') setStartKey(cur);
+      if (k === 'lang') { native(notifyPrefs(cur)); setTimeout(() => location.reload(), 150); return; }
       if (/^n[A-Z]/.test(k)) {
         const wantsAny = (+cur.nLesson > 0) || cur.nExam || cur.nHw;
         if (wantsAny) native({ type: 'askNotify' });
@@ -1033,7 +1052,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '4.0';
+  const SKIN_VERSION = '4.1';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -1042,6 +1061,41 @@
   const nativeCbs = {};
   function onNative(type, fn) { (nativeCbs[type] = nativeCbs[type] || []).push(fn); }
   window.__skNative = (type, val) => { (nativeCbs[type] || []).forEach(f => { try { f(val); } catch (e) {} }); };
+
+  /* ---- English: the app's own words are swapped as they appear (IDU's content is left alone) ---- */
+  const SKIP_TR = '.mbody,.note,.bubble,textarea,style,[data-raw],.tok,.who b';
+  function trString(s) {
+    const t = s.trim();
+    if (!t || !/[a-ząćęłńóśźż]/i.test(t)) return s;
+    let r = TR_EN[t];
+    if (r == null) for (const [rx, rep] of TR_RX) { if (rx.test(t)) { r = t.replace(rx, rep); break; } }
+    if (r == null) r = t;
+    r = r.replace(MONTH_RX, (m, d, mo) => d + ' ' + MONTH_EN[mo]).replace(/ · waga (\d+)/, ' · weight $1');
+    return r === t ? s : s.replace(t, () => r);
+  }
+  function trNode(n) {
+    if (n.nodeType === 3) {
+      const p = n.parentElement;
+      if (p && !p.closest(SKIP_TR)) { const v = trString(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+      return;
+    }
+    if (n.nodeType !== 1 && n.nodeType !== 11) return;
+    const attrs = el => { if (el.closest('.mbody,.note,.bubble,[data-raw]')) return;
+      for (const a of ['placeholder', 'aria-label']) if (el.hasAttribute(a)) { const v = trString(el.getAttribute(a)); if (v !== el.getAttribute(a)) el.setAttribute(a, v); } };
+    if (n.nodeType === 1) attrs(n);
+    const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    let c;
+    while ((c = w.nextNode())) { if (c.nodeType === 1) attrs(c); else trNode(c); }
+  }
+  function watchTranslate(root) {
+    if (!EN) return;
+    new MutationObserver(muts => {
+      for (const m of muts) {
+        if (m.type === 'characterData') trNode(m.target);
+        else m.addedNodes.forEach(trNode);
+      }
+    }).observe(root, { childList: true, subtree: true, characterData: true });
+  }
 
   // short message at the bottom of the screen
   function toast(root, text, kind) {
@@ -1318,6 +1372,7 @@
     host.id = 'sk-host';
     document.body.appendChild(host);
     const root = host.attachShadow({ mode: 'open' });
+    watchTranslate(root);
 
     const tabs = [
       ['start', 'home', 'Start', '/#start'],
@@ -1367,7 +1422,7 @@
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
       const t = root.getElementById('timer');
-      const upd = () => { t.textContent = 'Wylogowanie za ' + txt(ctx.timer); };
+      const upd = () => { t.textContent = L('Wylogowanie za ', 'Logout in ') + txt(ctx.timer); };
       upd();
       const mo = new MutationObserver(upd); mo.observe(ctx.timer, { childList: true, characterData: true, subtree: true });
       cleanups.push(() => mo.disconnect());
@@ -1529,7 +1584,7 @@
     root.innerHTML = `<style>
       button{position:fixed;right:14px;bottom:14px;z-index:2147483647;border:0;border-radius:22px;padding:10px 16px;
       background:#1e88e5;color:#fff;font:700 15px -apple-system,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.35)}</style>
-      <button>Nowy wygląd</button>`;
+      <button>${L('Nowy wygląd', 'New look')}</button>`;
     root.querySelector('button').onclick = () => { store.set('skClassic', '0'); location.reload(); };
   }
 
@@ -1695,18 +1750,18 @@
       if (cur) {
         l = cur; const left = mins(cur.end) - n;
         let more = 0; for (const x of ls) if (mins(x.start) >= mins(cur.end) && x.raw === cur.raw && x.nr === cur.nr + more + 1) more++;
-        label = `Teraz · zostało ${left} min${more ? ' (+' + more + ' lekcja)' : ''}`; extra = `${cur.start} – ${cur.end}`;
+        label = L(`Teraz · zostało ${left} min${more ? ' (+' + more + ' lekcja)' : ''}`, `Now · ${left} min left${more ? ' (+' + more + ' lesson)' : ''}`); extra = `${cur.start} – ${cur.end}`;
         prog = Math.min(100, Math.max(0, 100 * (n - mins(cur.start)) / (mins(cur.end) - mins(cur.start))));
         after = ls.find(x => mins(x.start) >= mins(cur.end) && x.nr > cur.nr + more);
       } else if (nxt) {
         l = nxt; const inMin = mins(nxt.start) - n;
         const started = ls.some(x => mins(x.end) <= n);
-        label = started ? `Przerwa · lekcja za ${inMin} min` : inMin <= 90 ? `Pierwsza lekcja za ${inMin} min` : 'Pierwsza lekcja';
+        label = started ? L(`Przerwa · lekcja za ${inMin} min`, `Break · lesson in ${inMin} min`) : inMin <= 90 ? L(`Pierwsza lekcja za ${inMin} min`, `First lesson in ${inMin} min`) : L('Pierwsza lekcja', 'First lesson');
         extra = `${nxt.start} – ${nxt.end}`;
       } else {
         const d = nextDayWithLessons(today);
         if (!plan[d]) return '<div id="nowcard"></div>';
-        l = plan[d][0]; label = (d === (today + 1) % 7 ? 'Jutro' : DAY_FULL[d]) + ' na start'; extra = `${l.start} – ${l.end}`;
+        l = plan[d][0]; label = EN ? 'First lesson ' + (d === (today + 1) % 7 ? 'tomorrow' : 'on ' + DAY_FULL[d]) : (d === (today + 1) % 7 ? 'Jutro' : DAY_FULL[d]) + ' na start'; extra = `${l.start} – ${l.end}`;
       }
       const c = subjColor(l.raw); const t = teacherFor(l);
       return `<div id="nowcard"><a class="card now tap" href="#plan" style="--c:${c}"><div class="bar"></div><div class="in" style="display:block">
@@ -1715,7 +1770,7 @@
         ${l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div>
         ${l.note ? `<div class="pill warn" style="margin-top:8px">${I('exam', 'xs')} ${esc(l.note)}</div>` : ''}
         ${prog != null ? `<div class="prog"><i style="width:${prog.toFixed(1)}%"></i></div>` : ''}
-        ${after ? `<div class="muted small" style="margin-top:8px">Potem: <b style="color:var(--text)">${esc(after.name)}</b> · ${esc(after.start)}${after.room ? ' · sala ' + esc(after.room) : ''}</div>` : ''}
+        ${after ? `<div class="muted small" style="margin-top:8px">${L('Potem', 'Then')}: <b style="color:var(--text)">${esc(after.name)}</b> · ${esc(after.start)}${after.room ? L(' · sala ', ' · room ') + esc(after.room) : ''}</div>` : ''}
       </div></a></div>`;
     }
     function feedItem(it) {
@@ -1736,10 +1791,10 @@
           const due = parseDate(it.due);
           return `<div class="fi"><div class="dot">${I('edit')}</div><div class="body">${head('edit', 'Zadanie domowe')}
             <a class="box tap" href="${esc(it.href)}"><div class="in"><div class="ttl">${esc(it.title)}</div></div>
-            ${strip(it.subject || 'Zadanie', due ? 'Termin: ' + esc(shortDate(due) + ', ' + hhmm(due)) : 'bez terminu')}</a></div></div>`;
+            ${strip(it.subject || L('Zadanie', 'Homework'), due ? L('Termin: ', 'Due: ') + esc(shortDate(due) + ', ' + hhmm(due)) : L('bez terminu', 'no deadline'))}</a></div></div>`;
         }
         case 'pres': {
-          const code = it.ok ? 'OB' : it.late ? 'SP' : 'NB';
+          const code = it.ok ? ST.ob : it.late ? ST.sp : ST.nb;
           return `<div class="fi"><div class="dot">${I('pres')}</div><div class="body">${head('pres', 'Frekwencja')}
             <div class="box"><div class="in row"><div class="letter" style="--c:${it.ok ? 'var(--good)' : it.late ? 'var(--warn)' : 'var(--bad)'}">${code}</div>
             <div class="grow"><div class="ttl">${esc(it.status)}${it.n > 1 ? ' ×' + it.n : ''}</div><div class="sub">${esc(it.dateS)}</div></div></div>
@@ -1795,15 +1850,15 @@
         return `<a class="card row tap" href="${esc(x.url || '/calendar')}" style="--c:${subjColor(subj)}">
           <div class="datebox" style="background:color-mix(in srgb,var(--c) 22%,var(--card2))"><b>${x.d.getDate()}</b><span>${MONTH_SHORT[x.d.getMonth()]}</span></div>
           <div class="grow"><div class="b clip">${esc(x.title.replace(/\s*\([^()]+\)\s*$/, ''))}</div><div class="muted small">${esc(prettySubj(subj))}</div></div>
-          <span class="pill ${days <= 2 ? 'bad' : days <= 6 ? 'warn' : ''}">${days === 0 ? 'dziś' : days === 1 ? 'jutro' : 'za ' + days + ' dni'}</span></a>`;
+          <span class="pill ${days <= 2 ? 'bad' : days <= 6 ? 'warn' : ''}">${days === 0 ? TODAY : days === 1 ? TOMORROW : inDays(days)}</span></a>`;
       }).join('');
     }
 
     function startView() {
       const h = new Date().getHours();
-      const hello = h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
+      const hello = EN ? (h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Hi' : 'Good evening') : h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
       const SS = loadSettings();
-      const dateS = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+      const dateS = new Date().toLocaleDateString(EN ? 'en-GB' : 'pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
       return `
         <div class="hello"><div class="grow"><h1>${esc(hello)}, ${esc(SS.nick || firstName)}</h1>
           <p class="lead">${esc(dateS)}${klass ? ' · ' + esc(txt(klass)) : ''}</p></div>
@@ -1812,7 +1867,7 @@
           <div class="b">Do potwierdzenia</div><div class="small muted clip">${esc(a.title)}</div></div>${I('right', 'sm chev')}</a>`).join('')}
         ${!SS.showDue ? '' : dueSoon.map(h => `<a class="alert tap" href="${esc(h.href)}" style="background:color-mix(in srgb,var(--bad) 14%,var(--card))">
           <div style="color:var(--bad)">${I('timer')}</div><div class="grow"><div class="b clip">${esc(h.title)}</div>
-          <div class="small muted">Termin ${esc(relTime(h.dueD) === 'dziś' ? 'dziś' : relTime(h.dueD))}, ${esc(hhmm(h.dueD))}${h.subject ? ' · ' + esc(prettySubj(h.subject)) : ''}</div></div>${I('right', 'sm chev')}</a>`).join('')}
+          <div class="small muted">${L('Termin', 'Due')} ${esc(relTime(h.dueD))}, ${esc(hhmm(h.dueD))}${h.subject ? ' · ' + esc(prettySubj(h.subject)) : ''}</div></div>${I('right', 'sm chev')}</a>`).join('')}
         ${SS.showNow ? nowNextCard() : ''}
         ${SS.showExams ? `<div id="exams">${examsHTML()}</div>` : ''}
         ${SS.showEvents && events.length ? `<div class="sec"><h2>Nadchodzące</h2><a href="/calendar">Kalendarz</a></div>
@@ -1822,7 +1877,7 @@
         ${SS.showFeed ? `<div class="sec"><h2>Co nowego</h2><a href="#" id="reload" style="display:flex;gap:5px;align-items:center;font-size:14px">${I('refresh', 'xs')}Odśwież</a></div>
         ${chipRow('ff', feedKinds().map(([v, label]) => ({ v, label, n: v === 'all' ? null : feed.filter(f => f.kind === v).length })).filter(o => o.n !== 0), feedFilter)}
         <div id="feed">${feedHTML()}</div>
-        <div class="muted small" style="text-align:center;margin-top:10px">Zaktualizowano: ${esc(hhmm(new Date()))}</div>` : ''}`;
+        <div class="muted small" style="text-align:center;margin-top:10px">${L('Zaktualizowano', 'Updated')}: ${esc(hhmm(new Date()))}</div>` : ''}`;
     }
 
     // ---------- plan ----------
@@ -1867,8 +1922,9 @@
       const m = weekMonday(weekOff), f = new Date(m); f.setDate(f.getDate() + 4);
       const range = m.getMonth() === f.getMonth() ? `${m.getDate()}–${f.getDate()} ${MONTH_SHORT[m.getMonth()]}` : `${shortDate(m)} – ${shortDate(f)}`;
       const base = (new Date().getDay() || 7) >= 6 ? 1 : 0;   // on weekends "this week" means next week
-      const rel = weekOff === 0 ? (base ? 'Następny tydzień' : 'Ten tydzień') : weekOff === 1 ? (base ? 'Za 2 tygodnie' : 'Następny tydzień') : weekOff === -1 ? (base ? 'Ten tydzień' : 'Poprzedni tydzień')
-        : weekOff > 0 ? `Za ${weekOff + base} tyg.` : `${-weekOff - base} tyg. temu`;
+      const NEXT = L('Następny tydzień', 'Next week'), THIS = L('Ten tydzień', 'This week');
+      const rel = weekOff === 0 ? (base ? NEXT : THIS) : weekOff === 1 ? (base ? L('Za 2 tygodnie', 'In 2 weeks') : NEXT) : weekOff === -1 ? (base ? THIS : L('Poprzedni tydzień', 'Last week'))
+        : weekOff > 0 ? L(`Za ${weekOff + base} tyg.`, `In ${weekOff + base} weeks`) : L(`${-weekOff - base} tyg. temu`, `${-weekOff - base} weeks ago`);
       return { range, rel };
     }
     function dayList(wd) {
@@ -1880,7 +1936,7 @@
       if (info) {
         top += info.free.map(e => `<div class="card evc" style="--c:var(--good)"><div class="bar"></div><div class="in"><div class="kind">Dzień wolny</div><div class="b">${esc(e.title)}</div></div></div>`).join('');
         top += info.events.map(e => `<a class="card evc tap" href="/calendar" style="--c:${e.color}"><div class="bar"></div><div class="in"><div class="kind">Wydarzenie</div>
-          <div class="b">${esc(e.title)}</div><div class="when">${e.timed ? esc(hhmm(e.start) + (e.end ? '–' + hhmm(e.end) : '')) : e.end ? esc(shortDate(e.start) + ' – ' + shortDate(e.end)) : 'cały dzień'}</div></div></a>`).join('');
+          <div class="b">${esc(e.title)}</div><div class="when">${e.timed ? esc(hhmm(e.start) + (e.end ? '–' + hhmm(e.end) : '')) : e.end ? esc(shortDate(e.start) + ' – ' + shortDate(e.end)) : L('cały dzień', 'all day')}</div></div></a>`).join('');
         const unmatched = info.exams.filter(e => !ls.some(l => e.subj && normSubj(e.subj) === normSubj(l.raw)));
         top += unmatched.map(e => `<a class="card evc tap" href="${esc(e.href)}" style="--c:var(--bad)"><div class="bar"></div><div class="in"><div class="kind">Sprawdzian</div>
           <div class="b">${esc(e.title.replace(/\s*\([^()]+\)\s*$/, ''))}</div><div class="when">${esc(prettySubj(e.subj))}</div></div></a>`).join('');
@@ -1898,11 +1954,11 @@
         const gap = prev ? mins(l.start) - mins(prev.end) : 0;
         const ex = examFor(info, l);
         const note = ex ? ex.title.replace(/\s*\([^()]+\)\s*$/, '') : weekOff === 0 ? l.note : '';
-        return `${gap >= 15 ? `<div class="brk">przerwa ${gap} min</div>` : ''}
+        return `${gap >= 15 ? `<div class="brk">${L('przerwa', 'break')} ${gap} min</div>` : ''}
           <a class="card les tap ${st} ${note ? 'exam' : ''}" href="${esc(l.href)}" data-les="${wd}:${i}" style="--c:${subjColor(l.raw)}"><div class="bar"></div><div class="in">
           <div class="tm">${esc(l.start)}<br>${esc(l.end)}</div>
           <div class="grow"><div class="b clip">${esc(l.name)} ${st === 'cur' ? '<span class="pill good">TERAZ</span>' : ''}</div>
-          <div class="muted small clip">Lekcja ${l.nr}${teacherFor(l) ? ' · ' + esc(teacherFor(l)) : ''}</div>
+          <div class="muted small clip">${L('Lekcja', 'Lesson')} ${l.nr}${teacherFor(l) ? ' · ' + esc(teacherFor(l)) : ''}</div>
           ${note ? `<div class="pill bad" style="margin-top:5px">${I('exam', 'xs')} Sprawdzian: ${esc(note)}</div>` : ''}</div>
           ${l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div></a>`;
       }).join('');
@@ -1919,7 +1975,7 @@
       planDays.forEach(d => (plan[d] || []).forEach(l => { times[l.nr] = l.start; }));
       const todayD = +dayStart(new Date());
       let cells = `<div></div>` + planDays.map(d => { const info = dayInfo(dateFor(d));
-        return `<div class="h ${+dateFor(d) === todayD ? 'today' : ''}">${DAY_SHORT[d]}<small style="display:block;font-weight:500">${info && info.free.length ? 'wolne' : dateFor(d).getDate()}</small></div>`; }).join('');
+        return `<div class="h ${+dateFor(d) === todayD ? 'today' : ''}">${DAY_SHORT[d]}<small style="display:block;font-weight:500">${info && info.free.length ? L('wolne', 'off') : dateFor(d).getDate()}</small></div>`; }).join('');
       const items = [];
       planDays.forEach((d, ci) => {
         const ls = (plan[d] || []).slice().sort((a, b) => a.nr - b.nr);
@@ -1959,7 +2015,7 @@
     function subjectsView() {
       return `<div class="search">${I('search', 'sm')}<input id="filter" placeholder="Szukaj przedmiotu" autocomplete="off"></div>
         ${klass ? `<div class="chips" style="margin:0 0 14px">
-          <a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}Klasa ${esc(txt(klass))}</a>
+          <a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}${L('Klasa', 'Class')} ${esc(txt(klass))}</a>
           ${klassForum ? `<a class="chip" href="${esc(attr(klassForum, 'href'))}">${I('chat')}Forum klasowe</a>` : ''}</div>` : ''}
         <div id="subjlist">${subjects.map(s => `<details class="card" data-n="${esc(s.name.toLowerCase())}">
           <summary class="row"><div class="av" style="background:${subjColor(s.name)}">${esc(prettySubj(s.name).charAt(0))}</div>
@@ -1976,8 +2032,8 @@
       const LL = { 'zadania domowe': ['edit', 'Zadania'], 'oceny': ['grades', 'Oceny'], 'obecności': ['pres', 'Obecności'], 'tematy lekcji': ['book', 'Tematy'], 'forum': ['chat', 'Forum'] };
       const t = teacherFor(l);
       openSheet(root, `<div class="hero" style="--c:${subjColor(l.raw)};margin:0 0 14px">
-          <div style="opacity:.85;font-size:13px;font-weight:700">${esc(DAY_FULL[wd].replace(/^./, m => m.toUpperCase()))} · lekcja ${l.nr}</div>
-          <h1 style="margin:4px 0 2px">${esc(l.name)}</h1><div style="font-weight:600">${esc(l.start)} – ${esc(l.end)}${l.room ? ' · sala ' + esc(l.room) : ''}</div></div>
+          <div style="opacity:.85;font-size:13px;font-weight:700">${esc(DAY_FULL[wd].replace(/^./, m => m.toUpperCase()))} · ${L('lekcja', 'lesson')} ${l.nr}</div>
+          <h1 style="margin:4px 0 2px">${esc(l.name)}</h1><div style="font-weight:600">${esc(l.start)} – ${esc(l.end)}${l.room ? L(' · sala ', ' · room ') + esc(l.room) : ''}</div></div>
         ${t ? `<div class="kv"><span>Nauczyciel</span><span>${esc(t)}</span></div>` : ''}
         ${l.note ? `<div class="kv"><span>Sprawdzian / notatka</span><span style="color:var(--warn)">${esc(l.note)}</span></div>` : ''}
         <div class="chips" style="margin-top:14px"><a class="chip" href="${esc(l.href)}">${I('layers')}Strona przedmiotu</a>
@@ -2000,7 +2056,7 @@
       }).filter(Boolean);
       const hw = feed.filter(f => f.kind === 'hw').map(f => { const d = parseDate(f.due);
         return d && d > new Date() ? { title: f.title, subject: prettySubj(f.subject || ''), due: ymdS(d) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes()) } : null; }).filter(Boolean);
-      native({ type: 'plan', v: 1, days, exams: ex, free: freeDays || [], hw, me: loadSettings().nick || firstName, updated: Date.now() });
+      native({ type: 'plan', v: 1, days, exams: ex, free: freeDays || [], hw, me: loadSettings().nick || firstName, lang: LANG, updated: Date.now() });
       native(notifyPrefs(loadSettings()));
     }
 
@@ -2189,7 +2245,7 @@
         const overall = nums.length ? fmtAvg(nums.reduce((a, r) => a + r.score, 0) / nums.length) : null;
         main.innerHTML = `
           ${withMarks.length ? `<div class="card row" style="gap:14px;margin-bottom:14px">
-            <div class="grow"><div class="lbl">Podsumowanie</div><div class="b" style="font-size:17px">${total} ${plural(total, 'ocena', 'oceny', 'ocen')} z ${withMarks.length} ${plural(withMarks.length, 'przedmiotu', 'przedmiotów', 'przedmiotów')}</div></div>
+            <div class="grow"><div class="lbl">Podsumowanie</div><div class="b" style="font-size:17px">${total} ${plural(total, 'ocena', 'oceny', 'ocen')} ${L('z', 'in')} ${withMarks.length} ${plural(withMarks.length, 'przedmiotu', 'przedmiotów', 'przedmiotów')}</div></div>
             ${overall ? `<div style="text-align:right"><div class="b" style="font-size:24px">${overall}</div><div class="muted small">średnia ogólna</div></div>` : ''}</div>` : ''}
           <div class="seg" id="gv"><button data-v="subj" class="${view === 'subj' ? 'on' : ''}">Przedmioty</button><button data-v="list" class="${view === 'list' ? 'on' : ''}">Wszystkie oceny</button></div>
           <div class="search">${I('search', 'sm')}<input id="gq" type="search" placeholder="Szukaj przedmiotu lub oceny" autocomplete="off"></div>
@@ -2246,7 +2302,7 @@
         });
       });
     });
-    const code = s => /uspraw/i.test(s) ? ['u', 'U'] : /nieobec/i.test(s) ? ['nb', 'NB'] : /spóź/i.test(s) ? ['sp', 'SP'] : /obec/i.test(s) ? ['ob', 'OB'] : ['', s.slice(0, 2).toUpperCase()];
+    const code = s => /uspraw/i.test(s) ? ['u', ST.u] : /nieobec/i.test(s) ? ['nb', ST.nb] : /spóź/i.test(s) ? ['sp', ST.sp] : /obec/i.test(s) ? ['ob', ST.ob] : ['', s.slice(0, 2).toUpperCase()];
     const dayKeys = Object.keys(days).filter(Boolean).sort().reverse();
 
     let psort = store.get('skPresSort') || 'worst', pday = 'all';
@@ -2258,8 +2314,8 @@
         <div class="row"><div class="grow b clip">${esc(prettySubj(s.name))}</div>
         <span class="pill ${s.ob.pct >= 85 ? 'good' : s.ob.pct >= 70 ? 'warn' : 'bad'}">${s.ob.pct != null ? Math.round(s.ob.pct) + '%' : '–'}</span></div>
         <div class="meter"><i style="width:${s.ob.pct || 0}%"></i></div>
-        <div class="muted small" style="margin-top:6px">${s.ob.n}/${s.ob.of || 0} obecności${s.nb.n ? ` · ${s.nb.n} nb` : ''}${s.nb.just ? ` (${s.nb.just} uspr.)` : ''}${s.sp.n ? ` · ${s.sp.n} spóźn.` : ''}${
-          s.ob.of && s.ob.pct != null && s.ob.pct < 50 ? ' · <b style="color:var(--bad)">uwaga: poniżej 50%</b>' : ''}</div></a>`).join('');
+        <div class="muted small" style="margin-top:6px">${s.ob.n}/${s.ob.of || 0} ${L('obecności', 'present')}${s.nb.n ? ` · ${s.nb.n} ${L('nb', 'absent')}` : ''}${s.nb.just ? ` (${s.nb.just} ${L('uspr.', 'excused')})` : ''}${s.sp.n ? ` · ${s.sp.n} ${L('spóźn.', 'late')}` : ''}${
+          s.ob.of && s.ob.pct != null && s.ob.pct < 50 ? ` · <b style="color:var(--bad)">${L('uwaga: poniżej 50%', 'warning: below 50%')}</b>` : ''}</div></a>`).join('');
     }
     function daysHTML() {
       const keys = pday === 'all' ? dayKeys.slice(0, 14) : dayKeys;
@@ -2280,12 +2336,12 @@
         const p = total && total.ob.pct != null ? total.ob.pct : null;
         main.innerHTML = `
           ${total ? `<div class="card row" style="gap:18px;padding:18px">
-            <div class="ring" data-p="${p || 0}" style="--p:${p || 0}"><div><div><b>${p != null ? Math.round(p) + '%' : '–'}</b><span>obecności</span></div></div></div>
+            <div class="ring" data-p="${p || 0}" style="--p:${p || 0}"><div><div><b>${p != null ? Math.round(p) + '%' : '–'}</b><span>${L('obecności', 'present')}</span></div></div></div>
             <div class="stats">
-              <div class="stat"><span class="muted">Obecności</span><b>${total.ob.n}</b></div>
-              <div class="stat"><span class="muted">Nieobecności</span><b style="color:var(--bad)">${total.nb.n}</b></div>
-              ${total.nb.just ? `<div class="stat"><span class="muted">usprawiedl.</span><b>${total.nb.just}</b></div>` : ''}
-              <div class="stat"><span class="muted">Spóźnienia</span><b style="color:var(--warn)">${total.sp.n}</b></div>
+              <div class="stat"><span class="muted">${L('Obecności', 'Present')}</span><b>${total.ob.n}</b></div>
+              <div class="stat"><span class="muted">${L('Nieobecności', 'Absent')}</span><b style="color:var(--bad)">${total.nb.n}</b></div>
+              ${total.nb.just ? `<div class="stat"><span class="muted">${L('usprawiedl.', 'excused')}</span><b>${total.nb.just}</b></div>` : ''}
+              <div class="stat"><span class="muted">${L('Spóźnienia', 'Late')}</span><b style="color:var(--warn)">${total.sp.n}</b></div>
             </div></div>` : ''}
           ${subj.length ? `<div class="sec"><h2>Przedmioty</h2></div>${chipRow('ps', [{ v: 'worst', label: 'Najniższa' }, { v: 'best', label: 'Najwyższa' }, { v: 'az', label: 'A–Z' }], psort)}<div id="plist">${subjHTML()}</div>` : ''}
           ${dayKeys.length ? `<div class="sec"><h2>Ostatnie dni</h2></div>${chipRow('pd', [{ v: 'all', label: 'Wszystko' }, { v: 'nb', label: 'Nieobecności', n: cnt('nb') }, { v: 'sp', label: 'Spóźnienia', n: cnt('sp') }, { v: 'u', label: 'Usprawiedliwione', n: cnt('u') }].filter(o => o.n !== 0), pday)}<div id="pdays">${daysHTML()}</div>` : ''}`;
@@ -2441,11 +2497,11 @@
       if (i.due) {
         const hours = (i.due - now) / 3600000;
         pill = hours < 0 ? '<span class="pill">zakończone</span>'
-          : `<span class="pill ${hours < 48 ? 'bad' : hours < 120 ? 'warn' : 'good'}">${esc(relTime(i.due) === 'dziś' ? 'dziś ' + hhmm(i.due) : relTime(i.due))}</span>`;
+          : `<span class="pill ${hours < 48 ? 'bad' : hours < 120 ? 'warn' : 'good'}">${esc(relTime(i.due) === TODAY ? TODAY + ' ' + hhmm(i.due) : relTime(i.due))}</span>`;
       }
       return `<a class="box tap" href="${esc(i.href)}" style="margin-bottom:10px"><div class="in">
         <div class="row" style="align-items:flex-start"><div class="grow ttl">${esc(i.title)}</div>${pill}</div>
-        <div class="sub">${i.due ? 'Termin: ' + esc(shortDate(i.due) + ', ' + hhmm(i.due)) : 'Dodano ' + esc(shortDate(i.created))}</div></div>
+        <div class="sub">${i.due ? L('Termin: ', 'Due: ') + esc(shortDate(i.due) + ', ' + hhmm(i.due)) : L('Dodano ', 'Added ') + esc(shortDate(i.created))}</div></div>
         <div class="strip" style="--c:${subjColor(i.subject)}"><span>${esc(prettySubj(i.subject))}</span></div></a>`;
     };
     const ended = items.filter(i => i.due && i.due < now);
@@ -2537,8 +2593,8 @@
             return g.note ? `<details><summary>${box}</summary><div class="note" style="margin:0 0 10px">${g.note}</div></details>` : box;
           }).join('') : '<div class="card muted">Brak ocen</div>'}
           ${pres.length ? `<div class="sec"><h2>Obecności</h2>${seeMore(pm) ? `<a href="${esc(seeMore(pm))}">Wszystkie</a>` : ''}</div>
-            <div class="card row"><div class="grow">Ostatnie ${pres.length} lekcji</div>
-            <span class="pill good">${presOk} ob.</span>${pres.length - presOk ? `<span class="pill bad">${pres.length - presOk} nb.</span>` : ''}</div>` : ''}
+            <div class="card row"><div class="grow">${L(`Ostatnie ${pres.length} lekcji`, `Last ${pres.length} lessons`)}</div>
+            <span class="pill good">${presOk} ${L('ob.', 'present')}</span>${pres.length - presOk ? `<span class="pill bad">${pres.length - presOk} ${L('nb.', 'absent')}</span>` : ''}</div>` : ''}
           ${anns.length ? `<div class="sec"><h2>Ogłoszenia</h2></div>` + list(anns, a => line('bell', a.n, a.date, a.h, a.unread ? '<span class="pill new">NOWE</span>' : I('right', 'sm chev'))) : ''}
           ${hws.length ? `<div class="sec"><h2>Zadania domowe</h2></div>` + list(hws, h => line('edit', h.n, h.date, h.h, I('right', 'sm chev'))) : ''}
           ${topics.length ? `<div class="sec"><h2>Tematy lekcji</h2>${seeMore(tm) ? `<a href="${esc(seeMore(tm))}">Wszystkie</a>` : ''}</div>` +
@@ -2615,8 +2671,8 @@
     const crumbs = txt($('#breadcrumbs')).replace(/^Jesteś tutaj:\s*/, '').split('>').map(x => x.trim()).filter(Boolean);
     const title = crumbs[crumbs.length - 1] || 'IDU';
     const subjFromCrumbs = crumbs.length >= 3 && !/^(I |II |III |IV )/.test(crumbs[crumbs.length - 2]) ? crumbs[crumbs.length - 2] : '';
-    const statusOf = s => /uspraw/i.test(s) ? ['u', 'U', 'Usprawiedliwione'] : /nieobec/i.test(s) ? ['nb', 'NB', 'Nieobecność']
-      : /spóź/i.test(s) ? ['sp', 'SP', 'Spóźnienie'] : /^obec/i.test(s) ? ['ob', 'OB', 'Obecność'] : null;
+    const statusOf = s => /uspraw/i.test(s) ? ['u', ST.u, 'Usprawiedliwione'] : /nieobec/i.test(s) ? ['nb', ST.nb, 'Nieobecność']
+      : /spóź/i.test(s) ? ['sp', ST.sp, 'Spóźnienie'] : /^obec/i.test(s) ? ['ob', ST.ob, 'Obecność'] : null;
 
     const sections = $$('#content .module').map((m, mi) => {
       const h = cleanTitle(txt($('h3', m))).replace(/:$/, '') || (mi ? 'Wszystkie' : '');
@@ -2682,12 +2738,12 @@
       render(main, root) {
         main.innerHTML = `
           ${allStatus && total ? `<div class="card row" style="gap:18px;padding:18px">
-            <div class="ring" data-p="${Math.round(100 * (counts.ob + counts.sp) / total)}"><div><div><b>${Math.round(100 * (counts.ob + counts.sp) / total)}%</b><span>obecności</span></div></div></div>
+            <div class="ring" data-p="${Math.round(100 * (counts.ob + counts.sp) / total)}"><div><div><b>${Math.round(100 * (counts.ob + counts.sp) / total)}%</b><span>${L('obecności', 'present')}</span></div></div></div>
             <div class="stats">
-              <div class="stat"><span class="muted">Obecności</span><b>${counts.ob}</b></div>
-              <div class="stat"><span class="muted">Nieobecności</span><b style="color:var(--bad)">${counts.nb}</b></div>
-              ${counts.u ? `<div class="stat"><span class="muted">Usprawiedl.</span><b style="color:var(--accent)">${counts.u}</b></div>` : ''}
-              <div class="stat"><span class="muted">Spóźnienia</span><b style="color:var(--warn)">${counts.sp}</b></div>
+              <div class="stat"><span class="muted">${L('Obecności', 'Present')}</span><b>${counts.ob}</b></div>
+              <div class="stat"><span class="muted">${L('Nieobecności', 'Absent')}</span><b style="color:var(--bad)">${counts.nb}</b></div>
+              ${counts.u ? `<div class="stat"><span class="muted">${L('Usprawiedl.', 'Excused')}</span><b style="color:var(--accent)">${counts.u}</b></div>` : ''}
+              <div class="stat"><span class="muted">${L('Spóźnienia', 'Late')}</span><b style="color:var(--warn)">${counts.sp}</b></div>
             </div></div>` : ''}
           ${!allStatus && allEvs.length > 5 ? `<div class="search">${I('search', 'sm')}<input id="eq" type="search" placeholder="Szukaj" autocomplete="off"></div>` : ''}
           ${filterOpts.length > 1 ? `<div style="margin-top:${allStatus ? 14 : 0}px">${chipRow('ef', filterOpts, ef)}</div>` : ''}
@@ -2723,7 +2779,8 @@
    * ------------------------------------------------------------------ */
   function calendarPage(ctx) {
     const url = attr($('#calendar'), 'data-events-url') || '/calendar_events.json';
-    const MONTHS_FULL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+    const MONTHS_FULL = EN ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      : ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
     const ymd = s => { const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/); return m ? new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null; };
     const key = d => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
     const cache = {};
@@ -2755,7 +2812,7 @@
     function when(e) {
       if (e.timed) return `${shortDate(e.start)}, ${hhmm(e.start)}${e.end ? '–' + hhmm(e.end) : ''}`;
       if (e.end && dayStart(e.end) > dayStart(e.start)) return `${shortDate(e.start)} – ${shortDate(e.end)}`;
-      return shortDate(e.start) + ' · cały dzień';
+      return shortDate(e.start) + L(' · cały dzień', ' · all day');
     }
     function evCard(e, i) {
       return `<div class="card evc tap" data-i="${i}" style="--c:${e.color}"><div class="bar"></div><div class="in">
@@ -2792,7 +2849,7 @@
               <button class="today-btn" id="ct">Dziś</button>
               <button class="iconbtn" id="cp" aria-label="Poprzedni">${I('back', 'sm')}</button>
               <button class="iconbtn" id="cn" aria-label="Następny">${I('right', 'sm')}</button></div>
-            <div class="cal" id="cal"><div class="wd">${['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'].map(x => `<span>${x}</span>`).join('')}</div>
+            <div class="cal" id="cal"><div class="wd">${(EN ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd']).map(x => `<span>${x}</span>`).join('')}</div>
               <div class="days7 ${dir === 1 ? 'slideL' : dir === -1 ? 'slideR' : ''}">${cells}</div></div>
             <div style="margin-top:12px">${chipRow('cf', [{ v: 'all', label: 'Wszystko' }, { v: 'exam', label: 'Sprawdziany' }, { v: 'event', label: 'Wydarzenia' }], cf)}</div>
             <div class="sec"><h2>${esc(+sel === +today ? 'Dziś' : DAY_FULL[sel.getDay()].replace(/^./, m => m.toUpperCase()) + ', ' + shortDate(sel))}</h2></div>
@@ -3021,13 +3078,13 @@
         const hours = due ? (due - now) / 3600000 : null;
         main.innerHTML = `<div class="hero" style="--c:${subjColor(subj || title)}"><div style="opacity:.85;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${esc(prettySubj(subj) || 'Zadanie')}</div>
             <h1 style="margin-top:4px">${esc(title)}</h1>
-            ${due ? `<div style="font-weight:600">Termin: ${esc(shortDate(due) + ', ' + hhmm(due))} · ${esc(hours < 0 ? 'zakończone' : relTime(due))}</div>` : ''}</div>
+            ${due ? `<div style="font-weight:600">${L('Termin', 'Due')}: ${esc(shortDate(due) + ', ' + hhmm(due))} · ${esc(hours < 0 ? L('zakończone', 'closed') : relTime(due))}</div>` : ''}</div>
           ${desc ? `<div class="sec"><h2>Opis</h2></div><div class="article"><div class="mbody">${desc}</div></div>` : ''}
           <div class="sec"><h2>Twoje pliki</h2></div>
           <div class="card" style="padding:4px 14px">${files.length ? files.map(f => `<a class="frow" href="${esc(f.h)}"><div style="color:var(--accent)">${I('file', 'sm')}</div><div class="grow clip">${esc(f.t)}</div>${I('down', 'sm chev')}</a>`).join('')
             : '<div class="muted" style="padding:10px 0">Nie wysłano jeszcze plików</div>'}</div>
           ${add && (hours == null || hours >= 0) ? `<a class="btn-p" href="${esc(attr(add, 'href'))}">${I('plus', 'sm')}Dodaj plik</a>` : ''}
-          ${created ? `<div class="muted small" style="text-align:center;margin-top:14px">Utworzono ${esc(created)}</div>` : ''}`;
+          ${created ? `<div class="muted small" style="text-align:center;margin-top:14px">${L('Utworzono', 'Created')} ${esc(created)}</div>` : ''}`;
       }
     };
   }
@@ -3082,7 +3139,7 @@
       render(main) {
         main.innerHTML = `<div class="phero">${PERSON_AV}<h1>${esc(name)}</h1>
             <div class="chips" style="justify-content:center;margin-top:6px">
-              ${klass ? `<a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}Klasa ${esc(txt(klass))}</a>` : ''}
+              ${klass ? `<a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}${L('Klasa', 'Class')} ${esc(txt(klass))}</a>` : ''}
               ${year ? `<span class="chip">${I('clock')}${esc(year)}</span>` : ''}</div></div>
           ${tutor ? `<div class="sec"><h2>Wychowawca</h2></div><a class="card row tap" href="${esc(attr(tutor, 'href'))}">
             <div class="av" style="background:${subjColor(txt(tutor))}">${esc(initials(txt(tutor)))}</div><div class="grow b">${esc(txt(tutor))}</div>${I('right', 'sm chev')}</a>` : ''}
@@ -3096,7 +3153,7 @@
           ${marks.length ? `<div class="sec"><h2>Ostatnie oceny</h2><a href="${esc(ctx.student)}/grades">Wszystkie</a></div>` + marks.map(m =>
             `<div class="gbox" style="--c:${subjColor(m.subject)};margin-bottom:8px"><div class="v">${gradeShort(m.v)}</div><div class="meta"><b>${esc(prettySubj(m.subject))}</b><span class="two">${esc(m.d)} · ${esc(m.date)}</span></div></div>`).join('') : ''}
           ${pres.length ? `<div class="sec"><h2>Ostatnie obecności</h2><a href="${esc(ctx.student)}/presences">Wszystkie</a></div><div class="card" style="padding:2px 14px">${pres.map(p =>
-            `<div class="frow"><div class="st ${p.ok ? 'ob' : /spóź/i.test(p.name) ? 'sp' : /uspraw/i.test(p.name) ? 'u' : 'nb'}">${p.ok ? 'OB' : /spóź/i.test(p.name) ? 'SP' : /uspraw/i.test(p.name) ? 'U' : 'NB'}</div>
+            `<div class="frow"><div class="st ${p.ok ? 'ob' : /spóź/i.test(p.name) ? 'sp' : /uspraw/i.test(p.name) ? 'u' : 'nb'}">${p.ok ? ST.ob : /spóź/i.test(p.name) ? ST.sp : /uspraw/i.test(p.name) ? ST.u : ST.nb}</div>
             <div class="grow clip">${esc(prettySubj(p.subject))}</div><span class="muted small">${esc(p.date)}</span></div>`).join('')}</div>` : ''}
           ${isMe && edit ? `<div class="chips" style="justify-content:center;margin-top:16px"><a class="chip" href="${esc(attr(edit, 'href'))}">${I('edit')}Edytuj profil</a></div>` : ''}`;
       }
@@ -3115,7 +3172,7 @@
     const students = $$('ul.students li .name a').map(a => ({ n: txt(a), h: attr(a, 'href'), me: attr(a, 'href') === ctx.student }));
     const plan = $$('#content a').find(a => /lesson_plan/.test(attr(a, 'href')));
     return {
-      title: 'Klasa ' + name, tab: '', top: false,
+      title: L('Klasa ', 'Class ') + name, tab: '', top: false,
       render(main) {
         main.innerHTML = `<div class="hero" style="--c:${subjColor(name)}"><div style="opacity:.85;font-size:13px;font-weight:700">KLASA</div>
             <h1 style="margin:2px 0 4px">${esc(name)}</h1><div style="font-weight:600">${esc(year)} · ${students.length} ${plural(students.length, 'uczeń', 'uczniów', 'uczniów')}</div></div>
@@ -3221,7 +3278,7 @@
         return `<a class="card les tap ${st}" href="${esc(l.href)}" style="--c:${subjColor(l.raw)}"><div class="bar"></div><div class="in">
           <div class="tm">${esc(l.start)}<br>${esc(l.end)}</div>
           <div class="grow"><div class="b clip">${esc(l.name)} ${st === 'cur' ? '<span class="pill good">TERAZ</span>' : ''}</div>
-          <div class="muted small clip">Lekcja ${l.nr}${meta(l) ? ' · ' + meta(l) : ''}</div></div>
+          <div class="muted small clip">${L('Lekcja', 'Lesson')} ${l.nr}${meta(l) ? ' · ' + meta(l) : ''}</div></div>
           ${opts.room && l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div></a>`;
       }).join('');
     }
@@ -3302,8 +3359,8 @@
       render(main, root) {
         const d = new Date(), n = d.getHours() * 60 + d.getMinutes(), ls = (plan[d.getDay()] || []).slice().sort((a, b) => a.nr - b.nr);
         const cur = ls.find(l => n >= mins(l.start) && n <= mins(l.end)), nxt = ls.find(l => mins(l.start) > n);
-        const status = cur ? `Teraz: ${esc(cur.name)}${cur.klass ? ' · ' + esc(cur.klass) : ''} (do ${esc(cur.end)})`
-          : nxt ? `Następna lekcja: ${esc(nxt.name)} o ${esc(nxt.start)}` : ls.length ? 'Na dziś już wolna' : 'Dziś bez zajęć';
+        const status = cur ? `${L('Teraz', 'Now')}: ${esc(cur.name)}${cur.klass ? ' · ' + esc(cur.klass) : ''} (${L('do', 'until')} ${esc(cur.end)})`
+          : nxt ? `${L('Następna lekcja', 'Next lesson')}: ${esc(nxt.name)} ${L('o', 'at')} ${esc(nxt.start)}` : ls.length ? L('Na dziś już wolna', 'Free for the rest of today') : L('Dziś bez zajęć', 'No lessons today');
         main.innerHTML = `<div class="hero" style="--c:${subjColor('sala ' + name)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">SALA</div>
             <h1 style="margin:2px 0 6px">${esc(name)}</h1><div class="row" style="gap:8px;font-weight:600">${I(cur || nxt ? 'clock' : 'check', 'sm')}<span>${status}</span></div></div>
           ${fields.length ? `<div class="card kvcard" style="margin-top:10px">${fields.map(f => `<div class="kv"><span>${esc(f.k)}</span><span>${esc(f.v)}</span></div>`).join('')}</div>` : ''}
@@ -3501,7 +3558,7 @@
       title: 'Szukaj na forum', tab: '', top: false,
       render(main, root) {
         main.innerHTML = `<form class="search" id="fs">${I('search', 'sm')}<input id="fq" type="search" enterkeyhint="search" placeholder="Szukane wyrażenie" value="${esc(q)}" autocomplete="off"></form>
-          ${q ? `<p class="lead">${results.length ? `${results.length} ${plural(results.length, 'wynik', 'wyniki', 'wyników')} dla „${esc(q)}”` : `Brak wyników dla „${esc(q)}”`}</p>` : '<div class="empty">' + I('chat', 'big') + '<div>Wpisz słowo i naciśnij Enter</div></div>'}
+          ${q ? `<p class="lead">${results.length ? `${results.length} ${plural(results.length, 'wynik', 'wyniki', 'wyników')} ${L('dla', 'for')} „${esc(q)}”` : `${L('Brak wyników dla', 'No results for')} „${esc(q)}”`}</p>` : '<div class="empty">' + I('chat', 'big') + '<div>Wpisz słowo i naciśnij Enter</div></div>'}
           ${results.map(r => `<a class="card tap" href="${esc(r.href || '#')}">
             <div class="row" style="gap:10px"><div class="av" style="width:34px;height:34px;font-size:13px;background:${subjColor(r.who)}">${esc(initials(r.who))}</div>
               <div class="grow"><div class="b clip">${esc(r.who)}</div><div class="muted small clip">${esc(r.cls ? r.cls + ' · ' : '')}${esc(r.date ? shortDate(r.date) + ' ' + r.date.getFullYear() : r.dateS)}</div></div>${I('right', 'sm chev')}</div>
@@ -3600,7 +3657,7 @@
       render(main) {
         main.innerHTML = `<div class="hero" style="--c:${subjColor(subj || topic)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">${esc((prettySubj(subj) || 'Lekcja').toUpperCase())}</div>
             <h1 style="margin:4px 0 8px;font-size:24px">${esc(topic)}</h1>
-            <div class="row" style="gap:8px;font-weight:600">${I('clock', 'sm')}<span>${d ? esc(DAY_FULL[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + shortDate(d) + ' ' + d.getFullYear()) : ''}${nr ? ' · lekcja ' + esc(nr) : ''}${time ? ' · ' + esc(time) : ''}</span></div></div>
+            <div class="row" style="gap:8px;font-weight:600">${I('clock', 'sm')}<span>${d ? esc(DAY_FULL[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + shortDate(d) + ' ' + d.getFullYear()) : ''}${nr ? L(' · lekcja ', ' · lesson ') + esc(nr) : ''}${time ? ' · ' + esc(time) : ''}</span></div></div>
           <div class="sec"><h2>Opis</h2></div>
           ${desc ? `<div class="article"><div class="mbody">${desc}</div></div>` : '<div class="card muted" style="text-align:center">Nauczyciel nie dodał opisu</div>'}
           <div class="chips">${allA ? `<a class="chip" href="${esc(attr(allA, 'href'))}">${I('book')}Wszystkie tematy</a>` : ''}
@@ -3727,6 +3784,123 @@
       }, 280);
     };
   }
+
+  /* ------------------------------------------------------------------ *
+   *  English words for the app (Polish → English)
+   * ------------------------------------------------------------------ */
+  const TR_EN = {
+    // bottom bar, menu, titles
+    'Start': 'Home', 'Oceny': 'Grades', 'Plan': 'Timetable', 'Wiadomości': 'Messages', 'Frekwencja': 'Attendance', 'Plan lekcji': 'Timetable',
+    'Zadania domowe': 'Homework', 'Zadania': 'Homework', 'Przedmioty': 'Subjects', 'Ogłoszenia': 'Announcements', 'Aktualności': 'News',
+    'Kalendarz': 'Calendar', 'Dokumenty': 'Documents', 'Szukaj osób': 'Find people', 'Ustawienia': 'Settings', 'Klasyczny widok IDU': 'Classic IDU view',
+    'Wyloguj': 'Log out', 'Mój profil': 'My profile', 'Wstecz': 'Back', 'Profil': 'Profile', 'Hol szkolny': 'Home',
+    // start
+    'Co nowego': "What's new", 'Odśwież': 'Refresh', 'Nadchodzące': 'Upcoming', 'Sprawdziany': 'Tests', 'Do potwierdzenia': 'Needs your confirmation',
+    'Wszystko': 'All', 'Dodano ocenę': 'New grade', 'Zadanie domowe': 'Homework', 'Ogłoszenie': 'Announcement', 'Aktualność': 'News', 'NOWE': 'NEW',
+    'Nic tutaj': 'Nothing here', 'TERAZ': 'NOW', 'Teraz': 'Now', 'Dziś': 'Today', 'Wczoraj': 'Yesterday', 'Jutro': 'Tomorrow',
+    // timetable
+    'Dzień': 'Day', 'Tydzień': 'Week', 'Brak lekcji': 'No lessons', 'Brak planu': 'No timetable', 'Dzień wolny': 'Day off', 'Wydarzenie': 'Event',
+    'Sprawdzian': 'Test', 'Wydarzenia': 'Events', 'Sprawdzam sprawdziany i wydarzenia…': 'Checking tests and events…',
+    'Według kalendarza to dzień wolny — lekcje niżej mogą się nie odbyć.': 'The calendar says this is a day off — the lessons below may not take place.',
+    'Nauczyciel': 'Teacher', 'Sprawdzian / notatka': 'Test / note', 'Strona przedmiotu': 'Subject page', 'Otwórz': 'Open', 'Tematy': 'Topics',
+    'Obecności': 'Attendance', 'Forum klasowe': 'Class forum', 'Szukaj przedmiotu': 'Search subjects', 'Poprzedni tydzień': 'Previous week',
+    'Następny tydzień': 'Next week', 'Poprzedni': 'Previous', 'Następny': 'Next', 'Plan sali': 'Room timetable', 'Pełny plan': 'Full timetable',
+    'Plan ucznia': 'Student timetable', 'Plan nauczyciela': 'Teacher timetable', 'Plan klasy': 'Class timetable', 'Plan przedmiotu': 'Subject timetable',
+    'SALA': 'ROOM', 'Plan do druku': 'Printable timetable',
+    // grades
+    'Podsumowanie': 'Summary', 'średnia ogólna': 'overall average', 'Wszystkie oceny': 'All grades', 'Szukaj przedmiotu lub oceny': 'Search subject or grade',
+    'Najnowsze': 'Newest', 'Najlepsze': 'Best', 'Najsłabsze': 'Weakest', 'Bez ocen': 'No grades', 'średnia': 'average', 'średnio': 'average',
+    'punkty': 'points', 'bez średniej': 'no average', 'Brak wyników': 'No results', 'Brak ocen': 'No grades', 'Twoje oceny': 'Your grades',
+    // attendance
+    'Nieobecności': 'Absences', 'Spóźnienia': 'Late', 'Najniższa': 'Lowest', 'Najwyższa': 'Highest', 'Ostatnie dni': 'Recent days',
+    'Nieobecność': 'Absence', 'Obecność': 'Present', 'Spóźnienie': 'Late', 'Usprawiedliwione': 'Excused', 'Brak wpisów': 'No entries',
+    // messages
+    'Odebrane': 'Inbox', 'Wysłane': 'Sent', 'Robocze': 'Drafts', 'Kosz': 'Trash', 'Szukaj (Enter = we wszystkich)': 'Search (Enter = all messages)',
+    'Wszystkie': 'All', 'Nieprzeczytane': 'Unread', 'Ostatni tydzień': 'Last week', 'Ten miesiąc': 'This month', 'Starsze': 'Older', 'Nowsze': 'Newer',
+    'Brak wiadomości': 'No messages', 'Brak wyników na tej stronie — naciśnij Enter, aby szukać we wszystkich wiadomościach': 'Nothing on this page — press Enter to search all messages',
+    'Nowa wiadomość': 'New message', 'Wiadomość': 'Message', 'Napisz odpowiedź…': 'Write a reply…', 'Wyślij': 'Send', 'Wysyłanie…': 'Sending…',
+    'Nie udało się – spróbuj ponownie': 'Failed – try again', 'Nie udało się — spróbuj ponownie': 'Failed — try again', 'Wysłano': 'Sent',
+    'Wiadomości wysłane': 'Sent messages', 'Skrzynka robocza': 'Drafts', 'Wiadomości usunięte': 'Deleted messages',
+    // compose
+    'Do': 'To', 'Temat': 'Subject', 'Treść wiadomości': 'Message', 'Wyślij kopię na mój e-mail': 'Send a copy to my e-mail', 'Zapisz': 'Save',
+    'Wpisz co najmniej 3 litery imienia lub nazwiska, aby znaleźć odbiorcę.': 'Type at least 3 letters of a name to find a recipient.',
+    'Wpisz imię lub nazwisko': 'Type a name', 'Dodaj…': 'Add…', 'Szukam…': 'Searching…', 'Nikogo nie znaleziono': 'No one found',
+    'Nie udało się wyszukać': 'Search failed', 'Dodaj odbiorcę': 'Add a recipient', 'Napisz treść wiadomości': 'Write your message',
+    'Zapisywanie…': 'Saving…', 'Wiadomość wysłana': 'Message sent', 'Zapisano w szkicach': 'Saved to drafts', 'IDU nie przyjęło wiadomości': 'IDU did not accept the message',
+    'Szkic': 'Draft', 'Usuń': 'Remove', 'nauczyciel': 'teacher', 'rodzic': 'parent', 'uczeń': 'student',
+    // homework
+    'Szukaj zadania lub przedmiotu': 'Search homework or subject', 'Do zrobienia': 'To do', 'Bez terminu': 'No deadline', 'Zakończone': 'Closed',
+    'zakończone': 'closed', 'Nic do zrobienia': 'Nothing to do', 'Brak zadań': 'No homework', 'Brak zadań domowych': 'No homework', 'bez terminu': 'no deadline',
+    'Twoje pliki': 'Your files', 'Nie wysłano jeszcze plików': 'No files sent yet', 'Dodaj plik': 'Add file', 'Opis': 'Description',
+    'ZADANIE DOMOWE': 'HOMEWORK', 'Wyślij plik': 'Send file', 'Zdjęcie, PDF, dokument… Nauczyciel zobaczy go przy zadaniu.': 'Photo, PDF, document… Your teacher will see it with the homework.',
+    'Wybierz plik': 'Choose a file', 'Dotknij, aby wybrać z telefonu': 'Tap to pick one from your phone', 'Wróć do zadania': 'Back to the homework',
+    'Plik wysłany': 'File sent', 'Nie udało się wysłać pliku': 'Could not send the file',
+    // subject, topics, lesson
+    'Tematy lekcji': 'Lesson topics', 'Pliki': 'Files', 'Pobierz Excel': 'Download Excel', 'Szukaj tematu': 'Search topics', 'Brak tematów': 'No topics',
+    'Nauczyciel nie dodał opisu': 'No description added', 'Wszystkie tematy': 'All topics', 'Lekcja': 'Lesson',
+    // events, calendar
+    'Szukaj': 'Search', 'Nowe': 'New', 'Brak wydarzeń': 'No events', 'Ładowanie…': 'Loading…', 'Ładowanie kalendarza…': 'Loading calendar…',
+    'Nie udało się wczytać szczegółów.': 'Could not load the details.', 'Dodane przez': 'Added by', 'WYDARZENIE': 'EVENT', 'Ogłoszenia przedmiotowe': 'Subject announcements',
+    // forum
+    'Szukaj na forum': 'Search the forum', 'Wątki': 'Threads', 'Komentarze': 'Comments', 'Posty': 'Posts', 'Brak komentarzy': 'No comments',
+    'Brak postów. Napisz pierwszy!': 'No posts yet. Write the first one!', 'Dodaj komentarz…': 'Add a comment…', 'Dodaj komentarz': 'Add comment',
+    'Odpowiedz': 'Reply', 'Załączniki': 'Attachments', 'Dodano komentarz': 'Comment added', 'Opublikowano': 'Posted', 'Szukane wyrażenie': 'Search phrase',
+    'Wpisz słowo i naciśnij Enter': 'Type a word and press Enter', 'Fora klasowe': 'Class forums', 'Fora przedmiotowe': 'Subject forums',
+    'Forum ogólne': 'General forum', 'Nowy temat': 'New topic', 'Wyszukaj': 'Search', 'Wyszukiwarka': 'Search', 'zobacz więcej wątków': 'see more threads',
+    // documents, files
+    'Szukaj dokumentu': 'Search documents', 'Brak dokumentów': 'No documents', 'Pobierz': 'Download', 'Pokaż': 'Show', 'Dokument': 'Document',
+    'Otwórz plik': 'Open file', 'Wszystkie dokumenty': 'All documents', 'Szukaj pliku': 'Search files', 'Brak plików': 'No files', 'Otwieram plik…': 'Opening file…',
+    // profile, class, people
+    'Wychowawca': 'Form tutor', 'Wychowawcy': 'Form tutors', 'Rodzice / opiekunowie': 'Parents / guardians', 'Dane osobowe': 'Personal data',
+    'Pokaż dane (adres, PESEL, telefon…)': 'Show data (address, PESEL, phone…)', 'Ostatnie oceny': 'Recent grades', 'Ostatnie obecności': 'Recent attendance',
+    'Edytuj profil': 'Edit profile', 'KLASA': 'CLASS', 'Forum klasy': 'Class forum', 'Uczniowie': 'Students', 'Szukaj ucznia': 'Search students', 'TY': 'YOU',
+    'Rodzic / opiekun': 'Parent / guardian', 'Wyślij wiadomość': 'Send a message', 'Kontakt': 'Contact', 'LISTA UCZNIÓW': 'STUDENT LIST',
+    'Prowadzi': 'Teacher', 'Prowadzący': 'Teachers', 'Uczniowie, nauczyciele i rodzice w IDU': 'Students, teachers and parents in IDU',
+    'Imię lub nazwisko (min. 3 litery)': 'First or last name (min. 3 letters)', 'Grupy do których należę': 'My groups', 'Klasy, których jestem wychowawcą': 'Classes I tutor',
+    'Lista nauczycieli': 'Teachers', 'Lista klas': 'Classes', 'Lista sal': 'Rooms', 'Recenzje': 'Reviews', 'Nic tu jeszcze nie ma': 'Nothing here yet',
+    'Ilość miejsc': 'Seats', 'Przystosowana dla osób niepełnosprawnych': 'Wheelchair accessible', 'nie': 'no', 'tak': 'yes',
+    // announcement
+    'Nowe ogłoszenie do potwierdzenia.': 'New announcement to confirm.', 'IDU pokaże resztę dopiero po jego przeczytaniu.': 'IDU will show everything else once you have read it.',
+    'Potwierdzam przeczytanie': 'I have read it', 'Potwierdzanie…': 'Confirming…',
+    // settings
+    'Zmiany działają od razu i zapisują się w apce.': 'Changes apply at once and are saved in the app.', 'Twoje zdjęcie': 'Your photo', 'Wybierz': 'Choose',
+    'Zdjęcie zostaje tylko w tym telefonie — nie jest wysyłane do IDU i nikt inny go nie zobaczy.': 'The photo stays on this phone only — it is never sent to IDU and nobody else sees it.',
+    'Imię w powitaniu': 'Name in the greeting', 'np. Janek': 'e.g. John', 'Wygląd': 'Appearance', 'Motyw': 'Theme', 'Ciemny': 'Dark', 'Czarny (OLED)': 'Black (OLED)',
+    'Granatowy': 'Navy', 'Grafit': 'Graphite', 'Śliwkowy': 'Plum', 'Kolor akcentu': 'Accent colour', 'Kolory przedmiotów': 'Subject colours', 'Żywe': 'Vivid',
+    'Stonowane': 'Muted', 'Jeden kolor': 'One colour', 'Zaokrąglenie': 'Corners', 'Małe': 'Small', 'Średnie': 'Medium', 'Duże': 'Large', 'Gęstość': 'Density',
+    'Kompaktowa': 'Compact', 'Normalna': 'Normal', 'Rozmiar tekstu': 'Text size', 'Czcionka': 'Font', 'Standardowa': 'Standard', 'Zaokrąglona': 'Rounded',
+    'Animacje': 'Animations', 'Efekt szkła (rozmycie)': 'Glass effect (blur)', 'Wibracje przy dotyku': 'Haptic feedback', 'Powiadomienia': 'Notifications',
+    'Przypomnienie przed lekcją': 'Reminder before each lesson', 'Wył.': 'Off', 'Sprawdzian — dzień wcześniej': 'Tests — the day before',
+    'Termin zadania — dzień wcześniej': 'Homework deadlines — the day before', 'Godzina przypomnień „dzień wcześniej”': 'Time of the “day before” reminders',
+    'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Nowych ocen i wiadomości iPhone nie może sprawdzać w tle.':
+      'Reminders are worked out from your timetable and calendar, so they work even when the app is closed. The iPhone cannot check for new grades or messages in the background.',
+    'Powiadomienia działają tylko w aplikacji IDU na iPhonie.': 'Notifications only work in the IDU iPhone app.',
+    'iPhone blokuje powiadomienia dla IDU. Włącz je w Ustawieniach iPhone’a → Powiadomienia → IDU.': 'Your iPhone blocks notifications for IDU. Turn them on in iPhone Settings → Notifications → IDU.',
+    'Widget': 'Widget', 'Następna lekcja i sala': 'Next lesson and room', 'Przytrzymaj palec na ekranie głównym →': 'Touch and hold the Home Screen →',
+    'Edytuj': 'Edit', 'Dodaj widżet': 'Add Widget', 'i wybierz rozmiar.': 'and pick a size.', 'Na ekranie blokady: przytrzymaj go →': 'On the Lock Screen: touch and hold it →',
+    'Dostosuj': 'Customize', 'Ekran blokady': 'Lock Screen', '→ pole widżetów.': '→ widget area.', 'Widget odświeża się, gdy otworzysz Start w apce.': 'The widget updates whenever you open Home in the app.',
+    'Ekran Start': 'Home screen', 'Karta bieżącej lekcji': 'Current lesson card', 'Zadania z bliskim terminem': 'Homework due soon', 'Nadchodzące wydarzenia': 'Upcoming events',
+    'Nawigacja': 'Navigation', 'Po otwarciu apki pokaż': 'Open the app on', 'Plan lekcji domyślnie': 'Timetable opens as', 'Poczta': 'Mail',
+    'Podpisy w dolnym pasku': 'Labels in the tab bar', 'Przywróć domyślne': 'Reset to defaults', 'Zdjęcie zapisane': 'Photo saved',
+    'Nie udało się wczytać zdjęcia': 'Could not load the photo', 'Ten format zdjęcia nie jest obsługiwany': 'This photo format is not supported',
+    'Brak połączenia z IDU': 'No connection to IDU', 'Twoje obecności': 'Your attendance', 'Uczący': 'Teaching', 'Nieuczący': 'Non-teaching',
+    'brak': 'none', 'Moje wypowiedzi na forach': 'My forum posts'
+  };
+  const STATUS_EN = { 'Obecność': 'Present', 'Nieobecność': 'Absence', 'Spóźnienie': 'Late', 'Usprawiedliwione': 'Excused' };
+  const TR_RX = [
+    [/^Sprawdzian: (.+)$/, 'Test: $1'],
+    [/^(\d+) lekcje$/, '$1 lessons'],
+    [/^lekcja (\d+)$/, 'lesson $1'],
+    [/^Komentarze · (\d+)$/, 'Comments · $1'],
+    [/^Posty · (\d+)$/, 'Posts · $1'],
+    [/^(Obecność|Nieobecność|Spóźnienie|Usprawiedliwione) (×\d+)$/, (m, a, b) => STATUS_EN[a] + ' ' + b],
+    [/^(\d+) wątków$/, '$1 threads'],
+    [/^Termin: (.+)$/, 'Due: $1'],
+    [/^Aktualizacja: (.+)$/, 'Update: $1'],
+    [/^Sala (\S{1,8})$/, 'Room $1']
+  ];
+  const MONTH_EN = { sty: 'Jan', lut: 'Feb', mar: 'Mar', kwi: 'Apr', maj: 'May', cze: 'Jun', lip: 'Jul', sie: 'Aug', wrz: 'Sep', 'paź': 'Oct', lis: 'Nov', gru: 'Dec' };
+  const MONTH_RX = /(\d{1,2}) (sty|lut|mar|kwi|maj|cze|lip|sie|wrz|paź|lis|gru)(?=[\s,.)]|$)/g;
 
   /* start (at the very end, so everything above is defined) */
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
