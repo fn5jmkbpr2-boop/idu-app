@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
-// @version     3.0
+// @version     4.0
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // ==/UserScript==
@@ -42,7 +42,13 @@
       box.onclick = () => box.remove();
       document.body.appendChild(box);
     }
-    finally { uncloak(); const early = document.getElementById('sk-early'); if (early) early.remove(); }
+    finally {
+      uncloak();
+      const early = document.getElementById('sk-early'); if (early) early.remove();
+      // the picture shown at launch fades into the live screen
+      const snap = document.getElementById('sk-snap');
+      if (snap) { snap.style.transition = 'opacity .18s ease'; requestAnimationFrame(() => { snap.style.opacity = '0'; }); setTimeout(() => snap.remove(), 260); }
+    }
   }
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -111,49 +117,67 @@
     return s === s.toUpperCase() && s.length > 4 ? s.charAt(0) + s.slice(1).toLowerCase() : s.charAt(0).toUpperCase() + s.slice(1);
   };
   const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
+  // "06 Piwnica Auerbacha" → "06", "27 (gabinet ps2)" → "27", "gimnastyczna" stays
+  const shortRoom = r => { const m = String(r || '').trim().match(/^(\d+[a-z]?)(?=\s|\(|$)/i); return m ? m[1] : String(r || '').trim(); };
   const initials = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
   /* ------------------------------------------------------------------ *
    *  Icons (simple line icons)
    * ------------------------------------------------------------------ */
   const ICONS = {
-    home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-    grades: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
-    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-    mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/>',
-    chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
-    menu: '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
-    back: '<polyline points="15 18 9 12 15 6"/>',
-    right: '<polyline points="9 18 15 12 9 6"/>',
-    down: '<polyline points="6 9 12 15 18 9"/>',
-    refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/>',
-    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
-    check: '<polyline points="20 6 9 17 4 12"/>',
-    x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
-    bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    news: '<path d="M4 22h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9h4"/><line x1="10" y1="7" x2="16" y2="7"/><line x1="10" y1="11" x2="16" y2="11"/><line x1="10" y1="15" x2="14" y2="15"/>',
-    star: '<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/>',
-    book: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
-    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
-    chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
-    plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
-    search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/>',
-    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-    users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
-    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
-    monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
-    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-    layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
-    pin: '<path d="M12 22s8-6 8-12a8 8 0 0 0-16 0c0 6 8 12 8 12z"/><circle cx="12" cy="10" r="3"/>',
-    alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
-    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
-    filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
-    sort: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>',
-    timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>',
-    exam: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'
+    // shapes with class "f" get a soft tinted fill when active (bottom bar, highlighted chips)
+    home: '<path class="f" d="M3.6 10.4 12 3.6l8.4 6.8v8.8a1.6 1.6 0 0 1-1.6 1.6h-4.1v-5.2a1.1 1.1 0 0 0-1.1-1.1h-3.2a1.1 1.1 0 0 0-1.1 1.1v5.2H5.2a1.6 1.6 0 0 1-1.6-1.6z"/>',
+    grades: '<path class="f" d="M12 3.4l2.5 5.1 5.6.8-4.05 3.95.95 5.6L12 16.2l-5 2.65.95-5.6L3.9 9.3l5.6-.8z"/>',
+    star: '<path class="f" d="M12 3.4l2.5 5.1 5.6.8-4.05 3.95.95 5.6L12 16.2l-5 2.65.95-5.6L3.9 9.3l5.6-.8z"/>',
+    calendar: '<rect class="f" x="3.5" y="5" width="17" height="15.5" rx="3.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M7.8 13.6h.01M12 13.6h.01M16.2 13.6h.01M7.8 17h.01M12 17h.01"/>',
+    mail: '<rect class="f" x="3" y="5" width="18" height="14" rx="3.2"/><path d="m4 7.6 8 5.6 8-5.6"/>',
+    pres: '<circle class="f" cx="10" cy="8" r="3.6"/><path d="M3.6 20a6.4 6.4 0 0 1 12.2-2.6"/><path d="m15.6 16.2 2.1 2.1 3.8-3.9"/>',
+    chart: '<path d="M5 20v-6.5M10 20V6M15 20v-9.5M20 20V9"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h11"/>',
+    back: '<path d="M15 5.5 8.5 12l6.5 6.5"/>',
+    right: '<path d="m9 5.5 6.5 6.5L9 18.5"/>',
+    down: '<path d="m5.5 9 6.5 6.5L18.5 9"/>',
+    up: '<path d="m5.5 15 6.5-6.5 6.5 6.5"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.35-5.65"/><path d="M20.2 4.2v4.6h-4.6"/>',
+    edit: '<path class="f" d="M4 20h4.2L19.1 9.1a2.85 2.85 0 0 0-4-4.05L4 16.1z"/><path d="m13.6 6.6 3.9 3.9"/>',
+    compose: '<path d="M11 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V13"/><path class="f" d="M18.4 3.6a2 2 0 0 1 2.8 2.8L13 14.6l-3.6.9.9-3.6z"/>',
+    check: '<path d="m5 12.6 4.4 4.4L19 7.4"/>',
+    x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    bell: '<path class="f" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 1.9H4.4z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/>',
+    news: '<rect class="f" x="3.5" y="4" width="13" height="16" rx="2.6"/><path d="M16.5 8.5h2.4a1.6 1.6 0 0 1 1.6 1.6V18a2 2 0 0 1-4 0M7 8.5h6M7 12h6M7 15.5h3.6"/>',
+    book: '<path class="f" d="M12 6.6C10.4 5.1 7.9 4.5 3.8 4.5v14c4.1 0 6.6.6 8.2 2.1 1.6-1.5 4.1-2.1 8.2-2.1v-14c-4.1 0-6.6.6-8.2 2.1z"/><path d="M12 6.6v14"/>',
+    file: '<path class="f" d="M14 3H7.6A2.6 2.6 0 0 0 5 5.6v12.8A2.6 2.6 0 0 0 7.6 21h8.8a2.6 2.6 0 0 0 2.6-2.6V8z"/><path d="M14 3v5h5M9 13h6M9 16.6h4"/>',
+    clip: '<path d="m20 11.6-7.7 7.7a5 5 0 0 1-7.1-7.1l8.1-8.1a3.3 3.3 0 0 1 4.7 4.7l-7.9 7.9a1.7 1.7 0 0 1-2.4-2.4l7.1-7.1"/>',
+    download: '<path d="M12 4v11M7.4 10.6 12 15.2l4.6-4.6M5 20h14"/>',
+    chat: '<path class="f" d="M5.2 4.5h13.6a2.2 2.2 0 0 1 2.2 2.2v8.8a2.2 2.2 0 0 1-2.2 2.2H11l-4.6 3.4v-3.4H5.2A2.2 2.2 0 0 1 3 15.5V6.7a2.2 2.2 0 0 1 2.2-2.2z"/>',
+    send: '<path class="f" d="M20.6 3.4 3.6 10.3l6.9 3.2 3.2 6.9z"/><path d="m20.6 3.4-10.1 10.1"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="6.6"/><path d="m20 20-4.3-4.3"/>',
+    user: '<circle class="f" cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+    users: '<circle class="f" cx="9" cy="8.4" r="3.6"/><path d="M2.6 20a6.4 6.4 0 0 1 12.8 0M15.8 5a3.6 3.6 0 0 1 0 6.8M18 14.2a6.4 6.4 0 0 1 3.4 5.8"/>',
+    logout: '<path d="M10 4H6.6A2.6 2.6 0 0 0 4 6.6v10.8A2.6 2.6 0 0 0 6.6 20H10"/><path d="m15 8 4 4-4 4M19 12H9.5"/>',
+    monitor: '<rect class="f" x="3" y="4" width="18" height="12.5" rx="2.6"/><path d="M8.5 20.5h7M12 16.5v4"/>',
+    clock: '<circle class="f" cx="12" cy="12" r="8.6"/><path d="M12 7.6V12l3 2"/>',
+    layers: '<path class="f" d="M12 3.6 3.2 8 12 12.4 20.8 8z"/><path d="m3.2 12.4 8.8 4.4 8.8-4.4M3.2 16.4 12 20.8l8.8-4.4"/>',
+    pin: '<path class="f" d="M12 21s-6.4-5.6-6.4-11a6.4 6.4 0 0 1 12.8 0c0 5.4-6.4 11-6.4 11z"/><circle cx="12" cy="10" r="2.3"/>',
+    door: '<path class="f" d="M6 20.5V5.2a1.7 1.7 0 0 1 1.7-1.7h8.6A1.7 1.7 0 0 1 18 5.2v15.3"/><path d="M3.5 20.5h17M14.4 12.4h.01"/>',
+    alert: '<circle class="f" cx="12" cy="12" r="8.6"/><path d="M12 7.8v4.8M12 16.3h.01"/>',
+    settings: '<path d="M4 7h8.6M17.4 7H20M4 17h2.6M11.4 17H20"/><circle class="f" cx="15" cy="7" r="2.4"/><circle class="f" cx="9" cy="17" r="2.4"/>',
+    filter: '<path d="M4 6.5h16M7 12h10M10 17.5h4"/>',
+    sort: '<path d="M8 4.5v15M4.6 8 8 4.5 11.4 8M16 19.5v-15M12.6 16l3.4 3.5 3.4-3.5"/>',
+    timer: '<circle class="f" cx="12" cy="13.4" r="7.6"/><path d="M12 9.6v3.8l2.4 1.6M9.5 2.8h5M18.6 6.2l1.3-1.3"/>',
+    exam: '<rect class="f" x="5" y="4.4" width="14" height="16.6" rx="2.6"/><path d="M9 4.4v-.6a1.3 1.3 0 0 1 1.3-1.3h3.4A1.3 1.3 0 0 1 15 3.8v.6M9 12.8l2 2 4-4"/>',
+    sun: '<circle class="f" cx="12" cy="12" r="4"/><path d="M12 2.6v2.2M12 19.2v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+    image: '<rect class="f" x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m20.5 15.6-4.4-4.4-8.3 8.3"/>',
+    trash: '<path d="M4.5 7h15M9.6 7V5.2a1.6 1.6 0 0 1 1.6-1.6h1.6a1.6 1.6 0 0 1 1.6 1.6V7"/><path class="f" d="m6.4 7 .9 12a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8l.9-12z"/>',
+    link: '<path d="M10 14a4.4 4.4 0 0 0 6.3 0l3-3a4.4 4.4 0 0 0-6.3-6.3l-1 1"/><path d="M14 10a4.4 4.4 0 0 0-6.3 0l-3 3a4.4 4.4 0 0 0 6.3 6.3l1-1"/>',
+    widget: '<rect class="f" x="3.5" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2.2"/><rect class="f" x="13.3" y="13.3" width="7.2" height="7.2" rx="2.2"/>',
+    vibrate: '<rect class="f" x="7.5" y="3.5" width="9" height="17" rx="2.4"/><path d="M4.4 8.5v7M19.6 8.5v7M11 17.2h2"/>',
+    inbox: '<path class="f" d="M4 13.5 6.2 5.6A2 2 0 0 1 8.1 4.2h7.8a2 2 0 0 1 1.9 1.4L20 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 13.5h4.4l1.4 2.4h4.4l1.4-2.4H20"/>',
+    at: '<circle cx="12" cy="12" r="3.6"/><path d="M15.6 12v1.4a2.5 2.5 0 0 0 5 0V12a8.6 8.6 0 1 0-3.4 6.8"/>',
+    group: '<circle class="f" cx="12" cy="7.6" r="3.2"/><path d="M6.4 20a5.6 5.6 0 0 1 11.2 0M4.6 10.6a2.4 2.4 0 1 0 0-.01M19.4 10.6a2.4 2.4 0 1 0 0-.01M2.4 17.6a3.8 3.8 0 0 1 3-3.4M21.6 17.6a3.8 3.8 0 0 0-3-3.4"/>'
   };
-  const I = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+  const I = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
   /* ------------------------------------------------------------------ *
    *  App styles (inside Shadow DOM, so IDU's CSS can't touch them)
@@ -470,7 +494,8 @@
   .kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:.5px solid var(--line);font-size:15px}
   .kv:last-child{border:0}
   .kv span:first-child{color:var(--muted)}
-  .kv span:last-child{text-align:right;font-weight:600;word-break:break-word}
+  .kv span:first-child{flex:1;min-width:0}
+  .kv span:last-child{text-align:right;font-weight:600;overflow-wrap:break-word;max-width:62%}
 
   /* ---- settings / filters / typography ---- */
   .app.rounded,.app.rounded *{font-family:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
@@ -557,6 +582,80 @@
   .tday b{color:var(--text);font-size:16px;margin-right:6px}
   .topic{display:flex;gap:12px;align-items:center}
   .tm2{font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--muted);background:var(--card2);border-radius:8px;padding:4px 8px;white-space:nowrap}
+
+  /* ---- v4: icons, pull-to-refresh, toasts, avatar ---- */
+  .ic .f{fill:none}
+  .nav a.on .ic .f,.ic.fill .f,.fi .dot .ic .f,.fab .ic .f,.ptr .ic .f{fill:currentColor;fill-opacity:.22}
+  .nav a.on .ic{stroke-width:2.05}
+  .empty .ic.big,.nores .ic.big{width:46px;height:46px;margin:0 auto 10px;color:var(--accent)}
+  .empty .ic.big .f,.nores .ic.big .f{fill:currentColor;fill-opacity:.18}
+  .ptr{position:fixed;left:50%;top:calc(40px + env(safe-area-inset-top));z-index:19;width:40px;height:40px;border-radius:50%;
+    background:var(--card);color:var(--accent);display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.4);
+    opacity:0;transform:translate(-50%,0) scale(.5);pointer-events:none;will-change:transform,opacity}
+  .ptr .ic{width:20px;height:20px}
+  .ptr.armed{background:var(--accent);color:#fff}
+  .ptr.back{transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s}
+  .ptr.spin{opacity:1!important;transform:translate(-50%,34px) scale(1)!important;transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s}
+  .ptr.spin .ic{animation:skSpin .7s linear infinite}
+  @keyframes skSpin{to{transform:rotate(360deg)}}
+  .app.still .top .title,.app.still .nav a.on .ic,.app.still .badge,.app.still .fab,.app.still .les.cur{animation:none!important}
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));z-index:60;transform:translateX(-50%);
+    background:color-mix(in srgb,var(--card2) 94%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    color:var(--text);border-radius:14px;padding:11px 16px;font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center;
+    box-shadow:0 8px 26px rgba(0,0,0,.45);animation:skToast .35s cubic-bezier(.2,.85,.25,1) both;width:max-content;max-width:88vw}
+  .toast .ic{width:18px;height:18px}
+  .toast.bad .ic{color:var(--bad)}.toast.good .ic{color:var(--good)}
+  .toast.out{opacity:0;transition:opacity .25s}
+  @keyframes skToast{from{opacity:0;transform:translate(-50%,16px) scale(.96)}to{opacity:1;transform:translate(-50%,0)}}
+  .pav img{width:100%;height:100%;object-fit:cover;display:block}
+  .hello{display:flex;align-items:center;gap:12px}
+  .hello .grow{min-width:0}
+  .hello .me{flex:none}
+  .hello .me .pav{width:50px;height:50px;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px color-mix(in srgb,var(--accent) 60%,transparent)}
+  .avrow{display:flex;align-items:center;gap:14px}
+  .avrow .pav{width:66px;height:66px}
+  .avrow .btns{display:flex;flex-wrap:wrap;gap:8px}
+  label.btn-s{cursor:pointer}
+  label.btn-s input{display:none}
+  .note2{font-size:13px;color:var(--muted);margin:8px 2px 0;line-height:1.45}
+  .note2.warn{color:var(--warn)}
+  .steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.55;color:var(--muted)}
+  .steps b{color:var(--text)}
+
+  /* ---- compose ---- */
+  .form{background:var(--card);border-radius:16px;box-shadow:var(--shadow);margin-bottom:12px}
+  .frow2{display:flex;align-items:flex-start;gap:10px;padding:8px 14px;border-bottom:.5px solid var(--line)}
+  .frow2>label{color:var(--muted);font-size:15px;padding-top:8px;min-width:46px}
+  .tokens{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;padding:2px 0}
+  .tok{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--accent) 22%,var(--card2));
+    border-radius:16px;padding:5px 5px 5px 11px;font-size:14px;font-weight:600;animation:skPop .3s both;max-width:100%}
+  .tok span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tok button{border:0;background:rgba(255,255,255,.14);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;padding:0;flex:none}
+  .tok button .ic{width:12px;height:12px}
+  .finput{flex:1;min-width:110px;border:0;background:none;color:var(--text);font:inherit;font-size:16px;padding:7px 0;outline:none}
+  .fta{width:100%;min-height:200px;border:0;background:none;color:var(--text);font:inherit;font-size:16px;line-height:1.5;padding:12px 14px;outline:none;resize:none;display:block}
+  .sugg{margin:-6px 0 12px;background:var(--card2);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.45);overflow:hidden;animation:skIn .2s both}
+  .sugg button{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;padding:10px 14px;text-align:left;border-bottom:.5px solid var(--line)}
+  .sugg button:last-child{border:0}
+  .sugg button:active{background:var(--card)}
+  .sugg .av,.plist .av{width:34px;height:34px;font-size:13px}
+  .sugg .muted{padding:12px 14px;font-size:14px}
+  .btnrow{display:flex;gap:10px;margin-top:4px}
+  .btnrow .btn-p{flex:1;margin:0}
+  .btnrow .btn-s{justify-content:center;padding:12px 16px}
+  .tgl.inline{padding:12px 14px;border:0}
+
+  /* ---- files, rooms, search ---- */
+  .ftype{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:11px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--c,var(--accent));flex:none}
+  mark{background:color-mix(in srgb,var(--warn) 38%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+  .kvcard{padding:4px 14px}
+  .roomnow{display:flex;gap:12px;align-items:center}
+  .klass{font-size:12px;color:var(--muted)}
+  .plist .frow{gap:12px}
+  .role{font-size:11px;font-weight:700;color:var(--muted);background:var(--card2);border-radius:7px;padding:2px 7px;white-space:nowrap}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;color:var(--muted);font-size:13px;margin-top:6px}
+  .meta span{display:inline-flex;gap:5px;align-items:center}
+  .meta .ic{width:15px;height:15px}
   `;
 
   /* ------------------------------------------------------------------ *
@@ -692,11 +791,12 @@
   function animateIn(scope) {
     if (!scope) return;
     let i = 0;
+    const vh = window.innerHeight || 800;
     scope.querySelectorAll(ANIM_SEL).forEach(el => {
       const parent = el.parentElement && el.parentElement.closest(ANIM_SEL);
       if (parent && scope.contains(parent)) return;            // only animate outermost blocks
-      el.classList.remove('anim');
-      void el.offsetWidth;                                     // restart animation
+      if (el.classList.contains('anim')) { el.classList.remove('anim'); void el.offsetWidth; }   // re-render of the same node
+      if (i >= 18 || (i > 4 && el.getBoundingClientRect().top > vh * 1.15)) return;              // below the screen: no need
       el.style.animationDelay = Math.min(i++ * 35, 420) + 'ms';
       el.classList.add('anim');
     });
@@ -765,7 +865,7 @@
     flashes.forEach(f => {
       if (txt(f).length > 160) {       // long notices collapse
         const d = document.createElement('details');
-        d.innerHTML = `<summary>${esc(txt(f).split(/[.!]/)[0].slice(0, 70))} ▾</summary>`;
+        d.innerHTML = `<summary>${esc(txt(f).split(/[.!]/)[0].slice(0, 70))} (rozwiń)</summary>`;
         d.appendChild(f); fl.appendChild(d);
       } else fl.appendChild(f);
     });
@@ -788,7 +888,8 @@
     plum: { bg: '#130f1a', card: '#1e1828', card2: '#2a2236', line: '#33293f', label: 'Śliwkowy' }
   };
   const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, theme: 'dark', radius: 'm', density: 'normal',
-    subj: 'vivid', labels: true, startTab: 'start', nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true };
+    subj: 'vivid', labels: true, startTab: 'start', nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true,
+    haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18 };
   function loadSettings() {
     let o = {}; try { o = JSON.parse(store.get('skSettings') || '{}'); } catch (e) {}
     return Object.assign({}, DEFAULTS, o);
@@ -797,7 +898,7 @@
     const st = loadSettings();
     const acc = ACCENTS[st.accent] || ACCENTS.blue;
     const th = THEMES[st.theme] || THEMES.dark;
-    SUBJ_MODE = st.subj; SUBJ_MONO = acc;
+    SUBJ_MODE = st.subj; SUBJ_MONO = acc; HAPTICS = st.haptics !== false;
     if (app) {
       app.style.setProperty('--accent', acc);
       app.style.setProperty('--bg', th.bg); app.style.setProperty('--card', th.card);
@@ -811,14 +912,25 @@
     const de = document.documentElement.style;
     de.setProperty('--fb-accent', acc); de.setProperty('--sk-bg', th.bg);
     de.setProperty('--fb-bg', th.bg); de.setProperty('--fb-card', th.card); de.setProperty('--fb-card2', th.card2); de.setProperty('--fb-line', th.line);
+    store.set('skSnapBg', th.bg);
     return st;
   }
+  // settings the iPhone app needs for reminders
+  const notifyPrefs = st => ({ type: 'notify', lessons: +st.nLesson || 0, exams: !!st.nExam, hw: !!st.nHw, hour: +st.nHour || 18 });
+
   function openSettings(root, app) {
     const st = loadSettings();
     const seg = (key, opts) => `<div class="seg" data-k="${key}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(st[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
     const tgl = (key, label) => `<label class="tgl"><span>${label}</span><input type="checkbox" data-t="${key}" ${st[key] ? 'checked' : ''}><i></i></label>`;
     const L = t => `<div class="lbl" style="--c:var(--muted)">${t}</div>`;
     const sh = openSheet(root, `<h2>Ustawienia</h2><div class="muted small" style="margin-bottom:6px">Zmiany działają od razu i zapisują się w apce.</div>
+      <div class="sgroup">Profil</div>
+      <div class="card avrow" style="margin-top:10px"><div id="avprev">${meAvatar()}</div>
+        <div class="grow"><div class="b">Twoje zdjęcie</div><div class="btns" style="margin-top:8px">
+          <label class="btn-s">${I('image', 'sm')}<span>Wybierz</span><input type="file" id="avfile" accept="image/*"></label>
+          <button class="btn-s" id="avdel" style="${store.get('skAvatar') ? '' : 'display:none'}">${I('trash', 'sm')}Usuń</button></div></div></div>
+      <div class="note2">Zdjęcie zostaje tylko w tym telefonie — nie jest wysyłane do IDU i nikt inny go nie zobaczy.</div>
+      ${L('Imię w powitaniu')}<div class="search" style="margin:0"><input id="nick" placeholder="np. Janek" value="${esc(st.nick)}" maxlength="24" autocomplete="off"></div>
       <div class="sgroup">Wygląd</div>
       ${L('Motyw')}<div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button data-theme="${k}" class="${st.theme === k ? 'on' : ''}" style="--b:${t.bg};--c2:${t.card}"><i></i><span>${t.label}</span></button>`).join('')}</div>
       ${L('Kolor akcentu')}<div class="swatches">${Object.entries(ACCENTS).map(([k, c]) => `<button data-acc="${k}" class="${st.accent === k ? 'on' : ''}" style="--c:${c}" aria-label="${k}"></button>`).join('')}</div>
@@ -827,27 +939,44 @@
       ${L('Gęstość')}${seg('density', [['compact', 'Kompaktowa'], ['normal', 'Normalna']])}
       ${L('Rozmiar tekstu')}${seg('size', [['s', 'A−'], ['m', 'A'], ['l', 'A+'], ['xl', 'A++']])}
       ${L('Czcionka')}${seg('font', [['system', 'Standardowa'], ['rounded', 'Zaokrąglona']])}
+      <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('motion', 'Animacje')}${tgl('glass', 'Efekt szkła (rozmycie)')}${tgl('haptics', 'Wibracje przy dotyku')}</div>
+      <div class="sgroup">Powiadomienia</div>
+      ${L('Przypomnienie przed lekcją')}${seg('nLesson', [['0', 'Wył.'], ['5', '5 min'], ['10', '10 min'], ['15', '15 min']])}
+      <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('nExam', 'Sprawdzian — dzień wcześniej')}${tgl('nHw', 'Termin zadania — dzień wcześniej')}</div>
+      ${L('Godzina przypomnień „dzień wcześniej”')}${seg('nHour', [['16', '16:00'], ['18', '18:00'], ['20', '20:00']])}
+      <div class="note2 ${NATIVE_IDU ? '' : 'warn'}" id="nnote">${NATIVE_IDU ? 'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Nowych ocen i wiadomości iPhone nie może sprawdzać w tle.' : 'Powiadomienia działają tylko w aplikacji IDU na iPhonie.'}</div>
+      <div class="sgroup">Widget</div>
+      <div class="card row" style="margin-top:10px;align-items:flex-start"><div style="color:var(--accent)">${I('widget', 'fill')}</div><div class="grow small">
+        <b>Następna lekcja i sala</b><ol class="steps"><li>Przytrzymaj palec na ekranie głównym → <b>Edytuj</b> → <b>Dodaj widżet</b>.</li>
+        <li>Wyszukaj <b>IDU</b> i wybierz rozmiar.</li><li>Na ekranie blokady: przytrzymaj go → <b>Dostosuj</b> → <b>Ekran blokady</b> → pole widżetów.</li></ol>
+        <div class="note2" style="margin-left:0">Widget odświeża się, gdy otworzysz Start w apce.</div></div></div>
       <div class="sgroup">Ekran Start</div>
-      ${L('Imię w powitaniu')}<div class="search" style="margin:0"><input id="nick" placeholder="np. Janek" value="${esc(st.nick)}" maxlength="24" autocomplete="off"></div>
       <div class="card" style="padding:2px 14px;margin-top:10px">${tgl('showNow', 'Karta bieżącej lekcji')}${tgl('showDue', 'Zadania z bliskim terminem')}${tgl('showExams', 'Sprawdziany')}${tgl('showEvents', 'Nadchodzące wydarzenia')}${tgl('showFeed', 'Co nowego')}</div>
       <div class="sgroup">Nawigacja</div>
       ${L('Po otwarciu apki pokaż')}${seg('startTab', [['start', 'Start'], ['plan', 'Plan'], ['grades', 'Oceny'], ['mail', 'Poczta']])}
       ${L('Plan lekcji domyślnie')}${seg('plan', [['day', 'Dzień'], ['week', 'Tydzień']])}
-      <div class="card" style="padding:2px 14px;margin-top:10px">${tgl('labels', 'Podpisy w dolnym pasku')}${tgl('motion', 'Animacje')}${tgl('glass', 'Efekt szkła (rozmycie)')}</div>
-      <button class="btn-s" id="sreset" style="margin-top:18px;width:100%;justify-content:center;color:var(--bad)">Przywróć domyślne</button>`);
+      <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('labels', 'Podpisy w dolnym pasku')}</div>
+      <button class="btn-s" id="sreset" style="margin-top:18px;width:100%;justify-content:center;color:var(--bad)">Przywróć domyślne</button>
+      <div class="muted small" style="text-align:center;margin-top:14px">IDU Skin ${esc(SKIN_VERSION)}</div>`);
+    let needsRedraw = false;
     const save = (k, v) => {
       if (k === 'plan') { store.set('skPlanMode', v); return; }
       const cur = loadSettings(); cur[k] = v;
       store.set('skSettings', JSON.stringify(cur)); applySettings(app);
-      if (k === 'subj') needsRedraw = true;
+      if (k === 'subj' || k === 'startTab') needsRedraw = needsRedraw || k === 'subj';
+      if (k === 'startTab') setStartKey(cur);
+      if (/^n[A-Z]/.test(k)) {
+        const wantsAny = (+cur.nLesson > 0) || cur.nExam || cur.nHw;
+        if (wantsAny) native({ type: 'askNotify' });
+        native(notifyPrefs(cur));
+      }
     };
-    let needsRedraw = false;
     const planNow = store.get('skPlanMode') || 'day';
     sh.querySelectorAll('.seg[data-k="plan"] button').forEach(b => b.classList.toggle('on', b.dataset.v === planNow));
     sh.querySelectorAll('.seg[data-k] button').forEach(b => b.onclick = () => {
       const k = b.parentElement.dataset.k;
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-      save(k, b.dataset.v);
+      save(k, /^n[A-Z]/.test(k) ? +b.dataset.v : b.dataset.v);
     });
     sh.querySelectorAll('.swatches button').forEach(b => b.onclick = () => {
       sh.querySelectorAll('.swatches button').forEach(x => x.classList.toggle('on', x === b)); save('accent', b.dataset.acc); needsRedraw = needsRedraw || loadSettings().subj === 'mono';
@@ -855,12 +984,36 @@
     sh.querySelectorAll('.themes button').forEach(b => b.onclick = () => {
       sh.querySelectorAll('.themes button').forEach(x => x.classList.toggle('on', x === b)); save('theme', b.dataset.theme);
     });
-    sh.querySelectorAll('input[data-t]').forEach(i => i.onchange = () => { save(i.dataset.t, i.checked); if (/^show/.test(i.dataset.t)) needsRedraw = true; });
+    sh.querySelectorAll('input[data-t]').forEach(i => i.onchange = () => { haptic('light'); save(i.dataset.t, i.checked); if (/^show/.test(i.dataset.t)) needsRedraw = true; });
     const nick = sh.querySelector('#nick'); nick.oninput = () => { save('nick', nick.value.trim()); needsRedraw = true; };
-    sh.querySelector('#sreset').onclick = () => { store.set('skSettings', '{}'); store.set('skPlanMode', 'day'); location.reload(); };
+    sh.querySelector('#sreset').onclick = () => { store.set('skSettings', '{}'); store.set('skPlanMode', 'day'); setStartKey(DEFAULTS); native(notifyPrefs(DEFAULTS)); location.reload(); };
+    // profile photo: cropped to a square, kept only in this phone's storage
+    const avfile = sh.querySelector('#avfile'), avdel = sh.querySelector('#avdel'), avprev = sh.querySelector('#avprev');
+    avfile.onchange = () => {
+      const f = avfile.files && avfile.files[0]; if (!f) return;
+      const url = URL.createObjectURL(f), img = new Image();
+      img.onload = () => {
+        try {
+          const S = 320, c = document.createElement('canvas'); c.width = c.height = S;
+          const k = Math.max(S / img.naturalWidth, S / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+          c.getContext('2d').drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+          store.set('skAvatar', c.toDataURL('image/jpeg', 0.86));
+          avprev.innerHTML = meAvatar(); avdel.style.display = ''; needsRedraw = true; haptic('success'); toast(root, 'Zdjęcie zapisane', 'good');
+        } catch (e) { toast(root, 'Nie udało się wczytać zdjęcia', 'bad'); }
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); toast(root, 'Ten format zdjęcia nie jest obsługiwany', 'bad'); };
+      img.src = url;
+    };
+    avdel.onclick = () => { try { localStorage.removeItem('skAvatar'); } catch (e) {} avprev.innerHTML = meAvatar(); avdel.style.display = 'none'; needsRedraw = true; haptic('light'); };
+    onNative('notify', ok => { const n = sh.querySelector('#nnote'); if (n && ok === false) { n.classList.add('warn'); n.textContent = 'iPhone blokuje powiadomienia dla IDU. Włącz je w Ustawieniach iPhone’a → Powiadomienia → IDU.'; } });
     // colours of subjects / start sections are baked into the page – redraw it when the sheet closes
-    const obs = new MutationObserver(() => { if (!sh.isConnected) { obs.disconnect(); if (needsRedraw) softGo(location.href, false); } });
+    const obs = new MutationObserver(() => { if (!sh.isConnected) { obs.disconnect(); if (needsRedraw) softGo(location.href, false, { quiet: true }); } });
     obs.observe(sh.parentNode, { childList: true });
+  }
+  function setStartKey(st) {
+    const me = store.get('skMe') || '';
+    store.set('skStartKey', st.startTab === 'plan' ? '/#plan' : st.startTab === 'grades' && me ? me + '/grades' : st.startTab === 'mail' ? '/internal_messages' : '/#start');
   }
   const newGrades = () => parseInt(store.get('skNewGrades') || '0', 10) || 0;
 
@@ -876,6 +1029,31 @@
     });
   }
   const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
+
+  /* ------------------------------------------------------------------ *
+   *  iPhone app bridge: vibrations, widget data, reminders
+   * ------------------------------------------------------------------ */
+  const SKIN_VERSION = '4.0';
+  const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
+  const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
+  let HAPTICS = true;
+  function haptic(kind) { if (!HAPTICS || !HANDLERS || !HANDLERS.haptic) return; try { HANDLERS.haptic.postMessage(kind || 'light'); } catch (e) {} }
+  function native(msg) { if (!NATIVE_IDU) return; try { HANDLERS.idu.postMessage(msg); } catch (e) {} }
+  const nativeCbs = {};
+  function onNative(type, fn) { (nativeCbs[type] = nativeCbs[type] || []).push(fn); }
+  window.__skNative = (type, val) => { (nativeCbs[type] || []).forEach(f => { try { f(val); } catch (e) {} }); };
+
+  // short message at the bottom of the screen
+  function toast(root, text, kind) {
+    const app = root && root.getElementById ? root.getElementById('app') : null; if (!app) return;
+    app.querySelectorAll('.toast').forEach(t => t.remove());
+    const t = document.createElement('div'); t.className = 'toast ' + (kind || '');
+    t.innerHTML = (kind === 'bad' ? I('alert') : kind === 'good' ? I('check') : '') + `<span>${esc(text)}</span>`;
+    app.appendChild(t);
+    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 2600);
+  }
+  // your own profile photo (stored only on this phone)
+  const meAvatar = () => { const a = store.get('skAvatar'); return a && /^data:image\//.test(a) ? `<div class="pav"><img src="${a}" alt=""></div>` : PERSON_AV; };
 
   /* ------------------------------------------------------------------ *
    *  MAIN
@@ -895,24 +1073,32 @@
       document.head.appendChild(pageStyle);
     }
 
-    if (!accLink) {                             // login / logged-out pages
+    // print-style pages (plans, class lists, calendar events) come without IDU's header
+    const bare = !accLink && !$('input[type="password"]') && BARE_KINDS.includes(routeKind(document, location.pathname.replace(/\/+$/, '') || '/'));
+    if (!accLink && !bare) {                    // login / logged-out pages
+      try { localStorage.removeItem('skSnap'); } catch (e) {}
       if (!loginMode()) { vp.content = 'width=1000, user-scalable=yes'; pageStyle.remove(); }
       return;
     }
 
-    const ctx = {
+    const ctx = bare ? {
+      student: store.get('skMe') || '/', name: store.get('skMeName') || '', unread: 0, timer: null, bare: true,
+      path: location.pathname.replace(/\/+$/, '') || '/'
+    } : {
       student: attr(accLink, 'href'),
       name: txt($('#login strong')),
       unread: parseInt(txt($('#messages strong')), 10) || 0,
       timer: $('.js-counter'),
       path: location.pathname.replace(/\/+$/, '') || '/'
     };
+    if (!bare) { store.set('skMe', ctx.student); store.set('skMeName', ctx.name); }
 
     if (CLASSIC) { mountClassicSwitch(); return; }
 
     applySettings(null);
     // first screen of the day: open the tab chosen in settings
     const st0 = loadSettings();
+    setStartKey(st0);
     if (ctx.path === '/' && !location.hash && st0.startTab !== 'start') {
       let first = false; try { first = !sessionStorage.getItem('skStarted'); sessionStorage.setItem('skStarted', '1'); } catch (e) {}
       if (first) {
@@ -929,6 +1115,11 @@
   // [name, test(doc, path)] – first match wins; also used to decide whether a page can be opened instantly
   const ROUTES = [
     ['home', (d, p) => p === '/'],
+    ['printplan', d => d.querySelector('.print_plan .schedule table')],
+    ['calevent', (d, p) => /^\/callendar_events\/\d+$/.test(p) && d.querySelector('.module h3')],
+    ['studentslist', (d, p) => /\/students_list$/.test(p) && d.querySelector('ul.students, .students_list')],
+    ['upload', (d, p) => /\/homework_attachments\/new(\.html)?$/.test(p) && d.querySelector('form input[type="file"]')],
+    ['compose', (d, p) => /^\/internal_messages\/(new|\d+\/edit)$/.test(p) && d.querySelector('#new_message_form')],
     ['grades', d => d.querySelector('table.marks-table')],
     ['presences', (d, p) => d.querySelector('table.presences_table') || /\/presences$/.test(p) && d.querySelector('.module table')],
     ['messages', d => d.querySelector('table.message-table')],
@@ -937,23 +1128,33 @@
     ['announcement', (d, p) => /^\/subject_announcements\/\d+\/confirm$/.test(p) && d.querySelector('#content .module h2')],
     ['klass', (d, p) => /^\/klasses\/\d+$/.test(p) && d.querySelector('#subject-card')],
     ['person', (d, p) => /^\/(teachers|parents)\/\d+$/.test(p) && d.querySelector('#student-card')],
+    ['room', (d, p) => /^\/rooms\/\d+$/.test(p) && d.querySelector('#content .schedule table')],
     ['subject', d => d.querySelector('#subject-card')],
     ['calendar', d => d.querySelector('#calendar[data-events-url]')],
     ['profile', d => d.querySelector('#student-card')],
     ['forums', d => d.querySelector('#content table.forum-table')],
+    ['forumsearch', (d, p) => /^\/forum\/search$/.test(p) && d.querySelector('#content form')],
     ['thread', d => d.querySelector('#content table.thread-table')],
     ['docs', (d, p) => /^\/documents\/attachments$/.test(p) && d.querySelector('#content table.object_list-table')],
+    ['docdetail', (d, p) => /^\/documents\/attachments\/\d+$/.test(p) && d.querySelector('#content .module p b')],
+    ['files', (d, p) => /\/subject_attachment_connections$/.test(p) && d.querySelector('#content table')],
     ['hwdetail', (d, p) => /\/homeworks\/\d+$/.test(p) && d.querySelector('#content .module h3')],
+    ['lesson', (d, p) => /\/lesson_instances\/\d+$/.test(p) && d.querySelector('#content .module h3')],
     ['topics', (d, p) => /lesson_instances$/.test(p) && d.querySelector('#content table')],
     ['subjects', (d, p) => d.querySelector('#content table.subjects-table') && !/lesson_instances/.test(p)],
-    ['events', d => d.querySelector('#content .profile-event') && !d.querySelector('#content textarea, #content form input[type=text]') && !d.querySelector('#content table')]
+    ['events', d => d.querySelector('#content .profile-event') && !d.querySelector('#content textarea, #content form input[type=text]') && !d.querySelector('#content table')],
+    ['events', (d, p) => /\/students_(grades|presences)$/.test(p) && d.querySelector('#content .module h3') && !d.querySelector('#content table')],
+    ['table', d => d.querySelector('#content table.object_list-table') && !d.querySelector('#content textarea, #content input[type=file], #content input[type=password]')]
   ];
+  const BARE_KINDS = ['printplan', 'calevent', 'studentslist', 'upload'];
   function routeKind(d, p) { for (const [k, f] of ROUTES) if (f(d, p)) return k; return null; }
   function route(ctx) {
     const PAGES = { home: homePage, grades: gradesPage, presences: presencesPage, messages: messagesPage, message: messagePage,
       homeworks: homeworksPage, announcement: announcementPage, klass: klassPage, person: personPage, subject: subjectPage,
       calendar: calendarPage, profile: profilePage, forums: forumListPage, thread: threadPage, docs: docsPage, hwdetail: hwDetailPage,
-      topics: topicsPage, subjects: subjectsListPage, events: eventsPage };
+      topics: topicsPage, subjects: subjectsListPage, events: eventsPage, printplan: printPlanPage, calevent: calEventPage,
+      studentslist: studentsListPage, compose: composePage, room: roomPage, forumsearch: forumSearchPage, docdetail: docDetailPage,
+      files: filesPage, lesson: lessonPage, table: tablePage, upload: uploadPage };
     const k = routeKind(document, ctx.path);
     return k ? PAGES[k](ctx) : null;
   }
@@ -963,18 +1164,29 @@
    *  (no full reload → no white flash, much faster). Unknown pages still load normally.
    * ------------------------------------------------------------------ */
   const FULL_LOAD_AT = Date.now();
-  const SOFT_RE = /^\/$|^\/students\/\d+(\/(grades|presences|homeworks|subject_announcements|reviews))?$|^\/internal_messages(\/(sent|drafts|trash|\d+\/watek))?$|^\/subjects(\/\d+(\/(lesson_instances|homeworks(\/\d+)?|students_grades|students_presences))?)?$|^\/(calendar|forums|informations|documents\/attachments)$|^\/forums\/[\w-]+(\/topics\/[\w-]+)?$|^\/informations\/\d+$|^\/(klasses|teachers|parents)\/\d+$|^\/subject_announcements\/\d+\/confirm$/;
+  const SOFT_RE = new RegExp([
+    '^/$',
+    '^/students/\\d+(/(grades|presences|homeworks|subject_announcements|reviews|lesson_plan))?$',
+    '^/internal_messages(/(sent|drafts|trash|new|\\d+/watek))?$',
+    '^/subjects(/\\d+(/(lesson_instances(/\\d+)?|homeworks(/\\d+)?|students_grades|students_presences|subject_attachment_connections|students_list|lesson_plan))?)?$',
+    '^/(calendar|forums|informations|documents/attachments|forum/search|klasses|rooms|teachers)$',
+    '^/forums/[\\w-]+(/topics/[\\w-]+)?$',
+    '^/(informations|callendar_events|forum/posts|documents/attachments)/\\d+$',
+    '^/(klasses|teachers|parents|rooms)/\\d+(/lesson_plan)?$',
+    '^/subject_announcements/\\d+/confirm$'
+  ].join('|'));
   // pages that change something just by opening them (mark as read) are never fetched ahead of time
-  const NO_PREFETCH_RE = /\/watek$|^\/informations\/\d+$|\/confirm$/;
+  const NO_PREFETCH_RE = /\/watek$|^\/informations\/\d+$|\/confirm$|\/download$/;
   const prefetchMap = new Map();
   let cleanups = [];
   const onWin = (t, fn, o) => { window.addEventListener(t, fn, o); cleanups.push(() => window.removeEventListener(t, fn, o)); };
   const every = (fn, ms) => { const id = setInterval(fn, ms); cleanups.push(() => clearInterval(id)); };
   function runCleanups() { cleanups.forEach(f => { try { f(); } catch (e) {} }); cleanups = []; }
-  function fetchPage(url) {
+  function fetchPage(url, fresh) {
     const hit = prefetchMap.get(url);
-    if (hit && Date.now() - hit.t < 20000) return hit.p;
-    const p = fetch(url, { credentials: 'same-origin' }).then(async r => ({ ok: r.ok, url: r.url, type: r.headers.get('content-type') || '', html: await r.text() }));
+    if (!fresh && hit && Date.now() - hit.t < 20000) return hit.p;
+    const p = fetch(url, { credentials: 'same-origin', cache: fresh ? 'no-store' : 'default' })
+      .then(async r => ({ ok: r.ok, url: r.url, type: r.headers.get('content-type') || '', html: await r.text() }));
     prefetchMap.set(url, { t: Date.now(), p });
     p.catch(() => prefetchMap.delete(url));
     return p;
@@ -983,23 +1195,33 @@
   function prefetch(href) {
     try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
-  let curKey = location.pathname + location.search, navBusy = false;
-  async function softGo(href, push) {
+  const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
+  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '';
+  // opts.quiet: refresh in place (no page-leave animation, keeps what you see until the new data is ready)
+  async function softGo(href, push, opts) {
+    opts = opts || {};
     const u = new URL(href, location.href);
-    if (!softable(u) || navBusy) { location.href = u.href; return; }
+    if (!softable(u)) { location.href = u.href; return false; }
+    if (navBusy) return null;
     navBusy = true;
-    const host = document.getElementById('sk-host');
-    const app = host && host.shadowRoot ? host.shadowRoot.getElementById('app') : null;
-    if (app) app.classList.add('leaving', 'loading');
+    saveSnapshot();
+    const app = shellApp();
+    if (app && !opts.quiet) app.classList.add('leaving', 'loading');
+    const y = window.scrollY;
     let pg = null;
-    try { pg = await fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
+    try { pg = await fetchPage(u.origin + u.pathname + u.search, opts.quiet); } catch (e) {}
     navBusy = false;
+    if (!pg && opts.quiet) return false;                 // offline – keep the current screen
     const fin = pg ? new URL(pg.url) : u;
+    const finPath = fin.pathname.replace(/\/+$/, '') || '/';
     const doc = pg && pg.ok && /html/.test(pg.type) ? new DOMParser().parseFromString(pg.html, 'text/html') : null;
-    if (!doc || !doc.querySelector('#account a') || !routeKind(doc, fin.pathname.replace(/\/+$/, '') || '/')) { location.href = (pg ? pg.url : u.href) + (pg ? u.hash : ''); return; }
+    const kind = doc ? routeKind(doc, finPath) : null;
+    const logged = doc && (doc.querySelector('#account a') || (BARE_KINDS.includes(kind) && !doc.querySelector('input[type="password"]')));
+    if (!logged || !kind) { location.href = (pg ? pg.url : u.href) + (pg ? u.hash : ''); return true; }
     prefetchMap.clear();
     runCleanups();
     document.title = doc.title;
+    HEAD_TEXT = Array.from(doc.querySelectorAll('head script')).map(s => s.textContent).join('\n');
     const tok = doc.querySelector('meta[name="csrf-token"]'), cur = $('meta[name="csrf-token"]');
     if (tok && cur) cur.setAttribute('content', tok.getAttribute('content'));
     document.body.replaceChildren(...Array.from(doc.body.childNodes).map(n => document.adoptNode(n)));
@@ -1007,10 +1229,55 @@
     const url = fin.pathname + fin.search + u.hash;
     if (push) history.pushState({ sk: 1 }, '', url); else if (location.pathname + location.search !== fin.pathname + fin.search) history.replaceState({ sk: 1 }, '', url);
     curKey = location.pathname + location.search;
+    QUIET = !!opts.quiet;
     window.scrollTo(0, 0);
     main();
+    if (opts.keepScroll) window.scrollTo(0, y);
+    return true;
   }
-  let navInit = false;
+  // pull-to-refresh / back from the background: reload the data of this screen without a white flash
+  async function refreshPage(opts) {
+    const u = new URL(location.href);
+    if (!softable(u)) { location.reload(); return; }
+    const ok = await softGo(location.href, false, Object.assign({ quiet: true }, opts || {}));
+    const app = shellApp();
+    if (app) app.querySelectorAll('.ptr').forEach(p => p.remove());
+    if (ok === false && app) toast(app.getRootNode(), 'Brak połączenia z IDU', 'bad');
+  }
+  // nothing typed and no sheet open → safe to refresh by itself
+  function canAutoRefresh() {
+    const app = shellApp(); if (!app) return false;
+    if (app.querySelector('.sheet') || app.classList.contains('open')) return false;
+    return !Array.from(app.querySelectorAll('textarea, input:not([type=checkbox]):not([type=file])')).some(i => i.value && i.value.trim());
+  }
+
+  /* ---- instant start: the app shows the last picture of a screen before IDU even answers ---- */
+  const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
+  function saveSnapshot() {
+    try {
+      const app = shellApp();
+      if (!app || !document.documentElement.classList.contains('sk-full')) return;
+      const c = app.cloneNode(true);
+      c.classList.remove('open', 'leaving', 'loading');
+      c.classList.add('still');
+      c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
+      const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
+      c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
+      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { e.style.opacity = ''; e.style.transform = ''; });
+      const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
+      if (h.length > 300000) return;
+      let map = {}; try { map = JSON.parse(localStorage.getItem('skSnap') || '{}'); } catch (e) {}
+      map[snapKey()] = { t: Date.now(), h };
+      Object.keys(map).sort((a, b) => map[b].t - map[a].t).slice(8).forEach(k => delete map[k]);
+      try { localStorage.setItem('skSnap', JSON.stringify(map)); }
+      catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [snapKey()]: map[snapKey()] })); }
+      if (localStorage.getItem('skSnapCss') !== APP_CSS) localStorage.setItem('skSnapCss', APP_CSS);
+    } catch (e) {}
+  }
+  let snapTimer = 0;
+  const saveSnapshotSoon = () => { clearTimeout(snapTimer); snapTimer = setTimeout(saveSnapshot, 1500); };
+
+  let navInit = false, hiddenAt = 0;
   function initNav() {
     if (navInit) return; navInit = true;
     try { history.replaceState({ sk: 1 }, '', location.href); } catch (e) {}
@@ -1019,11 +1286,27 @@
       if (k === curKey) return;            // only the #hash changed – the page handles it
       softGo(location.href, false);
     });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { hiddenAt = Date.now(); saveSnapshot(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 4 * 60e3 && canAutoRefresh()) refreshPage({ keepScroll: true });
+      hiddenAt = 0;
+    });
+    window.addEventListener('pagehide', saveSnapshot);
   }
 
   /* ------------------------------------------------------------------ *
    *  Shell: top bar, bottom nav, drawer
    * ------------------------------------------------------------------ */
+  // the app's stylesheet is parsed once and shared by every screen
+  let SHEET_OBJ = null;
+  function appStyles(root) {
+    try {
+      if (!SHEET_OBJ && 'adoptedStyleSheets' in Document.prototype && 'replaceSync' in CSSStyleSheet.prototype) { const sh = new CSSStyleSheet(); sh.replaceSync(APP_CSS); SHEET_OBJ = sh; }
+      if (SHEET_OBJ) { root.adoptedStyleSheets = [SHEET_OBJ]; return ''; }
+    } catch (e) { SHEET_OBJ = null; }
+    return `<style>${APP_CSS}</style>`;
+  }
+
   function mount(ctx, page) {
     const fallback = !page;
     const crumbs = txt($('#breadcrumbs')).replace(/^Jesteś tutaj:\s*/, '').split('>').map(s => s.trim()).filter(Boolean);
@@ -1041,10 +1324,10 @@
       ['grades', 'grades', 'Oceny', ctx.student + '/grades'],
       ['plan', 'calendar', 'Plan', '/#plan'],
       ['mail', 'mail', 'Wiadomości', '/internal_messages'],
-      ['pres', 'chart', 'Frekwencja', ctx.student + '/presences']
+      ['pres', 'pres', 'Frekwencja', ctx.student + '/presences']
     ];
 
-    root.innerHTML = `<style>${APP_CSS}</style>
+    root.innerHTML = `${appStyles(root)}
       <div class="app" id="app">
         <header class="top">
           ${isTop ? `<button class="btn" id="menu" aria-label="Menu">${I('menu')}</button>`
@@ -1062,7 +1345,12 @@
 
     const app = root.getElementById('app');
     applySettings(app);
-    const toggle = open => app.classList.toggle('open', open);
+    const toggle = open => { if (open !== app.classList.contains('open')) haptic('soft'); app.classList.toggle('open', open); };
+    // little vibrations for switches, tabs and filters
+    root.addEventListener('click', e => {
+      const t = e.target.closest && e.target.closest('.nav a, .seg button, .seg a, .fchips button, .days button, .swatches button, .themes button, .iconbtn, .today-btn, summary, .tok button, .sugg button');
+      if (t) haptic(t.matches('summary') ? 'soft' : 'selection');
+    }, true);
     // tapping the tab you're already on scrolls to the top
     root.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => {
       if (a.classList.contains('on') && (a.getAttribute('href').split('#')[0] === location.pathname || a.getAttribute('href') === '/#' + (location.hash.slice(1) || 'start'))) {
@@ -1070,11 +1358,12 @@
       }
     }, true));
     root.getElementById('settings').onclick = e => { e.preventDefault(); toggle(false); openSettings(root, app); };
+    root.getElementById('people').onclick = e => { e.preventDefault(); toggle(false); openPeople(root); };
     if (tab === 'grades') store.set('skNewGrades', '0');
     root.getElementById('menu').onclick = () => toggle(true);
     root.getElementById('scrim').onclick = () => toggle(false);
     const back = root.getElementById('back');
-    if (back) back.onclick = () => { if (history.length > 1) history.back(); else location.href = '/'; };
+    if (back) back.onclick = () => { if (history.length > 1) history.back(); else softGo('/', true); };
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
       const t = root.getElementById('timer');
@@ -1084,17 +1373,21 @@
       cleanups.push(() => mo.disconnect());
     }
 
-    // smooth page-leave animation for normal links
+    // links: IDU pages open instantly, files download without leaving the screen
     root.addEventListener('click', e => {
       const a = e.target.closest && e.target.closest('a[href]');
-      if (!a || e.defaultPrevented || a.target === '_blank') return;
+      if (!a || e.defaultPrevented) return;
       const href = a.getAttribute('href');
       if (!href || href.startsWith('#') || /^(javascript|mailto|tel):/i.test(href)) return;
       const u = new URL(href, location.href);
       if (u.origin !== location.origin) return;
+      if (/\/download$/.test(u.pathname)) { e.preventDefault(); haptic('light'); toast(root, 'Otwieram plik…'); location.href = u.href; return; }
+      if (/^\/users\/sign_out/.test(u.pathname)) { try { localStorage.removeItem('skSnap'); } catch (err) {} return; }
+      if (a.target === '_blank') return;
       if (u.pathname === location.pathname && u.search === location.search && u.hash) return; // same page (#plan)
       e.preventDefault();
       if (softable(u)) { softGo(u.href, true); return; }
+      saveSnapshot();
       app.classList.add('leaving');
       setTimeout(() => { location.href = u.href; }, 140);
     });
@@ -1102,19 +1395,20 @@
     root.addEventListener('touchstart', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
     root.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
     onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
+
     // swipe from the left edge: back on inner pages, opens the menu on main tabs (and on the first screen)
     (() => {
       const drawer = root.querySelector('.drawer'), scrim = root.getElementById('scrim');
-      let x0 = null, y0 = null, dx = 0, active = false, mode = '';
+      let x0 = null, y0 = null, dx = 0, active = false, mode = '', past = false;
       const target = () => root.getElementById('main') || document.querySelector('#content') || document.body;
       const W = () => drawer.getBoundingClientRect().width || 300;
       onWin('touchstart', e => {
         const t = e.touches[0]; x0 = null;
         if (e.touches.length !== 1 || root.querySelector('.sheet')) return;
-        if (app.classList.contains('open')) { mode = 'close'; x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; return; }
+        if (app.classList.contains('open')) { mode = 'close'; x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; past = false; return; }
         if (t.clientX > 28) return;
         mode = isTop || history.length <= 1 ? 'menu' : 'back';
-        x0 = t.clientX; y0 = t.clientY; dx = 0; active = false;
+        x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; past = false;
       }, { passive: true });
       onWin('touchmove', e => {
         if (x0 == null) return;
@@ -1122,6 +1416,8 @@
         if (!active && Math.abs(t.clientY - y0) > 30 && Math.abs(t.clientY - y0) > Math.abs(dx)) { x0 = null; return; }
         if (Math.abs(dx) > 10) active = true;
         if (!active) return;
+        const over = mode === 'back' ? dx > 90 : mode === 'menu' ? dx > 70 : dx < -70;
+        if (over !== past) { past = over; if (over) haptic('light'); }
         if (mode === 'back') { const el = target(); el.style.transition = 'none'; el.style.transform = `translateX(${Math.max(0, dx) * 0.6}px)`; el.style.opacity = String(1 - Math.min(Math.max(dx, 0), 300) / 600); }
         else {
           const w = W(); const pos = mode === 'menu' ? Math.min(0, -w + Math.max(0, dx)) : Math.min(0, Math.max(-w, dx));
@@ -1141,9 +1437,41 @@
         } else if (active) {
           const open = mode === 'menu' ? dx > 70 : dx > -70;
           drawer.style.transition = ''; drawer.style.transform = ''; scrim.style.transition = ''; scrim.style.opacity = ''; scrim.style.pointerEvents = '';
-          toggle(open);
+          app.classList.toggle('open', open);
         }
         active = false;
+      });
+    })();
+
+    // pull down at the top of a screen to refresh it (in place, no white flash)
+    (() => {
+      const ind = document.createElement('div'); ind.className = 'ptr'; ind.innerHTML = I('refresh');
+      app.appendChild(ind);
+      const TH = 78;
+      let y0 = null, x0 = 0, pull = 0, armed = false, busy = false;
+      const reset = () => { ind.classList.add('back'); ind.classList.remove('armed'); ind.style.opacity = '0'; ind.style.transform = ''; setTimeout(() => ind.classList.remove('back'), 260); };
+      onWin('touchstart', e => {
+        y0 = null;
+        if (busy || e.touches.length !== 1 || window.scrollY > 2 || root.querySelector('.sheet') || app.classList.contains('open')) return;
+        if (e.touches[0].clientX <= 28) return;                    // edge swipe has priority
+        y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; pull = 0; armed = false;
+      }, { passive: true });
+      onWin('touchmove', e => {
+        if (y0 == null) return;
+        const t = e.touches[0]; pull = t.clientY - y0;
+        if (Math.abs(t.clientX - x0) > 14 && Math.abs(t.clientX - x0) > Math.abs(pull)) { y0 = null; reset(); return; }
+        if (pull <= 0 || window.scrollY > 4) { if (armed || ind.style.opacity) reset(); armed = false; return; }
+        const p = Math.min(1, pull / TH);
+        ind.style.opacity = String(Math.min(1, p * 1.3));
+        ind.style.transform = `translate(-50%, ${Math.min(pull, 130) * 0.42}px) scale(${0.5 + 0.5 * p}) rotate(${pull * 2.6}deg)`;
+        if (pull >= TH && !armed) { armed = true; ind.classList.add('armed'); haptic('medium'); }
+        else if (pull < TH && armed) { armed = false; ind.classList.remove('armed'); }
+      }, { passive: true });
+      onWin('touchend', () => {
+        if (y0 == null) return; y0 = null;
+        if (!armed) { reset(); return; }
+        busy = true; ind.classList.remove('armed'); ind.style.transform = ''; ind.classList.add('spin');
+        refreshPage().then(() => { busy = false; if (ind.isConnected) { ind.classList.remove('spin'); reset(); } });
       });
     })();
 
@@ -1153,24 +1481,31 @@
       return;
     }
 
+    // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
+    const hadSnap = !!document.getElementById('sk-snap');
+    let skipAnim = hadSnap || QUIET;
     const mainEl = root.getElementById('main');
+    document.documentElement.classList.add('sk-full');
     page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; }, setTab: k => {
       root.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.tab === k));
-    }, animate: () => animateIn(mainEl) });
-    animateIn(mainEl);
-    document.documentElement.classList.add('sk-full');
+    }, animate: () => { if (!skipAnim) animateIn(mainEl); }, ctx });
+    if (skipAnim) app.classList.add('still');      // same content as a moment ago → no pop-in effects
+    else animateIn(mainEl);
+    QUIET = false;
+    skipAnim = false;
+    saveSnapshotSoon();
   }
 
   function drawerHTML(ctx) {
     const item = (href, ic, label, extra = '') => `<a class="dl" href="${esc(href)}">${I(ic)}<span>${label}</span>${extra}</a>`;
     return `
-      <div class="who">${PERSON_AV}
-        <div><b>${esc(ctx.name)}</b><span id="timer"></span></div></div>
+      <a class="who" href="${esc(ctx.student)}">${meAvatar()}
+        <div><b>${esc(ctx.name)}</b><span id="timer"></span></div></a>
       ${item('/#start', 'home', 'Start')}
       ${item(ctx.student + '/grades', 'grades', 'Oceny')}
       ${item('/#plan', 'calendar', 'Plan lekcji')}
       ${item(ctx.student + '/homeworks', 'edit', 'Zadania domowe')}
-      ${item(ctx.student + '/presences', 'chart', 'Frekwencja')}
+      ${item(ctx.student + '/presences', 'pres', 'Frekwencja')}
       ${item('/internal_messages', 'mail', 'Wiadomości', ctx.unread ? `<span class="cnt">${ctx.unread}</span>` : '')}
       <div class="dsep"></div>
       ${item('/#przedmioty', 'book', 'Przedmioty')}
@@ -1179,7 +1514,7 @@
       ${item('/calendar', 'clock', 'Kalendarz')}
       ${item('/forums', 'chat', 'Forum')}
       ${item('/documents/attachments', 'file', 'Dokumenty')}
-      ${item(ctx.student, 'user', 'Mój profil')}
+      <a class="dl" href="#" id="people">${I('search')}<span>Szukaj osób</span></a>
       <div class="dsep"></div>
       <a class="dl" href="#" id="settings">${I('settings')}<span>Ustawienia</span></a>
       <a class="dl" href="#" id="classic">${I('monitor')}<span>Klasyczny widok IDU</span></a>
@@ -1230,7 +1565,8 @@
           sid: (attr(a, 'href').match(/\/subjects\/(\d+)/) || [])[1] || '',
           room: txt($('.location > a[href^="/rooms"]', td)) || txt($('.location', td)).split(' ')[0] || '',
           roomHref: attr($('.location > a[href^="/rooms"]', td), 'href'),
-          teacher: $$('.lesson-cell > a[href^="/teachers"], .teacher a', td).map(txt).join(', '),
+          teacher: $$('.lesson-cell > a[href^="/teachers"], .teacher a', td).map(txt).join(', ') || attr($('.subject', td), 'title').replace(/^prowadzący:\s*/i, ''),
+          klass: txt($('.klass', td)).replace(/^Klasa:\s*/i, '').replace(/\s*\([^()]*\(\d+\)\)\s*$/, ''),
           note: $$('.lesson-cell > div', td).map(txt).filter(Boolean).join(' · '),
           links: $$('.location a', td).filter(x => $('img', x) && attr(x, 'href')).map(x => ({ t: attr($('img', x), 'alt').replace(/^link do\s*/i, ''), h: attr(x, 'href') }))
         });
@@ -1376,7 +1712,7 @@
       return `<div id="nowcard"><a class="card now tap" href="#plan" style="--c:${c}"><div class="bar"></div><div class="in" style="display:block">
         <div class="row"><div class="grow"><div class="lbl">${esc(label)}</div><div class="b clip" style="font-size:19px">${esc(l.name)}</div>
         <div class="muted small clip">${esc(extra)}${t ? ' · ' + esc(t) : ''}</div></div>
-        ${l.room ? `<div class="room">${esc(l.room)}</div>` : ''}</div>
+        ${l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div>
         ${l.note ? `<div class="pill warn" style="margin-top:8px">${I('exam', 'xs')} ${esc(l.note)}</div>` : ''}
         ${prog != null ? `<div class="prog"><i style="width:${prog.toFixed(1)}%"></i></div>` : ''}
         ${after ? `<div class="muted small" style="margin-top:8px">Potem: <b style="color:var(--text)">${esc(after.name)}</b> · ${esc(after.start)}${after.room ? ' · sala ' + esc(after.room) : ''}</div>` : ''}
@@ -1404,7 +1740,7 @@
         }
         case 'pres': {
           const code = it.ok ? 'OB' : it.late ? 'SP' : 'NB';
-          return `<div class="fi"><div class="dot">${I('chart')}</div><div class="body">${head('chart', 'Frekwencja')}
+          return `<div class="fi"><div class="dot">${I('pres')}</div><div class="body">${head('pres', 'Frekwencja')}
             <div class="box"><div class="in row"><div class="letter" style="--c:${it.ok ? 'var(--good)' : it.late ? 'var(--warn)' : 'var(--bad)'}">${code}</div>
             <div class="grow"><div class="ttl">${esc(it.status)}${it.n > 1 ? ' ×' + it.n : ''}</div><div class="sub">${esc(it.dateS)}</div></div></div>
             ${strip(it.subject)}</div></div></div>`;
@@ -1426,18 +1762,26 @@
       const list = feedFilter === 'all' ? feed : feed.filter(f => f.kind === feedFilter);
       return list.length ? list.map(feedItem).join('') : '<div class="nores">Nic tutaj</div>';
     }
-    // upcoming tests from the calendar (cached for 15 min)
-    let exams = null;
-    try { const c = JSON.parse(sessionStorage.getItem('skExams') || 'null'); if (c && Date.now() - c.t < 15 * 60e3) exams = c.list; } catch (e) {}
+    // upcoming tests + days off from the calendar: shown at once from the last visit, refreshed in the background
+    let exams = null, freeDays = [], examsFresh = false;
+    try { const c = JSON.parse(store.get('skExams2') || 'null'); if (c && Date.now() - c.t < 3 * 864e5) { exams = c.list; freeDays = c.free || []; examsFresh = Date.now() - c.t < 15 * 60e3; } } catch (e) {}
+    const ymdS = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     async function loadExams(after) {
-      if (exams) return;
+      if (examsFresh) return;
       try {
-        const s0 = new Date(); s0.setHours(0, 0, 0, 0); const e0 = new Date(s0); e0.setDate(e0.getDate() + 21);
+        const s0 = new Date(); s0.setHours(0, 0, 0, 0); const e0 = new Date(s0); e0.setDate(e0.getDate() + 35);
         const list = await (await fetch(`/calendar_events.json?start_at=${Math.floor(s0 / 1000)}&stop_at=${Math.floor(e0 / 1000)}`, { credentials: 'same-origin' })).json();
-        exams = list.filter(x => /grade_event/.test(x.className || '')).map(x => ({ title: x.title, start: x.start, url: (x.url || '').replace(/^https?:\/\/[^/]+/, '') }));
-        try { sessionStorage.setItem('skExams', JSON.stringify({ t: Date.now(), list: exams })); } catch (e) {}
-        if (after) after();
-      } catch (e) { exams = []; }
+        const ex = list.filter(x => /grade_event/.test(x.className || '')).map(x => ({ title: x.title, start: x.start, url: (x.url || '').replace(/^https?:\/\/[^/]+/, '') }));
+        const fr = list.filter(x => /free/.test(x.className || '')).map(x => {
+          const a = String(x.start).slice(0, 10); let b = a;
+          if (x.end) { const m = String(x.end).match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) { const d = new Date(+m[1], m[2] - 1, +m[3]); if (x.allDay !== false) d.setDate(d.getDate() - 1); b = ymdS(d) < a ? a : ymdS(d); } }
+          return { from: a, to: b, title: x.title };
+        });
+        const changed = JSON.stringify(ex) !== JSON.stringify(exams) || JSON.stringify(fr) !== JSON.stringify(freeDays);
+        exams = ex; freeDays = fr; examsFresh = true;
+        store.set('skExams2', JSON.stringify({ t: Date.now(), list: exams, free: freeDays }));
+        if (after && changed) after();
+      } catch (e) { if (!exams) exams = []; }
     }
     function examsHTML() {
       if (!exams || !exams.length) return '';
@@ -1461,8 +1805,9 @@
       const SS = loadSettings();
       const dateS = new Date().toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
       return `
-        <h1>${esc(hello)}, ${esc(SS.nick || firstName)}</h1>
-        <p class="lead">${esc(dateS)}${klass ? ' · ' + esc(txt(klass)) : ''}</p>
+        <div class="hello"><div class="grow"><h1>${esc(hello)}, ${esc(SS.nick || firstName)}</h1>
+          <p class="lead">${esc(dateS)}${klass ? ' · ' + esc(txt(klass)) : ''}</p></div>
+          <a class="me tap" href="${esc(ctx.student)}" aria-label="Mój profil">${meAvatar()}</a></div>
         ${pendingAnn.map(a => `<a class="alert tap" href="${esc(a.href)}">${I('alert')}<div class="grow">
           <div class="b">Do potwierdzenia</div><div class="small muted clip">${esc(a.title)}</div></div>${I('right', 'sm chev')}</a>`).join('')}
         ${!SS.showDue ? '' : dueSoon.map(h => `<a class="alert tap" href="${esc(h.href)}" style="background:color-mix(in srgb,var(--bad) 14%,var(--card))">
@@ -1474,7 +1819,7 @@
           <div class="hs">${events.map(e => `<a class="card ev tap" href="${esc(e.href)}">
             <div class="datebox"><b>${e.date ? e.date.getDate() : '?'}</b><span>${e.date ? MONTH_SHORT[e.date.getMonth()] : ''}</span></div>
             <div class="grow"><div class="b two">${esc(e.title)}</div><div class="muted small">${e.date ? esc(DAY_FULL[e.date.getDay()]) + (e.date.getHours() ? ', ' + hhmm(e.date) : '') : esc(e.dateS)}</div></div></a>`).join('')}</div>` : ''}
-        ${SS.showFeed ? `<div class="sec"><h2>Co nowego</h2><a href="#" id="reload">${I('refresh', 'xs')}</a></div>
+        ${SS.showFeed ? `<div class="sec"><h2>Co nowego</h2><a href="#" id="reload" style="display:flex;gap:5px;align-items:center;font-size:14px">${I('refresh', 'xs')}Odśwież</a></div>
         ${chipRow('ff', feedKinds().map(([v, label]) => ({ v, label, n: v === 'all' ? null : feed.filter(f => f.kind === v).length })).filter(o => o.n !== 0), feedFilter)}
         <div id="feed">${feedHTML()}</div>
         <div class="muted small" style="text-align:center;margin-top:10px">Zaktualizowano: ${esc(hhmm(new Date()))}</div>` : ''}`;
@@ -1541,7 +1886,7 @@
           <div class="b">${esc(e.title.replace(/\s*\([^()]+\)\s*$/, ''))}</div><div class="when">${esc(prettySubj(e.subj))}</div></div></a>`).join('');
       }
       if (info && info.free.length) return top + (ls.length ? `<div class="nores">Według kalendarza to dzień wolny — lekcje niżej mogą się nie odbyć.</div>` : '') + lessonsHTML(ls, wd, isToday, info, true);
-      if (!ls.length) return top + '<div class="empty">Brak lekcji 🎉</div>';
+      if (!ls.length) return top + `<div class="empty">${I('sun', 'big')}<div>Brak lekcji</div></div>`;
       return top + lessonsHTML(ls, wd, isToday, info, false);
     }
     function lessonsHTML(ls, wd, isToday, info, dim) {
@@ -1559,7 +1904,7 @@
           <div class="grow"><div class="b clip">${esc(l.name)} ${st === 'cur' ? '<span class="pill good">TERAZ</span>' : ''}</div>
           <div class="muted small clip">Lekcja ${l.nr}${teacherFor(l) ? ' · ' + esc(teacherFor(l)) : ''}</div>
           ${note ? `<div class="pill bad" style="margin-top:5px">${I('exam', 'xs')} Sprawdzian: ${esc(note)}</div>` : ''}</div>
-          ${l.room ? `<div class="room">${esc(l.room)}</div>` : ''}</div></a>`;
+          ${l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div></a>`;
       }).join('');
     }
     function dayMarks(wd) {
@@ -1590,7 +1935,7 @@
       cells += items.map(it => { const info = dayInfo(dateFor(it.d)); const ex = examFor(info, it.l) || (weekOff === 0 && it.l.note);
         const free = info && info.free.length;
         return `<a class="c tap ${ex ? 'ex' : ''}" href="${esc(it.l.href)}" data-les="${it.d}:${(plan[it.d] || []).indexOf(it.l)}" style="--c:${subjColor(it.l.raw)};grid-column:${it.col};grid-row:${it.row} / span ${it.span};${free ? 'opacity:.35' : ''}">
-        ${ex ? '<b class="tst">TEST</b>' : ''}${esc(it.l.name)}<small>${esc(it.l.room)}</small></a>`; }).join('');
+        ${ex ? '<b class="tst">TEST</b>' : ''}${esc(it.l.name)}<small>${esc(shortRoom(it.l.room))}</small></a>`; }).join('');
       return `<div class="grid" style="grid-template-rows:auto repeat(${maxNr - minNr + 1},minmax(42px,auto))">${cells}</div>`;
     }
     function planView() {
@@ -1609,7 +1954,7 @@
     }
 
     // ---------- subjects ----------
-    const LINK_LABEL = { 'zadania domowe': ['edit', 'Zadania'], 'oceny': ['grades', 'Oceny'], 'obecności': ['chart', 'Obecności'],
+    const LINK_LABEL = { 'zadania domowe': ['edit', 'Zadania'], 'oceny': ['grades', 'Oceny'], 'obecności': ['pres', 'Obecności'],
       'tematy lekcji': ['book', 'Tematy'], 'forum': ['chat', 'Forum'] };
     function subjectsView() {
       return `<div class="search">${I('search', 'sm')}<input id="filter" placeholder="Szukaj przedmiotu" autocomplete="off"></div>
@@ -1628,7 +1973,7 @@
     function openLesson(root, wd, i) {
       const l = (plan[wd] || [])[i]; if (!l) return;
       const subj = subjects.find(x => x.href === '/subjects/' + l.sid);
-      const LL = { 'zadania domowe': ['edit', 'Zadania'], 'oceny': ['grades', 'Oceny'], 'obecności': ['chart', 'Obecności'], 'tematy lekcji': ['book', 'Tematy'], 'forum': ['chat', 'Forum'] };
+      const LL = { 'zadania domowe': ['edit', 'Zadania'], 'oceny': ['grades', 'Oceny'], 'obecności': ['pres', 'Obecności'], 'tematy lekcji': ['book', 'Tematy'], 'forum': ['chat', 'Forum'] };
       const t = teacherFor(l);
       openSheet(root, `<div class="hero" style="--c:${subjColor(l.raw)};margin:0 0 14px">
           <div style="opacity:.85;font-size:13px;font-weight:700">${esc(DAY_FULL[wd].replace(/^./, m => m.toUpperCase()))} · lekcja ${l.nr}</div>
@@ -1636,8 +1981,27 @@
         ${t ? `<div class="kv"><span>Nauczyciel</span><span>${esc(t)}</span></div>` : ''}
         ${l.note ? `<div class="kv"><span>Sprawdzian / notatka</span><span style="color:var(--warn)">${esc(l.note)}</span></div>` : ''}
         <div class="chips" style="margin-top:14px"><a class="chip" href="${esc(l.href)}">${I('layers')}Strona przedmiotu</a>
+          ${l.roomHref ? `<a class="chip" href="${esc(l.roomHref)}">${I('pin')}Sala ${esc(l.room)}</a>` : ''}
           ${subj ? subj.links.filter(x => LL[x.t]).map(x => `<a class="chip" href="${esc(x.h)}">${I(LL[x.t][0])}${LL[x.t][1]}</a>`).join('') : ''}
           ${l.links.map(x => `<a class="chip" href="${esc(x.h)}" target="_blank">${I('right')}${esc(x.t || 'Link')}</a>`).join('')}</div>`);
+    }
+
+    // the iPhone app keeps a copy of the timetable for the widget and the reminders
+    let syncT = 0;
+    const syncNative = () => { if (!NATIVE_IDU) return; clearTimeout(syncT); syncT = setTimeout(syncNow, 400); };
+    function syncNow() {
+      const two = n => String(n).padStart(2, '0');
+      const days = {};
+      Object.keys(plan).forEach(k => { days[k] = plan[k].map(l => ({ nr: l.nr, start: l.start, end: l.end, name: l.name, room: l.room || '',
+        teacher: teacherFor(l) || '', color: subjColor(l.raw), subj: normSubj(l.raw) })); });
+      const ex = (exams || []).map(x => {
+        const m = String(x.start).match(/^(\d{4}-\d{2}-\d{2})/); const subj = (String(x.title).match(/\(([^()]+)\)\s*$/) || [])[1] || '';
+        return m ? { date: m[1], subj: normSubj(subj), name: prettySubj(subj), title: String(x.title).replace(/\s*\([^()]+\)\s*$/, '') } : null;
+      }).filter(Boolean);
+      const hw = feed.filter(f => f.kind === 'hw').map(f => { const d = parseDate(f.due);
+        return d && d > new Date() ? { title: f.title, subject: prettySubj(f.subject || ''), due: ymdS(d) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes()) } : null; }).filter(Boolean);
+      native({ type: 'plan', v: 1, days, exams: ex, free: freeDays || [], hw, me: loadSettings().nick || firstName, updated: Date.now() });
+      native(notifyPrefs(loadSettings()));
     }
 
     return {
@@ -1655,7 +2019,7 @@
         }
         function wire() {
           const r = root.getElementById('reload');
-          if (r) r.onclick = e => { e.preventDefault(); location.reload(); };
+          if (r) r.onclick = e => { e.preventDefault(); haptic('light'); r.style.opacity = '.5'; refreshPage({ keepScroll: true }); };
           wireChips(root, 'ff', v => { feedFilter = v; const f = root.getElementById('feed'); f.innerHTML = feedHTML(); animateIn(f); });
           main.querySelectorAll('[data-les]').forEach(el => el.onclick = e => {
             e.preventDefault(); e.stopPropagation(); const [wd, i] = el.dataset.les.split(':').map(Number); openLesson(root, wd, i);
@@ -1674,6 +2038,7 @@
             main.innerHTML = planView(); wire(); if (anim) { const b2 = root.getElementById('planbody'); if (b2) { b2.classList.add(anim); } }
           };
           const goWeek = d => {
+            haptic('selection');
             weekOff += d; rerenderPlan(d > 0 ? 'slideL' : 'slideR');
             loadWeek(weekOff, () => { if ((location.hash || '').slice(1) === 'plan') rerenderPlan(); });
           };
@@ -1692,6 +2057,7 @@
               if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
               if (dx < 0) { if (planDay < 5) planDay++; else { planDay = 1; goWeek(1); return; } }
               else { if (planDay > 1) planDay--; else { planDay = 5; goWeek(-1); return; } }
+              haptic('selection');
               rerenderPlan(dx < 0 ? 'slideL' : 'slideR');
             });
           }
@@ -1703,10 +2069,11 @@
         }
         onWin('hashchange', show);
         show();
+        syncNative();
         const view = () => (location.hash || '#start').slice(1);
-        loadExams(() => { const ex = root.getElementById('exams'); if (ex && view() === 'start') { ex.innerHTML = examsHTML(); animateIn(ex); wire(); } });
+        loadExams(() => { const ex = root.getElementById('exams'); if (ex && view() === 'start') { ex.innerHTML = examsHTML(); animateIn(ex); wire(); } syncNative(); saveSnapshotSoon(); });
         refreshTeachers(() => { if (view() === 'plan') { main.innerHTML = planView(); wire(); } else if (view() === 'start') {
-          const nc = root.getElementById('nowcard'); if (nc) nc.outerHTML = nowNextCard(); } });
+          const nc = root.getElementById('nowcard'); if (nc) nc.outerHTML = nowNextCard(); } syncNative(); saveSnapshotSoon(); });
         every(() => {
           if (view() === 'start') { const nc = root.getElementById('nowcard'); if (nc) nc.outerHTML = nowNextCard(); }
           else if (view() === 'plan' && planMode === 'day' && planDay === today) { const dl = root.getElementById('daylist'); if (dl) { dl.innerHTML = dayList(planDay); wire(); } }
@@ -1989,7 +2356,7 @@
           ${prev || next ? `<div class="row" style="justify-content:space-between;margin-top:6px">
             ${prev ? `<a class="btn-s" href="${esc(attr(prev, 'href'))}">${I('back', 'sm')}Nowsze</a>` : '<span></span>'}
             ${next ? `<a class="btn-s" href="${esc(attr(next, 'href'))}">Starsze${I('right', 'sm')}</a>` : ''}</div>` : ''}
-          <a class="fab" href="/internal_messages/new" aria-label="Nowa wiadomość">${I('edit')}</a>`;
+          <a class="fab" href="/internal_messages/new" aria-label="Nowa wiadomość">${I('compose')}</a>`;
         const redraw = () => { const l = root.getElementById('mlist'); l.innerHTML = listHTML(); };
         wireChips(root, 'mfc', v => { mf = v; redraw(); animateIn(root.getElementById('mlist')); });
         root.getElementById('sq').oninput = e => { mq = e.target.value; redraw(); };
@@ -2027,7 +2394,7 @@
             <div class="grow"><div class="b">${esc(m.who)}</div><div class="muted small">${esc(m.dateS)}</div></div></div>
             <div class="mbody">${m.html}</div></div>`).join('')}
           ${form ? `<div class="reply"><textarea id="rt" placeholder="Napisz odpowiedź…"></textarea>
-            <button class="btn-p" id="rs">${I('send', 'sm')}Wyślij</button></div>` : ''}`;
+            <button class="btn-p" id="rs">${I('send', 'sm')}<span>Wyślij</span></button></div>` : ''}`;
         if (!form) return;
         const btn = root.getElementById('rs');
         btn.onclick = async () => {
@@ -2040,8 +2407,10 @@
             fd.set('send', 'Wyślij');
             const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
             if (!r.ok) throw new Error(r.status);
-            location.reload();
+            haptic('success'); toast(root, 'Wysłano', 'good');
+            refreshPage();
           } catch (e) {
+            haptic('error');
             btn.disabled = false; btn.lastChild.textContent = 'Nie udało się – spróbuj ponownie';
           }
         };
@@ -2086,7 +2455,7 @@
       const nq = norm(hq);
       const pick = { open, ended, nodue, all: open.concat(nodue, ended.slice().sort((a, b) => b.due - a.due)) }[hf] || items;
       const list = pick.filter(i => !nq || norm(i.title + ' ' + i.subject).includes(nq));
-      return list.length ? list.map(card).join('') : `<div class="nores">${hf === 'open' ? 'Nic do zrobienia 🎉' : 'Brak zadań'}</div>`;
+      return list.length ? list.map(card).join('') : `<div class="nores">${hf === 'open' ? I('check', 'big') + '<div>Nic do zrobienia</div>' : 'Brak zadań'}</div>`;
     }
     return {
       title: 'Zadania domowe', tab: '', top: false,
@@ -2151,7 +2520,7 @@
             <div>${teachers.map(t => `<a href="${esc(t.h)}">${esc(t.n)}</a>`).join(', ')}</div></div>
           <div class="chips">
             ${seeMore(gm) ? `<a class="chip" href="${esc(seeMore(gm))}">${I('grades')}Oceny</a>` : ''}
-            ${seeMore(pm) ? `<a class="chip" href="${esc(seeMore(pm))}">${I('chart')}Obecności</a>` : ''}
+            ${seeMore(pm) ? `<a class="chip" href="${esc(seeMore(pm))}">${I('pres')}Obecności</a>` : ''}
             ${seeMore(hm) ? `<a class="chip" href="${esc(seeMore(hm))}">${I('edit')}Zadania</a>` : ''}
             ${seeMore(tm) ? `<a class="chip" href="${esc(seeMore(tm))}">${I('book')}Tematy</a>` : ''}
             ${seeMore(fm) ? `<a class="chip" href="${esc(seeMore(fm))}">${I('file')}Pliki</a>` : ''}
@@ -2268,7 +2637,7 @@
       return { h, evs, more };
     }).filter(s => s.evs.length);
 
-    const allStatus = sections.every(s => s.evs.every(e => statusOf(e.name)));
+    const allStatus = sections.length > 0 && sections.every(s => s.evs.every(e => statusOf(e.name)));
     const counts = { ob: 0, nb: 0, sp: 0, u: 0 };
     if (allStatus) sections.forEach(s => s.evs.forEach(e => { counts[statusOf(e.name)[0]]++; }));
     const total = counts.ob + counts.nb + counts.sp + counts.u;
@@ -2302,7 +2671,7 @@
           ${allStatus ? `<div class="card" style="padding:2px 14px">${evs.map(evHTML).join('')}</div>` : evs.map(evHTML).join('')}
           ${sec.more.length ? `<div class="chips">${sec.more.map(m => `<a class="chip" href="${esc(m.h)}">${esc(m.t)}</a>`).join('')}</div>` : ''}`;
       }).join('');
-      return out || '<div class="nores">Brak wyników</div>';
+      return out || (sections.length ? '<div class="nores">Brak wyników</div>' : `<div class="empty">${I('inbox', 'big')}<div>Nic tu jeszcze nie ma</div></div>`);
     }
     const filterOpts = allStatus
       ? [{ v: 'all', label: 'Wszystko' }, { v: 'nb', label: 'Nieobecności', n: counts.nb }, { v: 'sp', label: 'Spóźnienia', n: counts.sp }, { v: 'u', label: 'Usprawiedliwione', n: counts.u }].filter(o => o.n !== 0)
@@ -2338,6 +2707,7 @@
     const scrim = document.createElement('div'); scrim.className = 'sheet-scrim';
     const sh = document.createElement('div'); sh.className = 'sheet';
     sh.innerHTML = '<div class="grab"></div>' + html;
+    haptic('soft');
     const close = () => { sh.classList.add('closing'); scrim.style.opacity = '0'; scrim.style.transition = 'opacity .2s';
       setTimeout(() => { sh.remove(); scrim.remove(); }, 220); };
     scrim.onclick = close;
@@ -2579,8 +2949,9 @@
             if (submit && submit.name) fd.set(submit.name, submit.value);
             const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
             if (!r.ok) throw new Error(r.status);
-            location.reload();
-          } catch (e) { btn.disabled = false; btn.lastChild.textContent = 'Nie udało się – spróbuj ponownie'; }
+            haptic('success'); toast(root, isComments ? 'Dodano komentarz' : 'Opublikowano', 'good');
+            refreshPage();
+          } catch (e) { haptic('error'); btn.disabled = false; btn.lastChild.textContent = 'Nie udało się – spróbuj ponownie'; }
         };
       }
     };
@@ -2715,7 +3086,7 @@
               ${year ? `<span class="chip">${I('clock')}${esc(year)}</span>` : ''}</div></div>
           ${tutor ? `<div class="sec"><h2>Wychowawca</h2></div><a class="card row tap" href="${esc(attr(tutor, 'href'))}">
             <div class="av" style="background:${subjColor(txt(tutor))}">${esc(initials(txt(tutor)))}</div><div class="grow b">${esc(txt(tutor))}</div>${I('right', 'sm chev')}</a>` : ''}
-          ${isMe ? `<div class="chips"><a class="chip" href="${esc(ctx.student)}/grades">${I('grades')}Oceny</a><a class="chip" href="${esc(ctx.student)}/presences">${I('chart')}Frekwencja</a>
+          ${isMe ? `<div class="chips"><a class="chip" href="${esc(ctx.student)}/grades">${I('grades')}Oceny</a><a class="chip" href="${esc(ctx.student)}/presences">${I('pres')}Frekwencja</a>
             <a class="chip" href="${esc(ctx.student)}/homeworks">${I('edit')}Zadania</a><a class="chip" href="/#plan">${I('calendar')}Plan</a></div>` : ''}
           ${parents.length ? `<div class="sec"><h2>Rodzice / opiekunowie</h2></div><div class="card" style="padding:2px 14px">${parents.map(p => `<a class="frow" href="${esc(p.h)}">
             <div class="av" style="width:34px;height:34px;font-size:13px;background:${subjColor(p.n)}">${esc(initials(p.n))}</div><div class="grow">${esc(p.n)}</div>${I('right', 'sm chev')}</a>`).join('')}</div>` : ''}
@@ -2815,7 +3186,7 @@
           <div class="box" style="margin-top:8px"><div class="in" style="padding:16px">
             <div class="kind" style="--c:${subjColor(subj)}">Ogłoszenie</div><h1 style="font-size:24px;margin:2px 0 10px">${esc(title)}</h1>
             <div class="mbody">${c.innerHTML}</div></div>
-            ${subj ? `<a class="strip" href="${esc(attr(subjA, 'href'))}" style="--c:${subjColor(subj)}"><span>${esc(prettySubj(subj))}</span><span>›</span></a>` : ''}</div>
+            ${subj ? `<a class="strip" href="${esc(attr(subjA, 'href'))}" style="--c:${subjColor(subj)}"><span>${esc(prettySubj(subj))}</span>${I('right', 'xs')}</a>` : ''}</div>
           ${confirm ? `<button class="btn-p" id="conf" style="margin-top:16px">${I('check', 'sm')}<span>Potwierdzam przeczytanie</span></button>` : ''}`;
         const b = root.getElementById('conf');
         if (b) b.onclick = () => { b.disabled = true; b.lastChild.textContent = 'Potwierdzanie…'; 
@@ -2826,6 +3197,534 @@
           f.appendChild(t); document.body.appendChild(f); f.submit();
           setTimeout(() => { b.disabled = false; b.lastChild.textContent = 'Potwierdzam przeczytanie'; }, 6000); };
       }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  Timetable view used by printable plans and room pages
+   * ------------------------------------------------------------------ */
+  function scheduleView(el, root, plan, opts) {
+    const days = [1, 2, 3, 4, 5];
+    const today = new Date().getDay();
+    let day = today >= 1 && today <= 5 ? today : 1;
+    let mode = store.get('skPlanMode') === 'week' ? 'week' : 'day';
+    const nowM = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+    const short = t => t && t.length > 40 ? t.split(',')[0] + ' i in.' : t;
+    const meta = l => [opts.teacher !== false ? short(l.teacher) : '', opts.klass ? l.klass : ''].filter(Boolean).map(esc).join(' · ');
+    function list(wd) {
+      const ls = (plan[wd] || []).slice().sort((a, b) => a.nr - b.nr);
+      if (!ls.length) return `<div class="empty">${I('sun', 'big')}<div>Brak lekcji</div></div>`;
+      const n = nowM(), isToday = wd === today;
+      return ls.map(l => {
+        let st = '';
+        if (isToday) { if (n >= mins(l.start) && n <= mins(l.end)) st = 'cur'; else if (n > mins(l.end)) st = 'past'; }
+        return `<a class="card les tap ${st}" href="${esc(l.href)}" style="--c:${subjColor(l.raw)}"><div class="bar"></div><div class="in">
+          <div class="tm">${esc(l.start)}<br>${esc(l.end)}</div>
+          <div class="grow"><div class="b clip">${esc(l.name)} ${st === 'cur' ? '<span class="pill good">TERAZ</span>' : ''}</div>
+          <div class="muted small clip">Lekcja ${l.nr}${meta(l) ? ' · ' + meta(l) : ''}</div></div>
+          ${opts.room && l.room ? `<div class="room" title="${esc(l.room)}">${esc(shortRoom(l.room))}</div>` : ''}</div></a>`;
+      }).join('');
+    }
+    function grid() {
+      const nrs = [].concat(...days.map(d => (plan[d] || []).map(l => l.nr)));
+      if (!nrs.length) return '<div class="empty">Brak planu</div>';
+      const minNr = Math.min(...nrs), maxNr = Math.max(...nrs), times = {};
+      days.forEach(d => (plan[d] || []).forEach(l => { times[l.nr] = l.start; }));
+      let cells = '<div></div>' + days.map(d => `<div class="h ${d === today ? 'today' : ''}">${DAY_SHORT[d]}</div>`).join('');
+      for (let nr = minNr; nr <= maxNr; nr++) cells += `<div class="t" style="grid-column:1;grid-row:${nr - minNr + 2}">${esc(times[nr] || '')}</div>`;
+      days.forEach((d, ci) => {
+        const ls = (plan[d] || []).slice().sort((a, b) => a.nr - b.nr);
+        for (let i = 0; i < ls.length; i++) {
+          let span = 1;
+          while (ls[i + span] && ls[i + span].raw === ls[i].raw && ls[i + span].nr === ls[i].nr + span) span++;
+          const l = ls[i];
+          cells += `<a class="c tap" href="${esc(l.href)}" style="--c:${subjColor(l.raw)};grid-column:${ci + 2};grid-row:${l.nr - minNr + 2} / span ${span}">
+            ${esc(l.name)}<small>${esc(opts.room ? shortRoom(l.room) : opts.klass ? l.klass : '')}</small></a>`;
+          i += span - 1;
+        }
+      });
+      return `<div class="grid" style="grid-template-rows:auto repeat(${maxNr - minNr + 1},minmax(42px,auto))">${cells}</div>`;
+    }
+    function draw(anim) {
+      el.innerHTML = `<div class="seg" data-sm="1"><button data-m="day" class="${mode === 'day' ? 'on' : ''}">Dzień</button><button data-m="week" class="${mode === 'week' ? 'on' : ''}">Tydzień</button></div>
+        ${mode === 'day' ? `<div class="days">${days.map(d => `<button data-d="${d}" class="${d === day ? 'on' : ''}">${DAY_SHORT[d]}<small>${(plan[d] || []).length || '–'}</small></button>`).join('')}</div>
+        <div class="sl ${anim || ''}">${list(day)}</div>` : grid()}`;
+      el.querySelectorAll('[data-sm] button').forEach(b => b.onclick = () => { mode = b.dataset.m; draw(); animateIn(el); });
+      el.querySelectorAll('.days button').forEach(b => b.onclick = () => { day = +b.dataset.d; draw(); animateIn(el.querySelector('.sl')); });
+      const sl = el.querySelector('.sl');
+      if (sl) {
+        let sx = null, sy = 0;
+        sl.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+        sl.addEventListener('touchend', e => {
+          if (sx == null || sx < 30) { sx = null; return; }
+          const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+          if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+          const nd = dx < 0 ? Math.min(5, day + 1) : Math.max(1, day - 1);
+          if (nd === day) return;
+          day = nd; haptic('selection'); draw(dx < 0 ? 'slideL' : 'slideR');
+        });
+      }
+    }
+    draw();
+  }
+
+  /* printable plans: /students/N/lesson_plan, /klasses/N/lesson_plan, /rooms/N/lesson_plan … */
+  function printPlanPage(ctx) {
+    const box = $('.print_plan');
+    const mod = box.closest('.module') || document.body;
+    const who = txt($('h3', mod));
+    const plan = parseSchedule($('.print_plan .schedule table'));
+    const p = location.pathname;
+    const kind = /^\/students\//.test(p) ? 'Plan ucznia' : /^\/teachers\//.test(p) ? 'Plan nauczyciela' : /^\/rooms\//.test(p) ? 'Plan sali'
+      : /^\/klasses\//.test(p) ? 'Plan klasy' : /^\/subjects\//.test(p) ? 'Plan przedmiotu' : 'Plan lekcji';
+    return {
+      title: kind, tab: p === ctx.student + '/lesson_plan' ? 'plan' : '', top: false,
+      render(main, root) {
+        main.innerHTML = `<h1>${esc(who || kind)}</h1><p class="lead">${esc(kind)}</p><div id="sched"></div>`;
+        scheduleView(root.getElementById('sched'), root, plan, { room: !/^\/rooms\//.test(p), klass: !/^\/(students|klasses)\//.test(p) });
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  ROOM
+   * ------------------------------------------------------------------ */
+  function roomPage(ctx) {
+    const mods = $$('#content .module');
+    const info = mods[0];
+    const name = txt($('h3', info));
+    const fields = $$('p', info).map(p => { const b = $('b', p); if (!b) return null;
+      return { k: txt(b).replace(/[:?]\s*$/, ''), v: txt(p).replace(txt(b), '').trim() }; }).filter(f => f && f.v && !/^szkoły/i.test(f.k));
+    const plan = parseSchedule($('#content .schedule table'));
+    const printA = $$('#content a').find(a => /lesson_plan$/.test(attr(a, 'href')));
+    return {
+      title: 'Sala ' + name, tab: '', top: false,
+      render(main, root) {
+        const d = new Date(), n = d.getHours() * 60 + d.getMinutes(), ls = (plan[d.getDay()] || []).slice().sort((a, b) => a.nr - b.nr);
+        const cur = ls.find(l => n >= mins(l.start) && n <= mins(l.end)), nxt = ls.find(l => mins(l.start) > n);
+        const status = cur ? `Teraz: ${esc(cur.name)}${cur.klass ? ' · ' + esc(cur.klass) : ''} (do ${esc(cur.end)})`
+          : nxt ? `Następna lekcja: ${esc(nxt.name)} o ${esc(nxt.start)}` : ls.length ? 'Na dziś już wolna' : 'Dziś bez zajęć';
+        main.innerHTML = `<div class="hero" style="--c:${subjColor('sala ' + name)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">SALA</div>
+            <h1 style="margin:2px 0 6px">${esc(name)}</h1><div class="row" style="gap:8px;font-weight:600">${I(cur || nxt ? 'clock' : 'check', 'sm')}<span>${status}</span></div></div>
+          ${fields.length ? `<div class="card kvcard" style="margin-top:10px">${fields.map(f => `<div class="kv"><span>${esc(f.k)}</span><span>${esc(f.v)}</span></div>`).join('')}</div>` : ''}
+          <div class="sec"><h2>Plan sali</h2>${printA ? `<a href="${esc(attr(printA, 'href'))}">Pełny plan</a>` : ''}</div><div id="sched"></div>`;
+        scheduleView(root.getElementById('sched'), root, plan, { room: false, klass: true });
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  CALENDAR EVENT (opened from Start / links)
+   * ------------------------------------------------------------------ */
+  function calEventPage(ctx) {
+    const mod = $('.module');
+    const title = txt($('h3', mod));
+    const c = mod.cloneNode(true);
+    const h = $('h3', c); if (h) h.remove();
+    const by = $('div[style*="float"] a', c);
+    const byInfo = by ? { n: txt(by), h: attr(by, 'href') } : null;
+    if (by) by.closest('div').remove();
+    let when = '';
+    const st = $$('strong', c).find(x => /\d{4}/.test(txt(x)));
+    if (st) { when = txt(st); (st.closest('p') || st).remove(); }
+    $$('.clear', c).forEach(x => x.remove());
+    const body = txt(c) ? c.innerHTML : '';
+    const d = parseDate(when);
+    return {
+      title: 'Wydarzenie', tab: '', top: false,
+      render(main) {
+        main.innerHTML = `<div class="hero" style="--c:${subjColor(title)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">WYDARZENIE</div>
+            <h1 style="margin:4px 0 8px;font-size:24px">${esc(title)}</h1>
+            ${when ? `<div class="row" style="gap:8px;font-weight:600">${I('clock', 'sm')}<span>${esc(when)}${d && relTime(d) !== shortDate(d) ? ' · ' + esc(relTime(d)) : ''}</span></div>` : ''}</div>
+          ${body ? `<div class="article" style="margin-top:12px"><div class="mbody">${body}</div></div>` : ''}
+          ${byInfo ? `<div class="sec"><h2>Dodane przez</h2></div><a class="card row tap" href="${esc(byInfo.h)}">
+            <div class="av" style="background:${subjColor(byInfo.n)}">${esc(initials(byInfo.n))}</div><div class="grow b">${esc(byInfo.n)}</div>${I('right', 'sm chev')}</a>` : ''}
+          <div class="chips"><a class="chip" href="/calendar">${I('calendar')}Kalendarz</a></div>`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  STUDENTS OF A SUBJECT GROUP
+   * ------------------------------------------------------------------ */
+  function studentsListPage(ctx) {
+    const head = txt($('.h3 strong')) || txt($('.h3'));
+    const left = head.replace(/\s*-\s*Lista uczniów\s*$/i, '');
+    const subj = left.split(' / ')[0] || 'Przedmiot', grp = left.split(' / ').slice(1).join(' / ');
+    const teachers = $$('.teachers a').map(a => ({ n: txt(a), h: attr(a, 'href') }));
+    const person = li => { const a = $('.name a', li); return a ? { n: txt(a), h: attr(a, 'href'), k: txt($('.klass', li)).replace(/^\/\s*/, '') } : null; };
+    const groups = [];
+    $$('.students_list').forEach(sl => {
+      let label = '';
+      Array.from(sl.children).forEach(ch => {
+        if (ch.tagName === 'SPAN') label = txt(ch);
+        else if (ch.matches('ul.students')) groups.push({ label, items: $$(':scope > li', ch).map(person).filter(Boolean) });
+      });
+    });
+    if (!groups.length) groups.push({ label: '', items: $$('ul.students li').map(person).filter(Boolean) });
+    const total = groups.reduce((n, g) => n + g.items.length, 0);
+    const showLabels = groups.length > 1 || (groups[0] && groups[0].label && !/bez aspektu/i.test(groups[0].label));
+    return {
+      title: prettySubj(subj), tab: '', top: false,
+      render(main) {
+        let i = 0;
+        main.innerHTML = `<div class="hero" style="--c:${subjColor(subj)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">LISTA UCZNIÓW</div>
+            <h1 style="margin:2px 0 4px">${esc(prettySubj(subj))}</h1><div style="font-weight:600">${grp ? esc(grp) + ' · ' : ''}${total} ${plural(total, 'uczeń', 'uczniów', 'uczniów')}</div></div>
+          ${teachers.length ? `<div class="sec"><h2>${teachers.length > 1 ? 'Prowadzący' : 'Prowadzi'}</h2></div>` + teachers.map(t => `<a class="card row tap" href="${esc(t.h)}">
+            <div class="av" style="background:${subjColor(t.n)}">${esc(initials(t.n))}</div><div class="grow b">${esc(t.n)}</div>${I('right', 'sm chev')}</a>`).join('') : ''}
+          <div class="sec"><h2>Uczniowie</h2><span class="muted small">${total}</span></div>
+          ${total > 8 ? `<div class="search">${I('search', 'sm')}<input id="kq" type="search" placeholder="Szukaj ucznia" autocomplete="off"></div>` : ''}
+          ${groups.map(g => `${showLabels && g.label ? `<div class="cat">${esc(g.label)}</div>` : ''}<div class="card" style="padding:2px 14px">${g.items.map(st => { const me = st.h === ctx.student; return `<a class="frow" data-t="${esc(norm(st.n))}" href="${esc(st.h)}">
+              <span class="muted small" style="width:20px;text-align:right">${++i}</span>
+              <div class="av" style="width:34px;height:34px;font-size:13px;background:${subjColor(st.n)}">${esc(initials(st.n))}</div>
+              <div class="grow"><div class="clip ${me ? 'b' : ''}">${esc(st.n)}${me ? ' <span class="pill new">TY</span>' : ''}</div>${st.k ? `<div class="klass">${esc(st.k)}</div>` : ''}</div></a>`; }).join('')}</div>`).join('')}`;
+        const kq = main.querySelector('#kq');
+        if (kq) kq.oninput = () => { const q = norm(kq.value.trim()); main.querySelectorAll('[data-t]').forEach(el => { el.style.display = !q || el.dataset.t.includes(q) ? '' : 'none'; }); };
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  NEW MESSAGE
+   * ------------------------------------------------------------------ */
+  const htmlToText = h => {
+    const d = new DOMParser().parseFromString(String(h || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n'), 'text/html');
+    return (d.body.textContent || '').replace(/ /g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  };
+  function composePage(ctx) {
+    const form = $('#new_message_form');
+    const scripts = HEAD_TEXT + '\n' + $$('script').map(s => s.textContent).join('\n');
+    let recips = [];
+    const m = scripts.match(/initial_json_for_user_search\s*=\s*\$\.parseJSON\('((?:[^'\\]|\\.)*)'\)/);
+    if (m) { try { recips = JSON.parse(m[1].replace(/\\(["'\/])/g, '$1')).filter(r => r && r.id); } catch (e) { recips = []; } }
+    const titleIn = $('#message_title', form), bodyIn = $('#message_body', form), copyIn = $('#message_send_copy_to_email', form);
+    const title0 = titleIn ? titleIn.value : '', body0 = bodyIn ? htmlToText(bodyIn.value) : '', copy0 = !!(copyIn && copyIn.checked);
+    const isDraft = !!(($('#message_draft_id', form) || {}).value);
+    const splitName = n => { const mm = String(n).match(/^(.*?)\s*\(([^()]+)\)\s*$/); return mm ? { n: mm[1], role: mm[2] } : { n: String(n), role: '' }; };
+    return {
+      title: isDraft ? 'Szkic' : 'Nowa wiadomość', tab: 'mail', top: false,
+      render(main, root) {
+        main.innerHTML = `<div class="form">
+            <div class="frow2"><label for="to">Do</label><div class="tokens" id="toks"></div></div>
+            <div id="sugg"></div>
+            <div class="frow2"><label for="subj">Temat</label><input class="finput" id="subj" maxlength="200" value="${esc(title0)}" autocomplete="off"></div>
+            <textarea class="fta" id="body" placeholder="Treść wiadomości">${esc(body0)}</textarea></div>
+          <div class="card" style="padding:0"><label class="tgl inline"><span>Wyślij kopię na mój e-mail</span><input type="checkbox" id="copy" ${copy0 ? 'checked' : ''}><i></i></label></div>
+          <div class="btnrow"><button class="btn-s" id="draft">${I('inbox', 'sm')}<span>Zapisz</span></button><button class="btn-p" id="send">${I('send', 'sm')}<span>Wyślij</span></button></div>
+          <div class="note2">Wpisz co najmniej 3 litery imienia lub nazwiska, aby znaleźć odbiorcę.</div>`;
+        const toks = root.getElementById('toks'), sugg = root.getElementById('sugg');
+        const subj = root.getElementById('subj'), body = root.getElementById('body'), copy = root.getElementById('copy');
+        let input = null, seq = 0, tm = 0;
+        function drawTokens() {
+          toks.innerHTML = recips.map((r, i) => { const s = splitName(r.name); return `<span class="tok"><span>${esc(s.n)}</span><button data-i="${i}" aria-label="Usuń">${I('x')}</button></span>`; }).join('') +
+            `<input class="finput" id="to" placeholder="${recips.length ? 'Dodaj…' : 'Wpisz imię lub nazwisko'}" autocomplete="off" autocapitalize="words">`;
+          toks.querySelectorAll('.tok button').forEach(b => b.onclick = () => { recips.splice(+b.dataset.i, 1); drawTokens(); input.focus(); });
+          input = root.getElementById('to');
+          input.oninput = () => {
+            clearTimeout(tm); const q = input.value.trim();
+            if (q.length < 3) { sugg.innerHTML = ''; return; }
+            tm = setTimeout(async () => {
+              const my = ++seq;
+              sugg.innerHTML = '<div class="sugg"><div class="muted">Szukam…</div></div>';
+              try {
+                const r = await fetch('/internal_messages/search_users?q=' + encodeURIComponent(q), { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json, text/javascript, */*' } });
+                const list = JSON.parse(await r.text());
+                if (my !== seq) return;
+                const fresh = (Array.isArray(list) ? list : []).filter(p => p && p.id && !recips.some(x => String(x.id) === String(p.id))).slice(0, 12);
+                sugg.innerHTML = `<div class="sugg">${fresh.length ? fresh.map((p, i) => { const s = splitName(p.name); return `<button data-i="${i}">
+                  <div class="av" style="background:${subjColor(s.n)}">${esc(initials(s.n))}</div><div class="grow clip">${esc(s.n)}</div>${s.role ? `<span class="role">${esc(s.role)}</span>` : ''}</button>`; }).join('')
+                  : '<div class="muted">Nikogo nie znaleziono</div>'}</div>`;
+                sugg.querySelectorAll('button').forEach(b => b.onclick = () => { recips.push(fresh[+b.dataset.i]); sugg.innerHTML = ''; drawTokens(); input.focus(); });
+              } catch (e) { if (my === seq) sugg.innerHTML = '<div class="sugg"><div class="muted">Nie udało się wyszukać</div></div>'; }
+            }, 260);
+          };
+          input.onkeydown = e => {
+            if (e.key === 'Backspace' && !input.value && recips.length) { recips.pop(); drawTokens(); input.focus(); }
+            if (e.key === 'Enter') { e.preventDefault(); const b = sugg.querySelector('button'); if (b) b.click(); }
+          };
+        }
+        drawTokens();
+        const grow = () => { body.style.height = 'auto'; body.style.height = Math.max(200, body.scrollHeight) + 'px'; };
+        body.addEventListener('input', grow); grow();
+        if (!recips.length) setTimeout(() => input && input.focus(), 400); else if (!title0) setTimeout(() => subj.focus(), 400);
+        const sendB = root.getElementById('send'), draftB = root.getElementById('draft');
+        async function submit(kind) {
+          const text = body.value.trim();
+          if (kind === 'send' && !recips.length) { haptic('error'); toast(root, 'Dodaj odbiorcę', 'bad'); input.focus(); return; }
+          if (kind === 'send' && !text) { haptic('error'); toast(root, 'Napisz treść wiadomości', 'bad'); body.focus(); return; }
+          const btn = kind === 'send' ? sendB : draftB, label = btn.lastChild.textContent;
+          sendB.disabled = draftB.disabled = true; btn.lastChild.textContent = kind === 'send' ? 'Wysyłanie…' : 'Zapisywanie…';
+          try {
+            const fd = new FormData(form);
+            fd.set('receiver_ids', recips.map(r => r.id).join(','));
+            fd.set('message[title]', subj.value.trim());
+            fd.set('message[body]', text ? text.split(/\n{2,}/).map(p => '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>').join('') : '');
+            fd.delete('message[send_copy_to_email]'); fd.append('message[send_copy_to_email]', '0'); if (copy.checked) fd.append('message[send_copy_to_email]', '1');
+            fd.delete('send'); fd.delete('save'); fd.set(kind === 'send' ? 'send' : 'save', kind === 'send' ? 'Wyślij' : 'Zapisz');
+            const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+            const d = new DOMParser().parseFromString(await r.text(), 'text/html');
+            const err = d.querySelector('#errorExplanation, #error_explanation, .errorExplanation, .field_with_errors');
+            const stillForm = kind === 'send' && d.querySelector('#new_message_form') && !d.querySelector('#message, table.message-table');
+            if (!r.ok || err || stillForm) {
+              const why = txt(d.querySelector('#errorExplanation, #error_explanation, .errorExplanation')) || txt(d.querySelector('#flash-messages-section'));
+              throw new Error(why || 'IDU nie przyjęło wiadomości');
+            }
+            haptic('success'); toast(root, kind === 'send' ? 'Wiadomość wysłana' : 'Zapisano w szkicach', 'good');
+            setTimeout(() => softGo(kind === 'send' ? '/internal_messages/sent' : '/internal_messages/drafts', false), 700);
+          } catch (e) {
+            haptic('error'); toast(root, (e && e.message && e.message.length < 120 ? e.message : 'Nie udało się — spróbuj ponownie'), 'bad');
+            sendB.disabled = draftB.disabled = false; btn.lastChild.textContent = label;
+          }
+        }
+        sendB.onclick = () => submit('send');
+        draftB.onclick = () => submit('save');
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  FORUM SEARCH
+   * ------------------------------------------------------------------ */
+  function forumSearchPage(ctx) {
+    const q = new URLSearchParams(location.search).get('search[with_phrase]') || '';
+    const results = $$('#content table.thread-table tr').filter(tr => $('td.author', tr)).map(tr => ({
+      who: txt($('.author-name', tr)), cls: txt($('.author-class', tr)), date: parseDate(txt($('.post-data', tr))), dateS: txt($('.post-data', tr)),
+      text: txt($('.post-body', tr)), href: attr($$('a', tr).filter(a => /\/forum\/posts\/\d+/.test(attr(a, 'href'))).pop(), 'href')
+    }));
+    const snippet = t => {
+      const nq = norm(q.trim()); const i = nq ? norm(t).indexOf(nq) : -1;
+      if (i < 0) return esc(t.slice(0, 220)) + (t.length > 220 ? '…' : '');
+      const a = Math.max(0, i - 70), b = Math.min(t.length, i + nq.length + 170);
+      return (a ? '…' : '') + esc(t.slice(a, i)) + '<mark>' + esc(t.slice(i, i + nq.length)) + '</mark>' + esc(t.slice(i + nq.length, b)) + (b < t.length ? '…' : '');
+    };
+    return {
+      title: 'Szukaj na forum', tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<form class="search" id="fs">${I('search', 'sm')}<input id="fq" type="search" enterkeyhint="search" placeholder="Szukane wyrażenie" value="${esc(q)}" autocomplete="off"></form>
+          ${q ? `<p class="lead">${results.length ? `${results.length} ${plural(results.length, 'wynik', 'wyniki', 'wyników')} dla „${esc(q)}”` : `Brak wyników dla „${esc(q)}”`}</p>` : '<div class="empty">' + I('chat', 'big') + '<div>Wpisz słowo i naciśnij Enter</div></div>'}
+          ${results.map(r => `<a class="card tap" href="${esc(r.href || '#')}">
+            <div class="row" style="gap:10px"><div class="av" style="width:34px;height:34px;font-size:13px;background:${subjColor(r.who)}">${esc(initials(r.who))}</div>
+              <div class="grow"><div class="b clip">${esc(r.who)}</div><div class="muted small clip">${esc(r.cls ? r.cls + ' · ' : '')}${esc(r.date ? shortDate(r.date) + ' ' + r.date.getFullYear() : r.dateS)}</div></div>${I('right', 'sm chev')}</div>
+            <div style="font-size:15px;line-height:1.45;margin-top:8px">${snippet(r.text)}</div></a>`).join('')}`;
+        const f = root.getElementById('fs');
+        f.onsubmit = e => { e.preventDefault(); const v = root.getElementById('fq').value.trim(); if (v) softGo('/forum/search?search%5Bwith_phrase%5D=' + encodeURIComponent(v), true); };
+        if (!q) setTimeout(() => root.getElementById('fq').focus(), 350);
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  FILES (subject attachments, document details)
+   * ------------------------------------------------------------------ */
+  const fileExt = n => ((String(n).match(/\.([a-z0-9]{2,5})$/i) || [])[1] || '').toLowerCase();
+  const extColor = e => /pdf/.test(e) ? '#e5484d' : /docx?|odt|rtf|pages/.test(e) ? '#2f7de1' : /xlsx?|ods|csv|numbers/.test(e) ? '#2fa36b'
+    : /pptx?|odp|key/.test(e) ? '#f07a2b' : /png|jpe?g|gif|heic|webp/.test(e) ? '#8b5cf6' : /zip|rar|7z/.test(e) ? '#a1887f' : '#5d6878';
+  const extBadge = name => { const e = fileExt(name); return `<div class="ftype" style="--c:${extColor(e)}">${e ? esc(e.toUpperCase().slice(0, 4)) : I('file', 'sm')}</div>`; };
+
+  function filesPage(ctx) {
+    const rows = $$('#content table tr').map(tr => {
+      const tds = $$(':scope > td', tr); if (tds.length < 4) return null;
+      const a = $('a', tds[0]) || $('a', tr);
+      return { file: attr(a, 'title') || attr($('img', a), 'alt'), href: attr(a, 'href'), name: txt(tds[1]) || attr(a, 'title'), size: txt(tds[2]), date: txt(tds[3]), d: parseDate(txt(tds[3])) };
+    }).filter(r => r && r.href);
+    const subjA = $$('#breadcrumbs a').find(a => /^\/subjects\/\d+$/.test(attr(a, 'href')));
+    const subj = subjA ? txt(subjA) : '';
+    let fq = '', fs = 'new';
+    function listHTML() {
+      const nq = norm(fq);
+      const list = rows.filter(r => !nq || norm(r.name + ' ' + r.file).includes(nq))
+        .sort(fs === 'az' ? (a, b) => norm(a.name).localeCompare(norm(b.name)) : (a, b) => (b.d || 0) - (a.d || 0));
+      return list.length ? list.map(r => `<a class="card row tap" href="${esc(r.href)}">${extBadge(r.file)}
+          <div class="grow"><div class="b two">${esc(r.name)}</div><div class="muted small">${esc(r.size)}${r.size && r.date ? ' · ' : ''}${esc(r.d ? shortDate(r.d) + ' ' + r.d.getFullYear() : r.date)}</div></div>
+          <div style="color:var(--accent)">${I('download', 'sm')}</div></a>`).join('') : '<div class="nores">Brak plików</div>';
+    }
+    return {
+      title: subj ? prettySubj(subj) : 'Pliki', tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<h1>Pliki</h1><p class="lead">${rows.length} ${plural(rows.length, 'plik', 'pliki', 'plików')}${subj ? ' · ' + esc(prettySubj(subj)) : ''}</p>
+          ${rows.length > 5 ? `<div class="search">${I('search', 'sm')}<input id="fq" type="search" placeholder="Szukaj pliku" autocomplete="off"></div>
+            ${chipRow('fsrt', [{ v: 'new', label: 'Najnowsze' }, { v: 'az', label: 'A–Z' }], fs)}` : ''}
+          <div id="fl">${rows.length ? listHTML() : `<div class="empty">${I('file', 'big')}<div>Brak plików</div></div>`}</div>`;
+        const redraw = () => { root.getElementById('fl').innerHTML = listHTML(); };
+        const fi = root.getElementById('fq'); if (fi) fi.oninput = () => { fq = fi.value.trim(); redraw(); };
+        wireChips(root, 'fsrt', v => { fs = v; redraw(); animateIn(root.getElementById('fl')); });
+      }
+    };
+  }
+
+  function docDetailPage(ctx) {
+    const mod = $('#content .module');
+    const f = {}; let fileA = null;
+    $$('p', mod).forEach(p => {
+      const b = $('b', p); if (!b) return;
+      const k = txt(b).replace(/:$/, ''); const a = $('a', p);
+      if (a && /download/.test(attr(a, 'href'))) fileA = a;
+      f[k] = a ? txt(a) : txt(p).replace(txt(b), '').trim();
+    });
+    const opisDiv = $$(':scope > div', mod).find(d => /^opis/i.test(txt($('b', d))));
+    let opis = '';
+    if (opisDiv) { const c = opisDiv.cloneNode(true); const b = $('b', c); if (b) b.remove(); opis = txt(c) ? c.innerHTML : ''; }
+    const name = f['Nazwa'] || txt($('#breadcrumbs')).split('>').pop().trim() || 'Dokument';
+    const fileName = fileA ? txt(fileA) : '';
+    return {
+      title: 'Dokument', tab: '', top: false,
+      render(main) {
+        main.innerHTML = `<div class="card" style="padding:18px;text-align:center">
+            <div style="display:flex;justify-content:center;margin-bottom:12px">${extBadge(fileName).replace('class="ftype"', 'class="ftype" style="width:64px;height:64px;font-size:15px;border-radius:16px"')}</div>
+            <h1 style="font-size:22px;margin:0 0 6px">${esc(name)}</h1>
+            <div class="meta" style="justify-content:center">${f['Kategoria'] ? `<span class="pill">${esc(f['Kategoria'])}</span>` : ''}${f['Utworzono'] ? `<span>${I('clock')}${esc(f['Utworzono'])}</span>` : ''}</div>
+            ${fileName ? `<div class="muted small" style="margin-top:10px;word-break:break-all">${esc(fileName)}</div>` : ''}</div>
+          ${fileA ? `<a class="btn-p" href="${esc(attr(fileA, 'href'))}">${I('download', 'sm')}Otwórz plik</a>` : ''}
+          ${opis ? `<div class="sec"><h2>Opis</h2></div><div class="article"><div class="mbody">${opis}</div></div>` : ''}
+          <div class="chips" style="justify-content:center;margin-top:16px"><a class="chip" href="/documents/attachments">${I('file')}Wszystkie dokumenty</a></div>`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  ONE LESSON (topic + description)
+   * ------------------------------------------------------------------ */
+  function lessonPage(ctx) {
+    const mod = $('#content .module');
+    const head = txt($('h3', mod)).replace(/^Temat:\s*/i, '');
+    const m = head.match(/^(.*?),\s*(\d{1,2}\s+\S+\s+\d{4}),\s*\((\d+)\)\s*([\d:]+\s*-\s*[\d:]+)\s*$/);
+    const topic = m ? m[1] : head, d = m ? parseDate(m[2]) : null, nr = m ? m[3] : '', time = m ? m[4].replace(/\s+/g, '') : '';
+    const h4 = $$('h4', mod).find(x => /opis/i.test(txt(x)));
+    const descEl = h4 ? h4.nextElementSibling : null;
+    const desc = descEl && txt(descEl) ? descEl.innerHTML : '';
+    const subjA = $$('#breadcrumbs a').find(a => /^\/subjects\/\d+$/.test(attr(a, 'href')));
+    const allA = $$('#breadcrumbs a').find(a => /lesson_instances$/.test(attr(a, 'href')));
+    const subj = subjA ? txt(subjA) : '';
+    return {
+      title: subj ? prettySubj(subj) : 'Lekcja', tab: '', top: false,
+      render(main) {
+        main.innerHTML = `<div class="hero" style="--c:${subjColor(subj || topic)}"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">${esc((prettySubj(subj) || 'Lekcja').toUpperCase())}</div>
+            <h1 style="margin:4px 0 8px;font-size:24px">${esc(topic)}</h1>
+            <div class="row" style="gap:8px;font-weight:600">${I('clock', 'sm')}<span>${d ? esc(DAY_FULL[d.getDay()].replace(/^./, c => c.toUpperCase()) + ', ' + shortDate(d) + ' ' + d.getFullYear()) : ''}${nr ? ' · lekcja ' + esc(nr) : ''}${time ? ' · ' + esc(time) : ''}</span></div></div>
+          <div class="sec"><h2>Opis</h2></div>
+          ${desc ? `<div class="article"><div class="mbody">${desc}</div></div>` : '<div class="card muted" style="text-align:center">Nauczyciel nie dodał opisu</div>'}
+          <div class="chips">${allA ? `<a class="chip" href="${esc(attr(allA, 'href'))}">${I('book')}Wszystkie tematy</a>` : ''}
+            ${subjA ? `<a class="chip" href="${esc(attr(subjA, 'href'))}">${I('layers')}Strona przedmiotu</a>` : ''}</div>`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  Any other IDU list (e.g. Recenzje): rows become cards
+   * ------------------------------------------------------------------ */
+  function tablePage(ctx) {
+    const crumbs = txt($('#breadcrumbs')).replace(/^Jesteś tutaj:\s*/, '').split('>').map(x => x.trim()).filter(Boolean);
+    const title = crumbs[crumbs.length - 1] || txt($('#content h1, #content h3')) || document.title.replace(/^IDU - /, '');
+    const t = $('#content table.object_list-table');
+    const heads = $$('th', t).map(th => txt(th).replace(/[▲▼]/g, '').trim());
+    const iFirst = heads.findIndex(h => /^imię$/i.test(h)), iLast = heads.findIndex(h => /^nazwisko$/i.test(h));
+    const rows = $$('tr', t).filter(tr => $('td', tr)).map(tr => {
+      const cells = $$(':scope > td', tr).map((td, i) => ({ l: heads[i] || '', t: txt(td), links: $$('a', td).map(a => ({ t: txt(a), h: attr(a, 'href') })).filter(a => a.h && a.h !== '#') }));
+      let name, rest;
+      if (iFirst >= 0 && iLast >= 0) { name = (cells[iFirst].t + ' ' + cells[iLast].t).trim(); rest = cells.filter((c, i) => i !== iFirst && i !== iLast); }
+      else { const m = cells.find(c => c.t) || { t: '' }; name = m.t; rest = cells.filter(c => c !== m); }
+      const allLinks = [].concat(...cells.map(c => c.links));
+      const main = allLinks.find(a => /^(pokaż|szczegóły|otwórz)?$/i.test(a.t) || a.t === name) || allLinks[0];
+      const meta = rest.filter(c => c.t && !(c.links.length && c.links.every(a => a.t === c.t)));
+      const acts = allLinks.filter(a => a !== main && !(main && a.h === main.h));
+      return { name, href: main ? main.h : '', meta, acts };
+    });
+    const pag = $$('#content .pagination a').map(a => ({ t: txt(a), h: attr(a, 'href') })).filter(a => /poprzed|następ|prev|next|«|»|‹|›/i.test(a.t));
+    const people = iFirst >= 0 && iLast >= 0;
+    let q = '';
+    function card(r) {
+      const body = `${people ? `<div class="av" style="background:${subjColor(r.name)}">${esc(initials(r.name))}</div>` : ''}<div class="grow"><div class="b">${esc(r.name)}</div>
+        ${r.meta.length ? `<div class="meta">${r.meta.map(c => `<span>${c.l ? esc(c.l) + ': ' : ''}<b style="color:var(--text);font-weight:600">${esc(c.t)}</b></span>`).join('')}</div>` : ''}
+        ${r.acts.length ? `<div class="chips">${r.acts.map(a => `<a class="chip" href="${esc(a.h)}">${I(/download|pobierz/i.test(a.h + a.t) ? 'download' : 'right')}${esc(a.t || 'Otwórz')}</a>`).join('')}</div>` : ''}</div>`;
+      return r.href && !r.acts.length ? `<a class="card row tap" data-t="${esc(norm(r.name + ' ' + r.meta.map(c => c.t).join(' ')))}" href="${esc(r.href)}">${body}${I('right', 'sm chev')}</a>`
+        : `<div class="card row" data-t="${esc(norm(r.name))}">${body}</div>`;
+    }
+    return {
+      title, tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<h1>${esc(title)}</h1>${rows.length ? `<p class="lead">${rows.length} ${plural(rows.length, 'pozycja', 'pozycje', 'pozycji')}</p>` : ''}
+          ${rows.length > 8 ? `<div class="search">${I('search', 'sm')}<input id="tq" type="search" placeholder="Szukaj" autocomplete="off"></div>` : ''}
+          <div id="tl">${rows.length ? rows.map(card).join('') : `<div class="empty">${I('inbox', 'big')}<div>Nic tu jeszcze nie ma</div></div>`}</div>
+          ${pag.length ? `<div class="row" style="justify-content:space-between;margin-top:6px">${pag.map(a => `<a class="btn-s" href="${esc(a.h)}">${esc(a.t)}</a>`).join('')}</div>` : ''}`;
+        const tq = root.getElementById('tq');
+        if (tq) tq.oninput = () => { q = norm(tq.value.trim()); main.querySelectorAll('#tl [data-t]').forEach(el => { el.style.display = !q || el.dataset.t.includes(q) ? '' : 'none'; }); };
+      }
+    };
+  }
+
+  /* homework: upload a file (IDU shows this form without its header) */
+  function uploadPage(ctx) {
+    const form = $('form input[type="file"]').closest('form');
+    const fileIn = $('input[type="file"]', form);
+    const back = location.pathname.replace(/\/homework_attachments\/new(\.html)?$/, '');
+    return {
+      title: 'Dodaj plik', tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<div class="hero" style="--c:var(--accent)"><div style="opacity:.85;font-size:13px;font-weight:700;letter-spacing:.4px">ZADANIE DOMOWE</div>
+            <h1 style="margin:4px 0 4px;font-size:24px">Wyślij plik</h1><div style="font-weight:600;opacity:.9">Zdjęcie, PDF, dokument… Nauczyciel zobaczy go przy zadaniu.</div></div>
+          <label class="card row tap" style="margin-top:12px;cursor:pointer" id="pick">${extBadge('')}<div class="grow"><div class="b clip" id="fname">Wybierz plik</div>
+            <div class="muted small" id="fsize">Dotknij, aby wybrać z telefonu</div></div>${I('clip', 'sm')}<input type="file" id="ufile" style="display:none"></label>
+          <button class="btn-p" id="usend" disabled>${I('send', 'sm')}<span>Wyślij plik</span></button>
+          <div class="chips" style="justify-content:center;margin-top:14px"><a class="chip" href="${esc(back)}">${I('back')}Wróć do zadania</a></div>`;
+        const inp = root.getElementById('ufile'), send = root.getElementById('usend');
+        const size = n => n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+        inp.onchange = () => {
+          const f = inp.files && inp.files[0]; if (!f) return;
+          root.getElementById('fname').textContent = f.name;
+          root.getElementById('fsize').textContent = size(f.size);
+          root.querySelector('#pick .ftype').outerHTML = extBadge(f.name);
+          send.disabled = false; haptic('selection');
+        };
+        send.onclick = async () => {
+          const f = inp.files && inp.files[0]; if (!f) return;
+          send.disabled = true; send.lastChild.textContent = 'Wysyłanie…';
+          try {
+            const fd = new FormData(form);
+            fd.set(fileIn.name, f, f.name);
+            const sub = $('input[type="submit"]', form); if (sub && sub.name) fd.set(sub.name, sub.value);
+            const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+            const d = new DOMParser().parseFromString(await r.text(), 'text/html');
+            if (!r.ok || d.querySelector('#errorExplanation, #error_explanation, .errorExplanation, .field_with_errors') || d.querySelector('form input[type="file"]')) throw new Error();
+            haptic('success'); toast(root, 'Plik wysłany', 'good');
+            setTimeout(() => softGo(back, false), 800);
+          } catch (e) {
+            haptic('error'); toast(root, 'Nie udało się wysłać pliku', 'bad');
+            send.disabled = false; send.lastChild.textContent = 'Wyślij plik';
+          }
+        };
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  People search (sheet from the menu)
+   * ------------------------------------------------------------------ */
+  function openPeople(root) {
+    const sh = openSheet(root, `<h2>Szukaj osób</h2><div class="muted small" style="margin-bottom:10px">Uczniowie, nauczyciele i rodzice w IDU</div>
+      <div class="search">${I('search', 'sm')}<input id="pq" type="search" placeholder="Imię lub nazwisko (min. 3 litery)" autocomplete="off" autocapitalize="words"></div><div id="pres" class="plist"></div>`);
+    const q = sh.querySelector('#pq'), out = sh.querySelector('#pres');
+    let seq = 0, tm = 0;
+    setTimeout(() => q.focus(), 380);
+    q.oninput = () => {
+      clearTimeout(tm); const v = q.value.trim();
+      if (v.length < 3) { seq++; out.innerHTML = ''; return; }
+      tm = setTimeout(async () => {
+        const my = ++seq;
+        out.innerHTML = '<div class="muted small" style="padding:10px 2px">Szukam…</div>';
+        try {
+          const r = await fetch('/idu_users/search?search%5Bprofile_by_name%5D=' + encodeURIComponent(v), { credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/javascript, application/javascript, */*' } });
+          const t = await r.text(); if (my !== seq) return;
+          const mm = t.match(/\.html\("([\s\S]*)"\)\s*;?\s*$/);
+          const html = mm ? mm[1].replace(/\\(.)/g, (x, c) => c === 'n' ? '\n' : c === 't' ? '\t' : c) : t;
+          const d = new DOMParser().parseFromString(html, 'text/html');
+          const people = $$('.single_user', d).map(u => { const a = $('.user_name a', u); return a ? { n: txt(a), h: attr(a, 'href') } : null; }).filter(Boolean);
+          const role = h => /^\/teachers/.test(h) ? 'nauczyciel' : /^\/parents/.test(h) ? 'rodzic' : /^\/students/.test(h) ? 'uczeń' : '';
+          out.innerHTML = people.length ? `<div class="card" style="padding:2px 14px;margin-top:4px">${people.map(p => `<a class="frow" href="${esc(p.h)}">
+              <div class="av" style="background:${subjColor(p.n)}">${esc(initials(p.n))}</div><div class="grow clip">${esc(p.n)}</div>${role(p.h) ? `<span class="role">${role(p.h)}</span>` : ''}</a>`).join('')}</div>`
+            : '<div class="nores">Nikogo nie znaleziono</div>';
+        } catch (e) { if (my === seq) out.innerHTML = '<div class="nores">Nie udało się wyszukać</div>'; }
+      }, 280);
     };
   }
 

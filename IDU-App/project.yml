@@ -9,26 +9,60 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      - path: Shared
       - path: Resources
         buildPhase: resources
     info:
       path: Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "1.2"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "2.0"
+        CFBundleVersion: "4"
         UIUserInterfaceStyle: Dark
         UIStatusBarStyle: UIStatusBarStyleLightContent
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: Zrób zdjęcie do profilu w aplikacji (zostaje tylko w telefonie).
+        NSPhotoLibraryUsageDescription: Wybierz zdjęcie profilowe albo plik do wysłania w IDU.
+        CFBundleURLTypes:
+          - CFBundleURLName: pl.idu.personal.app
+            CFBundleURLSchemes: [idu]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.idu.personal.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.0"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+
+  # Widget (home screen + lock screen). Built on its own so the app still builds if the widget doesn't.
+  IDUWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+        excludes:
+          - "*.entitlements"
+      - path: Shared
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: IDU
+        CFBundleShortVersionString: "2.0"
+        CFBundleVersion: "4"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.idu.personal.app.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        APPLICATION_EXTENSION_API_ONLY: "YES"
         CODE_SIGNING_ALLOWED: "NO"
         CODE_SIGNING_REQUIRED: "NO"
         CODE_SIGN_IDENTITY: ""

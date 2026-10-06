@@ -1,13 +1,18 @@
-# IDU – personal app
+# IDU – osobista aplikacja
 
-Opens the official IDU (s27.idu.edu.pl) directly from the phone, full screen, with the mobile skin.
-No other servers are involved – it works like Safari, just without the browser bars.
+Otwiera oficjalne IDU (s27.idu.edu.pl) na pełnym ekranie, z mobilnym wyglądem (skin.js).
+Nie używa żadnych innych serwerów.
 
-## Build
-GitHub → Actions → "Build IDU app" → Run workflow → download the **IDU-app** artifact (contains `IDU.ipa`).
+## Co jest w środku
+- `Sources/App.swift` – aplikacja (WebView, wibracje, przypomnienia, otwieranie plików, szybki start)
+- `Shared/IDUShared.swift` – plan lekcji wspólny dla aplikacji i widgetu
+- `Widget/IDUWidget.swift` – widget „Następna lekcja” (ekran główny + ekran blokady)
+- `Resources/skin.js` – cały wygląd (wersja w nagłówku `@version`)
+- `project.yml` – projekt dla XcodeGen
 
-## Install
-Sideloadly (Windows) → connect iPhone → drop `IDU.ipa` → enter Apple ID → Start.
+## Budowanie
+GitHub → Actions → „Build IDU app” → Run workflow → pobierz artefakt **IDU-app** (`IDU.ipa`).
+Jeśli widget się nie zbuduje, aplikacja i tak powstanie (ostrzeżenie w logu „Build widget”).
 
-## Update the skin
-Replace `Resources/skin.js`, commit, download the new build, install again with Sideloadly.
+## Instalacja
+Sideloadly → podłącz iPhone’a → przeciągnij `IDU.ipa` → Apple ID → Start.
