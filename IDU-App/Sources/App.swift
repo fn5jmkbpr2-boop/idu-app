@@ -6,9 +6,7 @@ import WebKit
 
 private let homeURL = URL(string: "https://s27.idu.edu.pl/")!
 private let iduHost = "s27.idu.edu.pl"
-private let bgColor = UIColor { $0.userInterfaceStyle == .dark
-    ? UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1)
-    : UIColor(red: 0.953, green: 0.957, blue: 0.973, alpha: 1) }
+private let bgColor = UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1)   // always dark
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -18,6 +16,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let window = UIWindow(frame: UIScreen.main.bounds)
         window.backgroundColor = bgColor
+        window.overrideUserInterfaceStyle = .dark
         window.rootViewController = WebViewController()
         window.makeKeyAndVisible()
         self.window = window
@@ -61,7 +60,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView.load(URLRequest(url: homeURL))
     }
 
-    override var preferredStatusBarStyle: UIStatusBarStyle { .default }
+    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
 
     @objc private func pullToRefresh(_ sender: UIRefreshControl) {
         if webView.url == nil { webView.load(URLRequest(url: homeURL)) } else { webView.reload() }
@@ -132,7 +131,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         let html = """
         <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
         <style>body{font:17px -apple-system,sans-serif;display:flex;height:100vh;margin:0;align-items:center;justify-content:center;
-        text-align:center;background:#0f1115;color:#f2f4f8}@media(prefers-color-scheme:light){body{background:#f3f4f8;color:#14171f}}
+        text-align:center;background:#0f1115;color:#f2f4f8}
         a{display:inline-block;margin-top:16px;background:#1e88e5;color:#fff;padding:12px 22px;border-radius:12px;text-decoration:none;font-weight:700}</style>
         </head><body><div><div style="font-size:44px">📡</div><p>Brak połączenia z IDU</p>
         <a href="\(homeURL.absoluteString)">Spróbuj ponownie</a></div></body></html>
