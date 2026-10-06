@@ -37,7 +37,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        webView.allowsBackForwardNavigationGestures = true      // swipe from the edge to go back
+        webView.allowsBackForwardNavigationGestures = false     // the skin has its own smooth swipe-back
+        webView.scrollView.alwaysBounceHorizontal = false
+        if #available(iOS 15.0, *) { webView.underPageBackgroundColor = bgColor }
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
         webView.backgroundColor = bgColor
@@ -54,6 +56,13 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         super.viewDidLoad()
         loadSkin { [weak self] source in
             guard let self = self else { return }
+            // dark "curtain" before IDU paints its white page (the skin removes it when ready; 4 s safety limit)
+            let early = WKUserScript(source: """
+                (function(){var s=document.createElement('style');s.id='sk-early';
+                s.textContent='html{background:#0f1115!important}body{visibility:hidden!important}';
+                document.documentElement.appendChild(s);setTimeout(function(){s.remove()},4000);})();
+                """, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            self.webView.configuration.userContentController.addUserScript(early)
             if let source = source {    // inject the skin into every IDU page
                 let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
                 self.webView.configuration.userContentController.addUserScript(script)
