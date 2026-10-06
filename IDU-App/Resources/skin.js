@@ -405,6 +405,64 @@
   .scrim{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 
+
+  /* ---- calendar ---- */
+  .calhead{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
+  .calhead h1{flex:1;margin:0;font-size:22px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .iconbtn{width:40px;height:40px;border-radius:12px;border:0;background:var(--card);color:var(--text);display:grid;place-items:center;box-shadow:var(--shadow)}
+  .iconbtn:active{transform:scale(.92)}
+  .today-btn{border:0;background:var(--card2);color:var(--accent);font-weight:700;font-size:14px;border-radius:12px;padding:10px 12px}
+  .cal{background:var(--card);border-radius:18px;padding:10px 8px 8px;box-shadow:var(--shadow);touch-action:pan-y;overflow:hidden}
+  .cal .wd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
+  .cal .days7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal .d{border:0;background:none;color:var(--text);border-radius:12px;padding:6px 0 5px;min-height:52px;display:flex;flex-direction:column;align-items:center;gap:3px;font:inherit}
+  .cal .d .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:600}
+  .cal .d.out{opacity:.35}
+  .cal .d.wk .n{color:var(--muted)}
+  .cal .d.today .n{color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+  .cal .d.sel .n{background:var(--accent);color:#fff;box-shadow:none}
+  .cal .d:active{background:var(--card2)}
+  .cal .dots{display:flex;gap:3px;height:6px}
+  .cal .dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+  .slideL{animation:skSlideL .3s cubic-bezier(.2,.85,.25,1)}
+  .slideR{animation:skSlideR .3s cubic-bezier(.2,.85,.25,1)}
+  @keyframes skSlideL{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+  @keyframes skSlideR{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
+  .evc{display:flex;gap:0;padding:0;overflow:hidden;cursor:pointer}
+  .evc .bar{width:5px;background:var(--c);flex:none}
+  .evc .in{padding:12px 14px;flex:1;min-width:0}
+  .evc .when{font-size:13px;color:var(--muted);margin-top:3px}
+  .kind{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--c);margin-bottom:3px}
+  /* ---- bottom sheet ---- */
+  .sheet-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);animation:skFade .2s both}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:82vh;overflow:auto;background:var(--card);
+    border-radius:22px 22px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));animation:skUp .35s cubic-bezier(.2,.85,.25,1) both}
+  .sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+  .sheet h2{font-size:21px;margin:0 0 6px}
+  @keyframes skUp{from{transform:translateY(100%)}to{transform:none}}
+  .sheet.closing{animation:skDown .22s ease-in both}
+  @keyframes skDown{to{transform:translateY(100%)}}
+  /* ---- forum / posts ---- */
+  .frow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:.5px solid var(--line)}
+  .frow:last-child{border:0}
+  .newdot{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+  .post{display:flex;gap:10px;margin-bottom:14px}
+  .post .av{width:36px;height:36px;font-size:13px}
+  .bubble{flex:1;min-width:0;background:var(--card);border-radius:4px 18px 18px 18px;padding:10px 14px;box-shadow:var(--shadow)}
+  .bubble .hd{display:flex;gap:8px;align-items:baseline;margin-bottom:4px}
+  .bubble .hd b{font-size:14px}
+  .bubble .hd span{color:var(--muted);font-size:12px}
+  .bubble .mbody{font-size:15px}
+  .article{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+  .article .mbody span[style*="font-size"]{font-size:inherit!important}
+  /* ---- profile ---- */
+  .phero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:18px 0 6px}
+  .phero .pav{width:96px;height:96px;margin-bottom:12px;box-shadow:0 8px 26px rgba(0,0,0,.35)}
+  .phero h1{margin:0 0 6px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:.5px solid var(--line);font-size:15px}
+  .kv:last-child{border:0}
+  .kv span:first-child{color:var(--muted)}
+  .kv span:last-child{text-align:right;font-weight:600;word-break:break-word}
   /* ---- generic person avatar ---- */
   .pav{width:46px;height:46px;border-radius:50%;background:#3a3f4b;display:grid;place-items:center;overflow:hidden;flex:none}
   .pav svg{width:100%;height:100%;display:block}
@@ -616,7 +674,7 @@
            !box.parentElement.matches('.container, #site-content, #content, .span-24') &&
            box.parentElement.querySelectorAll('input[type="password"]').length === 1 &&
            box.parentElement.getBoundingClientRect().width < 760) box = box.parentElement;
-    const flashes = $$('#flash-messages-section > *, .flash, .alert, .error, .notice, [class*="flash"]')
+    const flashes = $$('#flash-messages-section > *, .flash, .alert, .error, .notice, .security-notice, [class*="flash"]')
       .filter(f => !box.contains(f) && !f.contains(box) && txt(f));
     const wrap = document.createElement('div');
     wrap.id = 'sk-login';
@@ -679,7 +737,14 @@
     if ($('#message #message-body')) return messagePage(ctx);
     if (/homeworks$/.test(p) && $('table.object_list-table')) return homeworksPage(ctx);
     if ($('#subject-card')) return subjectPage(ctx);
+    if ($('#calendar[data-events-url]')) return calendarPage(ctx);
+    if ($('#student-card')) return profilePage(ctx);
+    if ($('#content table.forum-table')) return forumListPage(ctx);
+    if ($('#content table.thread-table')) return threadPage(ctx);
+    if (/^\/documents\/attachments$/.test(p) && $('#content table.object_list-table')) return docsPage(ctx);
+    if (/\/homeworks\/\d+$/.test(p) && $('#content .module h3')) return hwDetailPage(ctx);
     if (/lesson_instances$/.test(p) && $('#content table')) return topicsPage(ctx);
+    if ($('#content table.subjects-table') && !/lesson_instances/.test(p)) return subjectsListPage(ctx);
     if ($('#content .profile-event') && !$('#content textarea, #content form input[type=text]') && !$('#content table')) return eventsPage(ctx);
     return null; // fallback: keep IDU content, just restyle it
   }
@@ -1554,15 +1619,19 @@
     const statusOf = s => /uspraw/i.test(s) ? ['u', 'U', 'Usprawiedliwione'] : /nieobec/i.test(s) ? ['nb', 'NB', 'Nieobecność']
       : /spóź/i.test(s) ? ['sp', 'SP', 'Spóźnienie'] : /^obec/i.test(s) ? ['ob', 'OB', 'Obecność'] : null;
 
-    const sections = $$('#content .module').map(m => {
-      const h = cleanTitle(txt($('h3', m)));
+    const sections = $$('#content .module').map((m, mi) => {
+      const h = cleanTitle(txt($('h3', m))).replace(/:$/, '') || (mi ? 'Wszystkie' : '');
       const evs = $$('.profile-event', m).map(e => {
         const nameEl = $('.name', e);
         const link = $('.name a', e) || $('a', e);
+        let nm = txt(nameEl) || txt(e), upd = '';
+        const um = nm.match(/^Aktualizacja:\s*(.+?\d{1,2}:\d{2})\s+(.*)$/);
+        if (um) { upd = um[1]; nm = um[2]; }
         return {
-          cls: e.className, subject: txt($('.subject', e)), name: txt(nameEl) || txt(e),
+          cls: e.className, subject: txt($('.subject', e)), name: nm, upd,
           href: attr(link, 'href'), desc: txt($('.description', e)).replace(/^\(|\)$/g, ''),
-          dateS: txt($('.date', e)), date: parseDate(txt($('.date', e))), unread: e.classList.contains('announcement') && !e.classList.contains('read')
+          dateS: txt($('.date', e)), date: parseDate(txt($('.date', e))),
+          unread: (e.classList.contains('announcement') || e.classList.contains('news')) && !e.classList.contains('read')
         };
       });
       const more = $$('.see-more a, .pagination a', m).map(a => ({ t: txt(a), h: attr(a, 'href') }));
@@ -1600,6 +1669,399 @@
           ${sections.map(sec => `${sections.length > 1 || allStatus ? `<div class="sec"><h2>${esc(sec.h)}</h2></div>` : ''}
             ${allStatus ? `<div class="card" style="padding:2px 14px">${sec.evs.map(evHTML).join('')}</div>` : sec.evs.map(evHTML).join('')}
             ${sec.more.length ? `<div class="chips">${sec.more.map(m => `<a class="chip" href="${esc(m.h)}">${esc(m.t)}</a>`).join('')}</div>` : ''}`).join('')}`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  Bottom sheet (used by calendar event details)
+   * ------------------------------------------------------------------ */
+  function openSheet(root, html) {
+    const app = root.getElementById('app');
+    const scrim = document.createElement('div'); scrim.className = 'sheet-scrim';
+    const sh = document.createElement('div'); sh.className = 'sheet';
+    sh.innerHTML = '<div class="grab"></div>' + html;
+    const close = () => { sh.classList.add('closing'); scrim.style.opacity = '0'; scrim.style.transition = 'opacity .2s';
+      setTimeout(() => { sh.remove(); scrim.remove(); }, 220); };
+    scrim.onclick = close;
+    let y0 = null;
+    sh.addEventListener('touchstart', e => { y0 = sh.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
+    sh.addEventListener('touchend', e => { if (y0 != null && e.changedTouches[0].clientY - y0 > 70) close(); y0 = null; });
+    app.appendChild(scrim); app.appendChild(sh);
+    return sh;
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  CALENDAR
+   * ------------------------------------------------------------------ */
+  function calendarPage(ctx) {
+    const url = attr($('#calendar'), 'data-events-url') || '/calendar_events.json';
+    const MONTHS_FULL = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+    const ymd = s => { const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/); return m ? new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null; };
+    const key = d => d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    const cache = {};
+    let month = new Date(); month = new Date(month.getFullYear(), month.getMonth(), 1);
+    let sel = dayStart(new Date());
+
+    function gridStart(m) { const d = new Date(m); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return d; }
+    async function load(m) {
+      const k = m.getFullYear() + '-' + m.getMonth();
+      if (cache[k]) return cache[k];
+      const s = gridStart(m); const e = new Date(s); e.setDate(e.getDate() + 42);
+      let list = [];
+      try {
+        const r = await fetch(`${url}?start_at=${Math.floor(s / 1000)}&stop_at=${Math.floor(e / 1000)}`, { credentials: 'same-origin' });
+        list = await r.json();
+      } catch (err) { list = []; }
+      cache[k] = list.map(ev => {
+        const start = ymd(ev.start); let end = ev.end ? ymd(ev.end) : null;
+        if (ev.allDay && end) end.setDate(end.getDate() - 1);         // end date is exclusive
+        const subj = (String(ev.title).match(/\(([^()]+)\)\s*$/) || [])[1];
+        const exam = /grade_event/.test(ev.className || '');
+        return { title: ev.title, start, end: end && end > start ? end : null, allDay: ev.allDay !== false,
+          timed: !ev.allDay, exam, subj, color: exam ? subjColor(subj || ev.title) : (ev.color || '#3d9be9'),
+          href: ev.url ? ev.url.replace(/^https?:\/\/[^/]+/, '') : '', detail: ev.fancybox_url || '' };
+      }).filter(e => e.start);
+      return cache[k];
+    }
+    const onDay = (list, d) => list.filter(e => { const a = dayStart(e.start), b = e.end ? dayStart(e.end) : a; return d >= a && d <= b; });
+    function when(e) {
+      if (e.timed) return `${shortDate(e.start)}, ${hhmm(e.start)}${e.end ? '–' + hhmm(e.end) : ''}`;
+      if (e.end && dayStart(e.end) > dayStart(e.start)) return `${shortDate(e.start)} – ${shortDate(e.end)}`;
+      return shortDate(e.start) + ' · cały dzień';
+    }
+    function evCard(e, i) {
+      return `<div class="card evc tap" data-i="${i}" style="--c:${e.color}"><div class="bar"></div><div class="in">
+        ${e.exam ? '<div class="kind">Sprawdzian</div>' : ''}<div class="b">${esc(e.exam && e.subj ? e.title.replace(/\s*\([^()]+\)\s*$/, '') : e.title)}</div>
+        <div class="when">${esc(when(e))}${e.exam && e.subj ? ' · ' + esc(prettySubj(e.subj)) : ''}</div></div></div>`;
+    }
+
+    return {
+      title: 'Kalendarz', tab: '', top: false,
+      render(main, root, api) {
+        let shown = [];
+        async function draw(dir) {
+          const list = await load(month);
+          const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+          const listNext = await load(next);
+          const s = gridStart(month);
+          const today = dayStart(new Date());
+          let cells = '';
+          for (let i = 0; i < 42; i++) {
+            const d = new Date(s); d.setDate(s.getDate() + i);
+            const evs = onDay(list, d);
+            const cls = [d.getMonth() !== month.getMonth() ? 'out' : '', d.getDay() === 0 || d.getDay() === 6 ? 'wk' : '',
+              +d === +today ? 'today' : '', +d === +sel ? 'sel' : ''].join(' ');
+            cells += `<button class="d ${cls}" data-d="${+d}"><span class="n">${d.getDate()}</span>
+              <span class="dots">${evs.slice(0, 3).map(e => `<i style="--c:${e.color}"></i>`).join('')}</span></button>`;
+          }
+          const selEvs = onDay(list.concat(listNext.filter(e => !list.some(x => x.title === e.title && +x.start === +e.start))), sel);
+          const all = list.concat(listNext.filter(e => !list.some(x => x.title === e.title && +x.start === +e.start)));
+          const upcoming = all.filter(e => (e.end || e.start) >= today).sort((a, b) => a.start - b.start).slice(0, 8);
+          shown = selEvs.concat(upcoming);
+          main.innerHTML = `
+            <div class="calhead"><h1>${MONTHS_FULL[month.getMonth()]} ${month.getFullYear()}</h1>
+              <button class="today-btn" id="ct">Dziś</button>
+              <button class="iconbtn" id="cp" aria-label="Poprzedni">${I('back', 'sm')}</button>
+              <button class="iconbtn" id="cn" aria-label="Następny">${I('right', 'sm')}</button></div>
+            <div class="cal" id="cal"><div class="wd">${['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'].map(x => `<span>${x}</span>`).join('')}</div>
+              <div class="days7 ${dir > 0 ? 'slideL' : dir < 0 ? 'slideR' : ''}">${cells}</div></div>
+            <div class="sec"><h2>${esc(+sel === +today ? 'Dziś' : DAY_FULL[sel.getDay()].replace(/^./, m => m.toUpperCase()) + ', ' + shortDate(sel))}</h2></div>
+            ${selEvs.length ? selEvs.map((e, i) => evCard(e, i)).join('') : '<div class="card muted" style="text-align:center">Brak wydarzeń</div>'}
+            ${upcoming.length ? `<div class="sec"><h2>Nadchodzące</h2></div>` + upcoming.map((e, i) => evCard(e, selEvs.length + i)).join('') : ''}`;
+          wire();
+          if (!dir) api.animate();
+        }
+        function wire() {
+          root.getElementById('cp').onclick = () => { month = new Date(month.getFullYear(), month.getMonth() - 1, 1); draw(-1); };
+          root.getElementById('cn').onclick = () => { month = new Date(month.getFullYear(), month.getMonth() + 1, 1); draw(1); };
+          root.getElementById('ct').onclick = () => { const t = new Date(); month = new Date(t.getFullYear(), t.getMonth(), 1); sel = dayStart(t); draw(0); };
+          main.querySelectorAll('.cal .d').forEach(b => b.onclick = () => {
+            const d = new Date(+b.dataset.d);
+            if (d.getMonth() !== month.getMonth()) { const dir = d > month ? 1 : -1; month = new Date(d.getFullYear(), d.getMonth(), 1); sel = d; draw(dir); return; }
+            sel = d; draw(0);
+          });
+          main.querySelectorAll('.evc').forEach(c => c.onclick = () => showEvent(shown[+c.dataset.i]));
+          const cal = root.getElementById('cal'); let x0 = null;
+          cal.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+          cal.addEventListener('touchend', e => {
+            if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
+            if (Math.abs(dx) > 50) root.getElementById(dx < 0 ? 'cn' : 'cp').click();
+          });
+        }
+        async function showEvent(e) {
+          if (!e) return;
+          if (!e.detail) { if (e.href) location.href = e.href; return; }
+          const sh = openSheet(root, `<div class="kind" style="--c:${e.color}">${e.exam ? 'Sprawdzian' : 'Wydarzenie'}</div>
+            <h2>${esc(e.title)}</h2><div class="muted">${esc(when(e))}</div><div class="mbody" id="evbody" style="margin-top:14px"><div class="muted small">Ładowanie…</div></div>`);
+          try {
+            const html = await (await fetch(e.detail, { credentials: 'same-origin' })).text();
+            const d = new DOMParser().parseFromString(html, 'text/html');
+            const m = d.querySelector('.module') || d.body;
+            const h = m.querySelector('h3'); if (h) h.remove();
+            const by = m.querySelector('div[style*="float: right"] a, div[style*="float:right"] a');
+            if (by) by.closest('div').remove();
+            m.querySelectorAll('strong').forEach(st => { if (/\d{1,2}:\d{2}/.test(st.textContent)) { const p = st.closest('p') || st; p.remove(); } });
+            sh.querySelector('#evbody').innerHTML = (m.innerHTML.trim() || '') +
+              (by ? `<div class="muted small" style="margin-top:12px">Dodane przez <a href="${esc(attr(by, 'href'))}">${esc(txt(by))}</a></div>` : '');
+          } catch (err) { sh.querySelector('#evbody').innerHTML = '<div class="muted">Nie udało się wczytać szczegółów.</div>'; }
+        }
+        main.innerHTML = '<div class="empty">Ładowanie kalendarza…</div>';
+        draw(0);
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  FORUM LIST / SUBFORUM
+   * ------------------------------------------------------------------ */
+  function forumListPage(ctx) {
+    const h1 = cleanTitle(txt($('#content h1')));
+    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href') }));
+    const sections = $$('#content table.forum-table').map(t => {
+      const head = txt($('.forum-header h4, .forum-header', t));
+      const rows = $$('tr', t).filter(tr => !$('.forum-header', tr)).map(tr => {
+        const isNew = /^nowe/i.test(attr($('td.icon img', tr), 'alt'));
+        const th = $('.thread-title', tr);
+        if (th) {
+          const a = $('.title a', th);
+          return { kind: 'thread', title: txt(a), href: attr(a, 'href'), last: txt($('.last-post a', th)),
+            date: parseDate(txt($('.post-date', tr))), author: txt($('.post-author', tr)),
+            replies: (txt($('.thread-data', tr)).match(/(\d+)\s+odpowied/) || [])[1] || '', isNew };
+        }
+        const sf = $('.subforum-title', tr);
+        if (sf) { const a = $('.title a', sf); return { kind: 'sub', title: txt(a), href: attr(a, 'href'), count: txt($('.post-count', tr)), isNew }; }
+        const a = $('a', tr);
+        return a ? { kind: 'more', title: txt(a), href: attr(a, 'href') } : { kind: 'empty', title: txt(tr) };
+      }).filter(r => r.title);
+      return { head, rows };
+    }).filter(s => s.rows.length);
+    const threadCard = r => `<a class="card tap" href="${esc(r.href)}">
+        <div class="row" style="align-items:flex-start"><div class="grow b">${esc(r.title)}</div>${r.isNew ? '<span class="pill new">NOWE</span>' : ''}</div>
+        ${r.last ? `<div class="muted two" style="font-size:14px;margin-top:4px">${esc(r.last)}</div>` : ''}
+        <div class="muted small" style="margin-top:8px;display:flex;gap:6px;align-items:center">${I('user', 'xs')}${esc(r.author)} · ${esc(relTime(r.date))}
+          ${r.replies ? `<span style="margin-left:auto;display:flex;gap:4px;align-items:center">${I('chat', 'xs')}${esc(r.replies)}</span>` : ''}</div></a>`;
+    return {
+      title: h1 && !/twoje fora/i.test(h1) ? h1 : 'Forum', tab: '', top: false,
+      render(main) {
+        main.innerHTML = `${actions.length ? `<div class="chips" style="margin:4px 0 4px">${actions.map(a => `<a class="chip" href="${esc(a.h)}">${I(/szuk|wyszuk/i.test(a.t) ? 'search' : /nowy/i.test(a.t) ? 'plus' : 'right')}${esc(a.t)}</a>`).join('')}</div>` : ''}
+          ${sections.map(sec => {
+            const subs = sec.rows.filter(r => r.kind === 'sub');
+            const threads = sec.rows.filter(r => r.kind === 'thread');
+            const more = sec.rows.filter(r => r.kind === 'more');
+            const empty = sec.rows.filter(r => r.kind === 'empty');
+            return `<div class="sec"><h2>${esc(sec.head || 'Wątki')}</h2></div>
+              ${threads.map(threadCard).join('')}
+              ${subs.length ? `<div class="card" style="padding:2px 14px">${subs.map(r => `<a class="frow" href="${esc(r.href)}">
+                <div class="av" style="width:34px;height:34px;font-size:14px;background:${subjColor(r.title)}">${esc(prettySubj(r.title).charAt(0))}</div>
+                <div class="grow"><div class="b clip">${esc(prettySubj(r.title))}</div><div class="muted small">${esc(r.count)}</div></div>
+                ${r.isNew ? '<span class="newdot"></span>' : ''}${I('right', 'sm chev')}</a>`).join('')}</div>` : ''}
+              ${empty.map(r => `<div class="card muted">${esc(r.title)}</div>`).join('')}
+              ${more.map(r => `<div class="chips" style="margin-top:2px"><a class="chip" href="${esc(r.href)}">${esc(r.title)}${I('right')}</a></div>`).join('')}`;
+          }).join('')}`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  THREAD (forum topic) and ARTICLE with comments (Aktualności)
+   * ------------------------------------------------------------------ */
+  function threadPage(ctx) {
+    const h1el = $('#content h1');
+    const owner = $('#go_to_forum_owner a');
+    const ownerBox = $('#go_to_forum_owner');
+    const title = h1el ? txt(h1el).replace(ownerBox ? txt(ownerBox) : '', '').trim() : 'Wątek';
+    // article body (Aktualności): the module with the h1 that has no posts table
+    const artMod = h1el ? h1el.closest('.module') : null;
+    let article = '';
+    if (artMod && !$('table.thread-table', artMod)) {
+      const c = artMod.cloneNode(true); const h = $('h1', c); if (h) h.remove(); article = c.innerHTML;
+    }
+    const posts = $$('table.thread-table tr').filter(tr => $('td.author', tr)).map(tr => ({
+      who: txt($('.author-name', tr)), whoHref: attr($('.author-name a', tr), 'href'), cls: txt($('.author-class', tr)),
+      date: parseDate(txt($('.post-data', tr))), dateS: txt($('.post-data', tr)), html: ($('.post-body', tr) || {}).innerHTML || ''
+    }));
+    const form = $('form.thread-reply, form#new_comment_form, form.new_comment');
+    const ta = form ? $('textarea', form) : null;
+    const submit = form ? $('input[type=submit]', form) : null;
+    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href') }));
+    const isComments = !!$('#comments');
+    return {
+      title: isComments ? 'Aktualność' : 'Forum', tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<h1 style="font-size:24px">${esc(title)}</h1>
+          ${owner || actions.length ? `<div class="chips" style="margin:6px 0 10px">
+            ${owner ? `<a class="chip" href="${esc(attr(owner, 'href'))}">${I('layers')}${esc(txt(owner))}</a>` : ''}
+            ${actions.map(a => `<a class="chip" href="${esc(a.h)}">${I('file')}${esc(a.t.replace(/Pokaż wszystkie załączniki do tego tematu/i, 'Załączniki'))}</a>`).join('')}</div>` : ''}
+          ${article ? `<div class="article"><div class="mbody">${article}</div></div>` : ''}
+          ${isComments || posts.length ? `<div class="sec"><h2>${isComments ? 'Komentarze' : 'Posty'}${posts.length ? ' · ' + posts.length : ''}</h2></div>` : ''}
+          ${posts.length ? posts.map(p => `<div class="post"><div class="av" style="background:${subjColor(p.who)}">${esc(initials(p.who))}</div>
+            <div class="bubble"><div class="hd"><b>${esc(p.who)}</b><span>${esc(p.cls ? p.cls + ' · ' : '')}${esc(p.date ? relTime(p.date) : p.dateS)}</span></div>
+            <div class="mbody">${p.html}</div></div></div>`).join('')
+            : `<div class="card muted" style="text-align:center">${isComments ? 'Brak komentarzy' : 'Brak postów. Napisz pierwszy!'}</div>`}
+          ${form && ta ? `<div class="reply"><textarea id="rt" placeholder="${isComments ? 'Dodaj komentarz…' : 'Napisz odpowiedź…'}"></textarea>
+            <button class="btn-p" id="rs">${I('send', 'sm')}<span>${isComments ? 'Dodaj komentarz' : 'Odpowiedz'}</span></button></div>` : ''}`;
+        const btn = root.getElementById('rs');
+        if (!btn) return;
+        btn.onclick = async () => {
+          const text = root.getElementById('rt').value.trim();
+          if (!text) return;
+          btn.disabled = true; btn.lastChild.textContent = 'Wysyłanie…';
+          try {
+            const fd = new FormData(form);
+            fd.set(ta.name, text);
+            if (submit && submit.name) fd.set(submit.name, submit.value);
+            const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+            if (!r.ok) throw new Error(r.status);
+            location.reload();
+          } catch (e) { btn.disabled = false; btn.lastChild.textContent = 'Nie udało się – spróbuj ponownie'; }
+        };
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  DOCUMENTS
+   * ------------------------------------------------------------------ */
+  function docsPage(ctx) {
+    const rows = []; let cat = '';
+    $$('#content table.object_list-table tr').forEach(tr => {
+      const tds = $$(':scope > td', tr);
+      if (!tds.length) return;
+      let i = 0;
+      if (tds.length >= 4 || tds[0].hasAttribute('rowspan')) { cat = txt(tds[0]); i = 1; }
+      const acts = $$('td.actions a', tr).map(a => ({ t: txt(a), h: attr(a, 'href') }));
+      rows.push({ cat: cat || 'Inne', name: txt(tds[i]), date: txt(tds[i + 1]), acts });
+    });
+    const groups = {};
+    rows.forEach(r => { (groups[r.cat] = groups[r.cat] || []).push(r); });
+    const q = new URLSearchParams(location.search).get('school_search[name_like]') || '';
+    return {
+      title: 'Dokumenty', tab: '', top: false,
+      render(main, root) {
+        main.innerHTML = `<form class="search" id="ds">${I('search', 'sm')}<input id="dq" type="search" placeholder="Szukaj dokumentu" value="${esc(q)}"></form>
+          ${rows.length ? Object.entries(groups).map(([c, list]) => `<div class="sec"><h2>${esc(c)}</h2><span class="muted small">${list.length}</span></div>
+            ${list.map(r => `<div class="card"><div class="row" style="align-items:flex-start"><div class="icon" style="width:40px;height:40px;border-radius:12px;background:var(--card2);display:grid;place-items:center;color:var(--accent)">${I('file')}</div>
+              <div class="grow"><div class="b">${esc(r.name)}</div><div class="muted small">${esc(r.date)}</div></div></div>
+              <div class="chips">${r.acts.map(a => `<a class="chip" href="${esc(a.h)}" ${/pobierz/i.test(a.t) ? 'style="background:var(--accent);color:#fff"' : ''}>${I(/pobierz/i.test(a.t) ? 'down' : 'right')}${esc(a.t)}</a>`).join('')}</div></div>`).join('')}`).join('')
+            : '<div class="empty">Brak dokumentów</div>'}`;
+        root.getElementById('ds').onsubmit = e => {
+          e.preventDefault();
+          const v = root.getElementById('dq').value.trim();
+          location.href = '/documents/attachments' + (v ? '?school_search%5Bname_like%5D=' + encodeURIComponent(v) : '');
+        };
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  HOMEWORK DETAIL
+   * ------------------------------------------------------------------ */
+  function hwDetailPage(ctx) {
+    const mods = $$('#content .module');
+    const main0 = mods[0];
+    const title = txt($('h3', main0));
+    const crumbs = $$('#breadcrumbs a');
+    const subjA = crumbs.find(a => /^\/subjects\/\d+$/.test(attr(a, 'href')));
+    const subj = subjA ? txt(subjA) : '';
+    let desc = '', due = null, created = '';
+    const c = main0.cloneNode(true);
+    $$('p', c).forEach(p => {
+      const t = txt(p);
+      if (/wysyłać do/i.test(t)) { due = parseDate(t); p.remove(); }
+      else if (/^utworzono/i.test(t)) { created = t.replace(/^utworzono:?\s*/i, ''); p.remove(); }
+    });
+    const h = $('h3', c); if (h) h.remove();
+    $$('strong', c).forEach(st => { if (/^opis:?$/i.test(txt(st))) { const br = st.nextElementSibling; if (br && br.tagName === 'BR') br.remove(); st.remove(); } });
+    desc = c.innerHTML.trim();
+    const filesMod = mods.find(m => /wysłane pliki/i.test(txt($('h3', m))));
+    const files = filesMod ? $$('a', filesMod).map(a => ({ t: txt(a), h: attr(a, 'href') })) : [];
+    const add = $$('#content .action-button a').find(a => /dodaj plik/i.test(txt(a)));
+    const now = new Date();
+    return {
+      title: 'Zadanie domowe', tab: '', top: false,
+      render(main) {
+        const hours = due ? (due - now) / 3600000 : null;
+        main.innerHTML = `<div class="hero" style="--c:${subjColor(subj || title)}"><div style="opacity:.85;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${esc(prettySubj(subj) || 'Zadanie')}</div>
+            <h1 style="margin-top:4px">${esc(title)}</h1>
+            ${due ? `<div style="font-weight:600">Termin: ${esc(shortDate(due) + ', ' + hhmm(due))} · ${esc(hours < 0 ? 'zakończone' : relTime(due))}</div>` : ''}</div>
+          ${desc ? `<div class="sec"><h2>Opis</h2></div><div class="article"><div class="mbody">${desc}</div></div>` : ''}
+          <div class="sec"><h2>Twoje pliki</h2></div>
+          <div class="card" style="padding:4px 14px">${files.length ? files.map(f => `<a class="frow" href="${esc(f.h)}"><div style="color:var(--accent)">${I('file', 'sm')}</div><div class="grow clip">${esc(f.t)}</div>${I('down', 'sm chev')}</a>`).join('')
+            : '<div class="muted" style="padding:10px 0">Nie wysłano jeszcze plików</div>'}</div>
+          ${add && (hours == null || hours >= 0) ? `<a class="btn-p" href="${esc(attr(add, 'href'))}">${I('plus', 'sm')}Dodaj plik</a>` : ''}
+          ${created ? `<div class="muted small" style="text-align:center;margin-top:14px">Utworzono ${esc(created)}</div>` : ''}`;
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  SUBJECT LIST
+   * ------------------------------------------------------------------ */
+  function subjectsListPage(ctx) {
+    const rows = $$('#content table.subjects-table tr').map(tr => {
+      const tds = $$(':scope > td', tr); if (tds.length < 2) return null;
+      const name = txt(tds[0]).split(' / ')[0];
+      const a = $('td.actions a', tr) || $('a', tr);
+      return { name, teacher: txt(tds[1]), href: attr(a, 'href') };
+    }).filter(Boolean);
+    return {
+      title: 'Przedmioty', tab: '', top: false,
+      render(main) {
+        main.innerHTML = rows.map(r => `<a class="card row tap" href="${esc(r.href)}"><div class="av" style="background:${subjColor(r.name)}">${esc(prettySubj(r.name).charAt(0))}</div>
+          <div class="grow"><div class="b clip">${esc(prettySubj(r.name))}</div><div class="muted small two">${esc(r.teacher)}</div></div>${I('right', 'sm chev')}</a>`).join('');
+      }
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  PROFILE
+   * ------------------------------------------------------------------ */
+  function profilePage(ctx) {
+    const card = $('#student-card');
+    const name = txt($('#student-data h3', card)) || ctx.name;
+    const h6 = $('#student-data h6', card);
+    const klass = h6 ? $('a[href^="/klasses"]', h6) : null;
+    const tutor = h6 ? $('a[href^="/teachers"]', h6) : null;
+    const year = h6 ? (txt(h6).match(/rocznik:\s*([^\s].*?)\s+Klasa/i) || [])[1] : '';
+    const parents = $$('#parents .data a', card).map(a => ({ n: txt(a), h: attr(a, 'href') }));
+    const edit = $('a.edit', card);
+    const isMe = location.pathname === ctx.student;
+    // personal data: label (<p>) followed by value (.data)
+    const fields = [];
+    $$('#contact-data p, #messengers p', card).forEach(p => {
+      const label = txt(p).replace(/:$/, '');
+      const v = p.nextElementSibling;
+      if (!v || !v.classList.contains('data')) return;
+      const val = v.innerText ? v.innerText.replace(/\s*\n\s*/g, ', ').trim() : txt(v);
+      if (label && val && !/^dane kontaktowe$/i.test(label)) fields.push({ label, val });
+    });
+    const marks = $$('.module').filter(m => /oceny/i.test(txt($('h3', m)))).flatMap(m => $$('.profile-event.mark', m)).slice(0, 5).map(e => ({
+      subject: txt($('.subject', e)), v: txt($('.name', e)), d: txt($('.description', e)).replace(/^\(|\)$/g, ''), date: txt($('.date', e)) }));
+    const pres = $$('.module').filter(m => /obecno/i.test(txt($('h3', m)))).flatMap(m => $$('.profile-event', m)).slice(0, 6).map(e => ({
+      subject: txt($('.subject', e)), name: txt($('.name', e)), date: txt($('.date', e)), ok: e.classList.contains('presence') }));
+    return {
+      title: isMe ? 'Mój profil' : name, tab: '', top: false,
+      render(main) {
+        main.innerHTML = `<div class="phero">${PERSON_AV}<h1>${esc(name)}</h1>
+            <div class="chips" style="justify-content:center;margin-top:6px">
+              ${klass ? `<a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}Klasa ${esc(txt(klass))}</a>` : ''}
+              ${year ? `<span class="chip">${I('clock')}${esc(year)}</span>` : ''}</div></div>
+          ${tutor ? `<div class="sec"><h2>Wychowawca</h2></div><a class="card row tap" href="${esc(attr(tutor, 'href'))}">
+            <div class="av" style="background:${subjColor(txt(tutor))}">${esc(initials(txt(tutor)))}</div><div class="grow b">${esc(txt(tutor))}</div>${I('right', 'sm chev')}</a>` : ''}
+          ${isMe ? `<div class="chips"><a class="chip" href="${esc(ctx.student)}/grades">${I('grades')}Oceny</a><a class="chip" href="${esc(ctx.student)}/presences">${I('chart')}Frekwencja</a>
+            <a class="chip" href="${esc(ctx.student)}/homeworks">${I('edit')}Zadania</a><a class="chip" href="/#plan">${I('calendar')}Plan</a></div>` : ''}
+          ${parents.length ? `<div class="sec"><h2>Rodzice / opiekunowie</h2></div><div class="card" style="padding:2px 14px">${parents.map(p => `<a class="frow" href="${esc(p.h)}">
+            <div class="av" style="width:34px;height:34px;font-size:13px;background:${subjColor(p.n)}">${esc(initials(p.n))}</div><div class="grow">${esc(p.n)}</div>${I('right', 'sm chev')}</a>`).join('')}</div>` : ''}
+          ${fields.length ? `<div class="sec"><h2>Dane osobowe</h2></div><details class="card"><summary class="row"><div style="color:var(--muted)">${I('user', 'sm')}</div>
+            <div class="grow">Pokaż dane (adres, PESEL, telefon…)</div>${I('down', 'sm chev')}</summary>
+            <div style="margin-top:8px">${fields.map(f => `<div class="kv"><span>${esc(f.label)}</span><span>${esc(f.val)}</span></div>`).join('')}</div></details>` : ''}
+          ${marks.length ? `<div class="sec"><h2>Ostatnie oceny</h2><a href="${esc(ctx.student)}/grades">Wszystkie</a></div>` + marks.map(m =>
+            `<div class="gbox" style="--c:${subjColor(m.subject)};margin-bottom:8px"><div class="v">${gradeShort(m.v)}</div><div class="meta"><b>${esc(prettySubj(m.subject))}</b><span class="two">${esc(m.d)} · ${esc(m.date)}</span></div></div>`).join('') : ''}
+          ${pres.length ? `<div class="sec"><h2>Ostatnie obecności</h2><a href="${esc(ctx.student)}/presences">Wszystkie</a></div><div class="card" style="padding:2px 14px">${pres.map(p =>
+            `<div class="frow"><div class="st ${p.ok ? 'ob' : /spóź/i.test(p.name) ? 'sp' : /uspraw/i.test(p.name) ? 'u' : 'nb'}">${p.ok ? 'OB' : /spóź/i.test(p.name) ? 'SP' : /uspraw/i.test(p.name) ? 'U' : 'NB'}</div>
+            <div class="grow clip">${esc(prettySubj(p.subject))}</div><span class="muted small">${esc(p.date)}</span></div>`).join('')}</div>` : ''}
+          ${isMe && edit ? `<div class="chips" style="justify-content:center;margin-top:16px"><a class="chip" href="${esc(attr(edit, 'href'))}">${I('edit')}Edytuj profil</a></div>` : ''}`;
       }
     };
   }
