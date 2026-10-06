@@ -15,8 +15,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "1.2"
+        CFBundleVersion: "3"
         UIUserInterfaceStyle: Dark
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UILaunchScreen: {}
