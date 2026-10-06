@@ -7,6 +7,8 @@ import WebKit
 private let homeURL = URL(string: "https://s27.idu.edu.pl/")!
 private let iduHost = "s27.idu.edu.pl"
 private let bgColor = UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1)   // always dark
+// The newest skin is downloaded from GitHub at every launch (falls back to the last download, then to the built-in copy)
+private let remoteSkinURL = URL(string: "https://raw.githubusercontent.com/fn5jmkbpr2-boop/idu-app/main/IDU-App/Resources/skin.js")
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -32,13 +34,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         config.websiteDataStore = .default()          // keeps you logged in between launches
         config.allowsInlineMediaPlayback = true
 
-        // Inject the skin into every IDU page
-        if let url = Bundle.main.url(forResource: "skin", withExtension: "js"),
-           let source = try? String(contentsOf: url, encoding: .utf8) {
-            let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-            config.userContentController.addUserScript(script)
-        }
-
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -57,7 +52,38 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        webView.load(URLRequest(url: homeURL))
+        loadSkin { [weak self] source in
+            guard let self = self else { return }
+            if let source = source {    // inject the skin into every IDU page
+                let script = WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+                self.webView.configuration.userContentController.addUserScript(script)
+            }
+            self.webView.load(URLRequest(url: homeURL))
+        }
+    }
+
+    private var cachedSkinFile: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("skin.js")
+    }
+
+    private func loadSkin(_ done: @escaping (String?) -> Void) {
+        let bundled = Bundle.main.url(forResource: "skin", withExtension: "js").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        let cacheFile = cachedSkinFile
+        let cached = cacheFile.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        guard let remote = remoteSkinURL else { done(cached ?? bundled); return }
+        let request = URLRequest(url: remote, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 4)
+        URLSession.shared.dataTask(with: request) { data, response, _ in
+            var result = cached ?? bundled
+            if let data = data, (response as? HTTPURLResponse)?.statusCode == 200,
+               let text = String(data: data, encoding: .utf8), text.contains("@name        IDU Skin") {
+                result = text
+                if let file = cacheFile {
+                    try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? text.write(to: file, atomically: true, encoding: .utf8)
+                }
+            }
+            DispatchQueue.main.async { done(result) }
+        }.resume()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
