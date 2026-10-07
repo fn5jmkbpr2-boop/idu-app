@@ -978,7 +978,7 @@
     graphite: { bg: '#18181b', card: '#232327', card2: '#2e2e33', line: '#36363c', label: 'Grafit' },
     plum: { bg: '#130f1a', card: '#1e1828', card2: '#2a2236', line: '#33293f', label: 'Śliwkowy' }
   };
-  const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, bigTitles: true, theme: 'dark', radius: 'm', density: 'normal',
+  const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, bigTitles: true, navMin: true, theme: 'dark', radius: 'm', density: 'normal',
     subj: 'vivid', labels: false, startTab: 'start', preset: 'obecny', head: 'system', nav: 'pill', cards: 'cards', contrast: 'normal',
     tabs: ['start', 'plan', 'subjects', 'grades', 'mail'], startLayout: 'A', tiles: ['next', 'grades', 'mail', 'todo'], tilesWide: ['next'], subjView: 'page', wfMode: 'max', wfTarget: 95, showTodo: true, nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true,
     haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18, wGrades: true, wMail: true, wAnn: false, lang: 'pl' };
@@ -1278,6 +1278,49 @@
     sh.querySelector('[data-a="copy"]').onclick = () => { try { navigator.clipboard.writeText(abs); toast(root, 'Skopiowano link', 'good'); } catch (e) {} closeSheet(sh); };
   }
   // hold a finger on any link (announcement, message, file …) → menu
+  // iOS Mail: swipe a message to the left → add it to (or take it out of) Ważne
+  function wireSwipeRows(root, scope) {
+    let row = null, x0 = 0, y0 = 0, dx = 0, on = false, under = null, armed = false, moved = false;
+    scope.addEventListener('touchstart', e => {
+      row = null; moved = false;
+      const r = e.target.closest && e.target.closest('a.msg');
+      if (!r || e.touches.length !== 1 || e.touches[0].clientX < 30) return;        // the left edge is for "back"
+      row = r; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; on = false; armed = false;
+    }, { passive: true });
+    scope.addEventListener('touchmove', e => {
+      if (!row) return;
+      const t = e.touches[0], ddx = t.clientX - x0, ddy = t.clientY - y0;
+      if (!on) {
+        if (Math.abs(ddy) > 10 && Math.abs(ddy) > Math.abs(ddx)) { row = null; return; }   // that's a scroll
+        if (ddx > -14) return;
+        on = true; moved = true;
+        const box = row.parentElement; if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+        under = document.createElement('div'); under.className = 'swact';
+        under.innerHTML = `${I('star', 'sm')}<span>${favFind(row.getAttribute('href')) ? 'Usuń z Ważnych' : 'Do Ważnych'}</span>`;
+        Object.assign(under.style, { left: row.offsetLeft + 'px', top: row.offsetTop + 'px', width: row.offsetWidth + 'px', height: row.offsetHeight + 'px' });
+        box.insertBefore(under, row);
+        Object.assign(row.style, { transition: 'none', position: 'relative', zIndex: '1', background: 'var(--card)' });
+      }
+      dx = Math.min(0, ddx + 14);
+      const lim = -row.offsetWidth * .55, x = dx < lim ? lim + (dx - lim) * .25 : dx;   // rubber band past the end
+      row.style.transform = `translateX(${x}px)`;
+      const a = dx < -90; if (a !== armed) { armed = a; haptic(a ? 'medium' : 'light'); under.classList.toggle('armed', a); }
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    const end = () => {
+      if (!row || !on) { row = null; return; }
+      const r = row, u = under; row = null; on = false;
+      r.style.transition = 'transform .32s cubic-bezier(.2,.9,.25,1)'; r.style.transform = '';
+      setTimeout(() => { Object.assign(r.style, { transition: '', zIndex: '', background: '', position: '' }); if (u) u.remove(); }, 340);
+      if (!armed) return;
+      const href = r.getAttribute('href');
+      if (favFind(href)) favRemove(root, href);
+      else { favAdd({ href, title: txt2(r.querySelector('.s')) || txt2(r).slice(0, 140), sub: txt2(r.querySelector('.n')), label: 'Wiadomość' }); haptic('success'); toast(root, 'Dodano do Ważnych', 'good'); }
+    };
+    scope.addEventListener('touchend', end, { passive: true }); scope.addEventListener('touchcancel', end, { passive: true });
+    scope.addEventListener('click', e => { if (moved && e.target.closest && e.target.closest('a.msg')) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+  }
+
   function wireLongPress(root, scope) {
     let t = null, fired = false, sx = 0, sy = 0, pt = null, pa = null;
     scope.addEventListener('touchstart', e => {
@@ -1669,7 +1712,7 @@
       } else if (page === 'bar') {
         const tabs = navTabs(st), max = st.nav === 'plus' ? 4 : 5;
         h = `<h2>Dolny pasek</h2>${LB('Kształt')}${seg('nav', [['pill', 'Zaokrąglony'], ['float', 'Pływający'], ['bar', 'Klasyczny'], ['plus', 'Z przyciskiem +']])}
-          <div class="card" style="padding:2px 14px;margin-top:12px">${st.nav === 'pill' ? '<div class="muted small" style="padding:12px 0">Zaokrąglony pasek ma same ikony – aktywna przesuwa się w jasnej pigułce.</div>' : tgl('labels', 'Napisy pod ikonami')}</div>
+          <div class="card" style="padding:2px 14px;margin-top:12px">${st.nav === 'pill' ? '<div class="muted small" style="padding:12px 0">Zaokrąglony pasek ma same ikony – aktywna przesuwa się w jasnej pigułce.</div>' : tgl('labels', 'Napisy pod ikonami')}${st.nav === 'pill' || st.nav === 'float' ? tgl('navMin', 'Zmniejszaj pasek przy przewijaniu') : ''}</div>
           ${LB(`Zakładki (${tabs.length}/${max}) – zaznacz i ustaw kolejność`)}${orderList('otabs', TABDEFS, tabs)}
           ${LB('Po otwarciu apki pokaż')}${seg('startTab', [['start', 'Start'], ['plan', 'Plan'], ['grades', 'Oceny'], ['mail', 'Poczta']])}`;
       } else if (page === 'screens') {
@@ -1805,6 +1848,11 @@
   .app[data-nav="pill"] .nav a.on .ic .f{fill-opacity:.0}
   .app[data-nav="float"] .nav a{z-index:1;padding:6px 0}
   .app[data-nav="float"] .nav .ind{background:color-mix(in srgb,var(--accent) 20%,transparent)}
+  .app:is([data-nav="pill"],[data-nav="float"]) .nav{transform-origin:50% 100%;transition:transform .4s cubic-bezier(.3,.75,.2,1),box-shadow .3s}
+  .app.navmin:is([data-nav="pill"],[data-nav="float"]) .nav{transform:translateY(10px) scale(.84)}
+  .swact{position:absolute;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 20px;z-index:0;border-radius:12px;font-weight:700;font-size:14px;
+    color:#fff;background:color-mix(in srgb,var(--warn) 55%,#000);transition:background-color .2s,color .2s}
+  .swact.armed{background:var(--warn);color:#111}
   .nav .plusb{flex:none;width:58px;height:58px;margin:-24px 4px 0;border-radius:29px;border:4px solid var(--bg);background:var(--accent);color:#fff;
     display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 45%,transparent)}
   .nav .plusb .ic{width:26px;height:26px;stroke-width:2.4}
@@ -2353,8 +2401,16 @@
     applySettings(app);
     app.classList.toggle('istop', !!isTop);
     // iOS: the bar gets its background only when something scrolls under it; the big title shrinks into the bar
-    const onScroll = () => { const y = window.scrollY; app.classList.toggle('scrolled', y > 2); app.classList.toggle('ltc', y > 36); };
+    let lastY = window.scrollY, navSmall = false;
+    const navMinOn = () => loadSettings().navMin !== false && MOTION !== 'off';
+    const onScroll = () => {
+      const y = window.scrollY, dy = y - lastY; lastY = y;
+      app.classList.toggle('scrolled', y > 2); app.classList.toggle('ltc', y > 36);
+      if (!navSmall && y > 140 && dy > 4 && navMinOn() && !root.querySelector('.sheet')) { navSmall = true; app.classList.add('navmin'); }
+      else if (navSmall && (dy < -4 || y < 80)) { navSmall = false; app.classList.remove('navmin'); }
+    };
     onScroll(); onWin('scroll', onScroll, { passive: true });
+    root.addEventListener('touchstart', e => { if (navSmall && e.target.closest && e.target.closest('.nav')) { navSmall = false; app.classList.remove('navmin'); } }, { passive: true });
     root.addEventListener('click', e => {
       const sm = e.target.closest && e.target.closest('summary');
       if (sm && MOTION === 'full' && !e.defaultPrevented) {
@@ -2514,6 +2570,7 @@
       app.dataset.tab = k; const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
     }, animate: () => { if (!skipAnim) animateIn(mainEl, slide); }, ctx });
     wireLongPress(root, mainEl);
+    wireSwipeRows(root, mainEl);
     wireFavButton(root, mainEl);
     if (skipAnim) { app.classList.add('still'); segThumbs(mainEl); }      // same content as a moment ago → no pop-in effects
     else if (slide) { const cls = dir === 'fwd' ? 'pushIn' : 'popIn', lt = root.getElementById('lt'); mainEl.classList.add(cls); if (lt) lt.classList.add(cls);
