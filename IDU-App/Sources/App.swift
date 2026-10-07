@@ -181,17 +181,42 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         view = webView
     }
 
+    private var loadedSkinVersion: Double = 0
+    private var lastSkinCheck = Date.distantPast
+    private var hiddenAt: Date?
+
+    /// the early script + the skin, injected into every IDU page
+    private func installScripts(_ source: String?) {
+        let controller = webView.configuration.userContentController
+        controller.removeAllUserScripts()
+        controller.addUserScript(WKUserScript(source: earlyScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        if let source = source {
+            controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+            loadedSkinVersion = version(of: source)
+        }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        let controller = webView.configuration.userContentController
-        controller.addUserScript(WKUserScript(source: earlyScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        if let source = localSkin() {    // inject the skin into every IDU page
-            controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
-        }
+        installScripts(localSkin())
         let start = WebViewController.startPath.flatMap { URL(string: $0, relativeTo: homeURL)?.absoluteURL } ?? homeURL
         WebViewController.startPath = nil
         webView.load(URLRequest(url: start))
         updateSkinInBackground()
+        let nc = NotificationCenter.default
+        nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in self?.hiddenAt = Date() }
+        nc.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { [weak self] _ in self?.cameBack() }
+    }
+
+    /// back from the background: look for a newer skin now and then; if one arrived while you were away for a while, use it right away
+    private func cameBack() {
+        let away = hiddenAt.map { Date().timeIntervalSince($0) } ?? 0
+        hiddenAt = nil
+        if Date().timeIntervalSince(lastSkinCheck) > 30 * 60 { updateSkinInBackground() }
+        if away > 5 * 60, let source = localSkin(), version(of: source) > loadedSkinVersion {
+            installScripts(source)
+            webView.reload()
+        }
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { Theme.light ? .darkContent : .lightContent }
@@ -312,6 +337,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     private func updateSkinInBackground() {
+        lastSkinCheck = Date()
         guard let remote = remoteSkinURL, let file = cachedSkinFile else { return }
         let request = URLRequest(url: remote, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         URLSession.shared.dataTask(with: request) { data, response, _ in
