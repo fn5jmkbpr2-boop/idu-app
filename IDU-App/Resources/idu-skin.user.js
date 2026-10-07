@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.8
+// @version     5.9
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -43,7 +43,7 @@
       const box = document.createElement('div');
       box.style.cssText = 'position:fixed;left:10px;right:10px;top:10px;z-index:2147483647;background:#e0335a;color:#fff;' +
         'font:14px/1.4 -apple-system,sans-serif;padding:12px 14px;border-radius:12px;white-space:pre-wrap;word-break:break-word';
-      box.textContent = 'IDU Skin – błąd (zrób screenshot):\n' + (e && e.message) + '\n' + String(e && e.stack || '').split('\n').slice(0, 3).join('\n');
+      box.textContent = L('IDU Skin – błąd (zrób screenshot):', 'IDU Skin – error (take a screenshot):') + '\n' + (e && e.message) + '\n' + String(e && e.stack || '').split('\n').slice(0, 3).join('\n');
       box.onclick = () => box.remove();
       document.body.appendChild(box);
     }
@@ -134,7 +134,7 @@
     return s === s.toUpperCase() && s.length > 4 ? s.charAt(0) + s.slice(1).toLowerCase() : s.charAt(0).toUpperCase() + s.slice(1);
   };
   const PLURAL_EN = { ocena: ['grade', 'grades'], wynik: ['result', 'results'], lekcja: ['lesson', 'lessons'], plik: ['file', 'files'],
-    pozycja: ['item', 'items'], 'uczeń': ['student', 'students'], przedmiotu: ['subject', 'subjects'] };
+    pozycja: ['item', 'items'], 'uczeń': ['student', 'students'], przedmiotu: ['subject', 'subjects'], nieusprawiedliwiona: ['unexcused', 'unexcused'] };
   const plural = (n, one, few, many) => {
     if (EN) { const e = PLURAL_EN[one]; return e ? e[n === 1 ? 0 : 1] : (n === 1 ? one : many); }
     return n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
@@ -218,6 +218,9 @@
     background:var(--bg);min-height:100vh;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   button{font:inherit;color:inherit}
+  /* phone: an app, not a web page – long-pressing a button doesn't select its text; message and note text can still be copied */
+  @media (hover:none){.app{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}.app img{-webkit-user-drag:none}
+    .app :is(.mbody,.note,.article,input,textarea,select,[contenteditable],.fta,.selectable){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}}
   .ic{width:22px;height:22px;flex:none;display:block}
   .ic.sm{width:18px;height:18px}.ic.xs{width:15px;height:15px}
 
@@ -227,7 +230,6 @@
     background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(18px);
     -webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:.5px solid var(--line)}
   .top .btn{width:40px;height:40px;border:0;background:none;border-radius:12px;display:grid;place-items:center;color:var(--accent)}
-  .top .btn:active{background:var(--card2)}
   .top .title{flex:1;min-width:0;font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:2px}
   main{padding:calc(64px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
 
@@ -254,7 +256,6 @@
   .who b{display:block;font-size:17px}
   .who span{color:var(--muted);font-size:13px}
   .dl{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:12px;font-size:16px;font-weight:500}
-  .dl:active{background:var(--card2)}
   .dl .ic{color:var(--muted)}
   .dl.danger{color:var(--bad)}.dl.danger .ic{color:var(--bad)}
   .dsep{height:.5px;background:var(--line);margin:8px 10px}
@@ -272,7 +273,6 @@
 
   /* cards */
   .card{display:block;background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
-  a.card:active,.tap:active{transform:scale(.985);opacity:.9}
   .row{display:flex;align-items:center;gap:12px}
   .grow{flex:1;min-width:0}
   .b{font-weight:700}
@@ -436,41 +436,35 @@
   .alert .ic{color:var(--warn)}
 
   /* ---- motion ---- */
-  @keyframes skIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  @keyframes skIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes skFade{from{opacity:0}to{opacity:1}}
   @keyframes skGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes skPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
   .anim{animation:skIn .36s cubic-bezier(.16,1,.3,1) both}
   main{transition:opacity .14s ease,transform .14s ease}
   .app.leaving main{opacity:0;transform:translateY(-6px)}
+  .app.veiled .top,.app.veiled .lt,.app.veiled .fab{opacity:0!important;pointer-events:none!important;transition:opacity .14s ease!important}
   .app.leaving.go-fwd main{transform:translateX(-18px)}.app.leaving.go-back main{transform:translateX(18px)}
   @keyframes skPushIn{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
   @keyframes skPopIn{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:none}}
   main.pushIn,.lt.pushIn{animation:skPushIn .3s cubic-bezier(.16,1,.3,1) both}main.popIn,.lt.popIn{animation:skPopIn .3s cubic-bezier(.16,1,.3,1) both}
   .app.softmotion .anim{animation:skFade .28s ease both}.app.softmotion main.pushIn,.app.softmotion main.popIn{animation:skFade .25s ease both}
   .app.softmotion .nav a.on .ic,.app.softmotion .fab,.app.softmotion .badge,.app.softmotion .les.cur{animation:none}
-  .lp-press{transform:scale(.965)!important;transition:transform .35s cubic-bezier(.3,.7,.3,1)!important}
-  .lp-lift{animation:skLift .45s cubic-bezier(.2,.85,.25,1)}
-  @keyframes skLift{0%{transform:scale(.965)}45%{transform:scale(1.025)}100%{transform:none}}
   .top .title{animation:skFade .3s ease both}
   .card,.box,.gcard,.chip,.btn-p,.btn-s,.days button,.seg button,.seg a,.nav a,.dl,.les,.msg,.fab,.room{
-    transition:transform .18s cubic-bezier(.2,.8,.2,1),background-color .2s,opacity .2s,box-shadow .2s}
-  .card:active,.box:active,.gcard:active,.chip:active,.btn-p:active,.btn-s:active,.days button:active,.les:active,.msg:active,.dl:active{transform:scale(.97)}
-  .nav a:active .ic{transform:scale(.85)}
-  .nav a .ic{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
-  .nav a.on .ic{animation:skPop .4s cubic-bezier(.2,.8,.2,1)}
-  .fab{animation:skPop .5s .25s cubic-bezier(.2,.8,.2,1) both}
-  .fab:active{transform:scale(.9)}
-  .badge{animation:skPop .45s .2s both}
+    transition:background-color .2s,opacity .2s,box-shadow .2s,color .2s}
+  /* touch feedback like iOS lists: the row lights up under your finger – nothing moves or shrinks */
+  .app{--hl:color-mix(in srgb,var(--text) 10%,transparent)}
+  .pr{background-image:linear-gradient(var(--hl),var(--hl))!important}
+  :is(.top .btn,.sec a,.today-btn,.hero a,.mbody a,.lt a).pr{background-image:none!important;opacity:.4;transition:none}
+  :is(.nav a,.seg>a,.seg>button,.dnav>a,.tgl,.tok button,.plusb).pr{background-image:none!important}
+  .fab{animation:skFade .3s .15s ease both}
   details[open]>*:not(summary){animation:skIn .3s cubic-bezier(.2,.85,.25,1) both}
   details>summary .ic{transition:transform .25s}
   details[open]>summary .ic.chev{transform:rotate(180deg)}
   .meter i{transform-origin:left;animation:skGrow .8s .15s cubic-bezier(.2,.85,.25,1) both}
   .les.cur{animation:skIn .45s both,skGlow 2.4s 1s ease-in-out infinite}
   @keyframes skGlow{0%,100%{box-shadow:0 0 0 0 rgba(47,191,113,.0)}50%{box-shadow:0 0 0 6px rgba(47,191,113,.18)}}
-  .drawer .dl{opacity:0;transform:translateX(-12px);transition:opacity .25s,transform .3s cubic-bezier(.2,.85,.25,1),background-color .2s}
-  .app.open .drawer .dl{opacity:1;transform:none}
-  ${Array.from({length:18},(_,i)=>`.app.open .drawer .dl:nth-of-type(${i+1}){transition-delay:${40+i*22}ms}`).join('')}
   .scrim{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 
@@ -479,7 +473,6 @@
   .calhead{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
   .calhead h1{flex:1;margin:0;font-size:22px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .iconbtn{width:40px;height:40px;border-radius:12px;border:0;background:var(--card);color:var(--text);display:grid;place-items:center;box-shadow:var(--shadow)}
-  .iconbtn:active{transform:scale(.92)}
   .today-btn{border:0;background:var(--card2);color:var(--accent);font-weight:700;font-size:14px;border-radius:12px;padding:10px 12px}
   .cal{background:var(--card);border-radius:18px;padding:10px 8px 8px;box-shadow:var(--shadow);touch-action:pan-y;overflow:hidden}
   .cal .wd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
@@ -490,7 +483,6 @@
   .cal .d.wk .n{color:var(--muted)}
   .cal .d.today .n{color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
   .cal .d.sel .n{background:var(--accent);color:#fff;box-shadow:none}
-  .cal .d:active{background:var(--card2)}
   .cal .dots{display:flex;gap:3px;height:6px}
   .cal .dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
   .slideL{animation:skSlideL .3s cubic-bezier(.2,.85,.25,1)}
@@ -544,17 +536,15 @@
   .sheet .lbl{margin:16px 2px 6px}
   .sheet .seg{margin:0}
   .swatches{display:flex;gap:12px;flex-wrap:wrap}
-  .swatches button{width:36px;height:36px;border-radius:50%;border:0;background:var(--c);box-shadow:0 0 0 0 var(--c);transition:box-shadow .2s,transform .2s}
+  .swatches button{width:36px;height:36px;border-radius:50%;border:0;background:var(--c);box-shadow:0 0 0 0 var(--c);transition:box-shadow .2s}
   .swatches button.on{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--c)}
-  .swatches button:active{transform:scale(.9)}
   .fchips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 12px;padding:2px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .fchips::-webkit-scrollbar{display:none}
   .fchips button{flex:none;border:0;border-radius:20px;padding:8px 14px;font-size:14px;font-weight:600;background:var(--card);color:var(--muted);
-    box-shadow:var(--shadow);display:flex;gap:6px;align-items:center;transition:background-color .2s,color .2s,transform .15s}
+    box-shadow:var(--shadow);display:flex;gap:6px;align-items:center;transition:background-color .2s,color .2s}
   .fchips button span{font-size:12px;background:var(--card2);border-radius:10px;padding:1px 7px;color:var(--muted)}
   .fchips button.on{background:var(--accent);color:#fff}
   .fchips button.on span{background:rgba(255,255,255,.25);color:#fff}
-  .fchips button:active{transform:scale(.94)}
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
   .toolbar .search{flex:1;margin:0}
   .sortbtn{border:0;background:var(--card2);color:var(--text);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap}
@@ -575,10 +565,9 @@
   .sgroup{margin:22px 2px 2px;font-size:20px;font-weight:800;letter-spacing:-.3px}
   .themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
   .themes button{border:0;border-radius:14px;background:var(--b);color:#fff;padding:10px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
-    font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1.5px var(--line);transition:transform .15s,box-shadow .2s}
+    font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s}
   .themes button i{width:100%;height:22px;border-radius:7px;background:var(--c2)}
   .themes button.on{box-shadow:inset 0 0 0 2.5px var(--accent)}
-  .themes button:active{transform:scale(.95)}
   .tgl{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--line);font-size:15px;cursor:pointer}
   .tgl:last-child{border:0}
   .tgl span{flex:1}
@@ -666,7 +655,7 @@
   .frow2>label{color:var(--muted);font-size:15px;padding-top:8px;min-width:46px}
   .tokens{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;padding:2px 0}
   .tok{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--accent) 22%,var(--card2));
-    border-radius:16px;padding:5px 5px 5px 11px;font-size:14px;font-weight:600;animation:skPop .3s both;max-width:100%}
+    border-radius:16px;padding:5px 5px 5px 11px;font-size:14px;font-weight:600;animation:skFade .2s both;max-width:100%}
   .tok span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tok button{border:0;background:rgba(255,255,255,.14);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;padding:0;flex:none}
   .tok button .ic{width:12px;height:12px}
@@ -675,7 +664,6 @@
   .sugg{margin:-6px 0 12px;background:var(--card2);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.45);overflow:hidden;animation:skIn .2s both}
   .sugg button{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;padding:10px 14px;text-align:left;border-bottom:.5px solid var(--line)}
   .sugg button:last-child{border:0}
-  .sugg button:active{background:var(--card)}
   .sugg .av,.plist .av{width:34px;height:34px;font-size:13px}
   .sugg .muted{padding:12px 14px;font-size:14px}
   .btnrow{display:flex;gap:10px;margin-top:4px}
@@ -701,7 +689,7 @@
    * ------------------------------------------------------------------ */
   const PAGE_CSS = `
   html.sk-full,html.sk-full body{background:var(--sk-bg,#0f1115)!important;margin:0!important;padding:0!important;min-width:0!important}
-  html.sk-full body>*:not(#sk-host):not(#sk-under):not(#sk-preview){display:none!important}
+  html.sk-full body>*:not(#sk-host):not(#sk-under){display:none!important}
   html.sk-modal,html.sk-modal body{overflow:hidden!important;overscroll-behavior:none}
   #sk-host{display:block!important;position:static!important;width:auto!important;margin:0!important;padding:0!important;border:0!important;float:none!important}
 
@@ -805,7 +793,7 @@
   #sk-login .sk-box input[type=submit],#sk-login .sk-box button{display:block!important;width:100%!important;margin-top:16px!important;
     background-color:#1e88e5!important;color:#fff!important;border:0!important;border-radius:14px!important;padding:14px!important;
     font-size:17px!important;font-weight:700!important;-webkit-appearance:none;text-align:center!important}
-  #sk-login .sk-box input[type=submit]:active,#sk-login .sk-box button:active{transform:scale(.98)}
+  #sk-login .sk-box input[type=submit]:active,#sk-login .sk-box button:active{opacity:.8}
   #sk-login .sk-box a{color:#3d9be9!important;font-size:14px}
   #sk-login .sk-box iframe{max-width:100%!important}
   #sk-login .sk-box *:not(input):not(button):not(label):not(select){padding:0!important;margin-top:0!important;margin-bottom:0!important;
@@ -1101,32 +1089,42 @@
       return `<a href="${esc(href(ctx))}" data-tab="${k}" class="${k === tab ? 'on' : ''}" aria-label="${label}">${I(TABDEFS[k][0])}<span class="lb">${label}</span>${badge ? `<span class="badge">${badge}</span>` : ''}</a>`;
     };
     const half = Math.ceil(keys.length / 2);
-    return `<nav class="nav"><span class="ind"></span>${st.nav === 'plus'
+    // the pill starts where the last bar left it (no frame where it sits on the first tab)
+    const ind = IND_LAST && tab ? ` style="width:${IND_LAST.w}px;transform:translateX(${IND_LAST.x}px)"` : tab ? '' : ' style="opacity:0"';
+    return `<nav class="nav"><span class="ind"${ind}></span>${st.nav === 'plus'
       ? keys.slice(0, half).map(a).join('') + `<button class="plusb" id="navplus" aria-label="Dodaj">${I('plus')}</button>` + keys.slice(half).map(a).join('')
       : keys.map(a).join('')}</nav>`;
   }
-  let IND_LAST = null;
+  let IND_LAST = null, IND_ANIM = null;
+  const IND_MS = 420;
+  const indFrames = (prev, x, w) => { const l = Math.min(prev.x, x), r = Math.max(prev.x + prev.w, x + w);
+    return [{ transform: `translateX(${prev.x}px)`, width: prev.w + 'px' }, { transform: `translateX(${l}px) scaleY(.9)`, width: (r - l) + 'px', offset: .4 }, { transform: `translateX(${x}px)`, width: w + 'px' }]; };
   function moveInd(root, instant) {
     const nav = root && root.querySelector('.nav'); if (!nav) return;
     const ind = nav.querySelector('.ind'), a = nav.querySelector('a.on'); if (!ind) return;
-    if (!a) { ind.style.opacity = '0'; IND_LAST = null; return; }
+    if (!a) { ind.style.opacity = '0'; IND_LAST = null; IND_ANIM = null; return; }
     const x = a.offsetLeft, w = a.offsetWidth, prev = IND_LAST;
     IND_LAST = { x, w };
-    const liquid = !instant && prev && (prev.x !== x || prev.w !== w) && MOTION === 'full' && ind.animate && getComputedStyle(ind).display !== 'none';
-    if (liquid) ind.style.transition = 'none';
+    const glide = an => { ind.style.transition = 'none'; an.onfinish = an.oncancel = () => { ind.style.transition = ''; }; };
     ind.style.opacity = ''; ind.style.width = w + 'px'; ind.style.transform = `translateX(${x}px)`;
+    // the next screen arrived while the pill was still gliding: the new tab bar takes the glide over where it was – no jump
+    const run = IND_ANIM;
+    const at = run && (typeof run.an.currentTime === 'number' ? run.an.currentTime : performance.now() - run.t0);
+    if (run && run.el !== ind && run.to.x === x && run.to.w === w && ind.animate && at < IND_MS) {
+      run.el = ind;
+      const an = ind.animate(indFrames(run.from, x, w), { duration: IND_MS, easing: 'cubic-bezier(.3,.8,.2,1)' });
+      an.currentTime = at; glide(an);
+      return;
+    }
+    const liquid = !instant && prev && (prev.x !== x || prev.w !== w) && MOTION === 'full' && ind.animate && getComputedStyle(ind).display !== 'none';
     if (!liquid) return;
-    const l = Math.min(prev.x, x), r = Math.max(prev.x + prev.w, x + w);
-    const an = ind.animate([
-      { transform: `translateX(${prev.x}px)`, width: prev.w + 'px' },
-      { transform: `translateX(${l}px) scaleY(.9)`, width: (r - l) + 'px', offset: .4 },
-      { transform: `translateX(${x}px)`, width: w + 'px' }
-    ], { duration: 420, easing: 'cubic-bezier(.3,.8,.2,1)' });
-    an.onfinish = an.oncancel = () => { ind.style.transition = ''; };
+    const an = ind.animate(indFrames(prev, x, w), { duration: IND_MS, easing: 'cubic-bezier(.3,.8,.2,1)' });
+    IND_ANIM = { el: ind, an, from: prev, to: { x, w }, t0: performance.now() }; glide(an);
   }
   function wireNav(root) {
     root.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => {
       if (a.classList.contains('on') && (a.getAttribute('href').split('#')[0] === location.pathname || a.getAttribute('href') === '/#' + (location.hash.slice(1) || 'start'))) {
+        if (VEIL) cancelNav();
         e.preventDefault(); e.stopPropagation(); window.scrollTo({ top: 0, behavior: MOTION === 'off' ? 'auto' : 'smooth' }); return;
       }
       // the pill moves right away – the next screen loads behind it
@@ -1151,7 +1149,7 @@
     sh.querySelector('[data-q="photo"]').onclick = () => { closeSheet(sh); goHome('dodaj'); };
     sh.querySelector('[data-q="note"]').onclick = () => { closeSheet(sh); goHome('dodaj:text'); };
   }
-  function goHome(hash) { if (location.pathname === '/') location.hash = hash; else softGo('/#' + hash, true); }
+  function goHome(hash) { if (location.pathname === '/') { if (VEIL) cancelNav(); location.hash = hash; } else softGo('/#' + hash, true); }
 
   /* ---------- computer: menu bar at the top ---------- */
   const isDesk = () => matchMedia('(min-width: 900px)').matches;
@@ -1249,7 +1247,7 @@
     f.remind = +when; favSave(all);
     if (NATIVE_IDU) {
       native({ type: 'askNotify' });
-      native({ type: 'remind', id: 'fav' + f.id, title: '★ ' + f.title.slice(0, 80), body: f.sub || 'Przypomnienie z Ważnych', at: Math.round(+when / 1000), path: f.href });
+      native({ type: 'remind', id: 'fav' + f.id, title: '★ ' + f.title.slice(0, 80), body: f.sub || L('Przypomnienie z Ważnych', 'Reminder from Starred'), at: Math.round(+when / 1000), path: f.href });
       toast(root, 'Przypomnę: ' + fmtWhen(+when), 'good');
     } else toast(root, 'Przypomnienia działają w aplikacji na iPhonie');
     haptic('success');
@@ -1323,23 +1321,45 @@
     scope.addEventListener('click', e => { if (moved && e.target.closest && e.target.closest('a.msg')) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   }
 
+  // a row lights up while your finger rests on it (after a moment, so scrolling past doesn't flash anything); quick taps flash briefly
+  const PRESS_SEL = 'a[href],button,summary,label,.tap,[data-press]';
+  function wirePress(root) {
+    let el = null, x0 = 0, y0 = 0, tmr = 0, on = 0, scrolledAt = 0;
+    const show = () => { tmr = 0; if (el) { el.classList.add('pr'); on = performance.now(); } };
+    const hide = late => {
+      clearTimeout(tmr); tmr = 0;
+      const e = el; el = null; if (!e) return;
+      const keep = late ? Math.max(0, 130 - (performance.now() - on)) : 0;
+      if (keep) setTimeout(() => e.classList.remove('pr'), keep); else e.classList.remove('pr');
+    };
+    onWin('scroll', () => { scrolledAt = performance.now(); if (el) hide(false); }, { passive: true });
+    root.addEventListener('touchstart', e => {
+      hide(false);
+      if (e.touches.length !== 1 || performance.now() - scrolledAt < 120) return;     // a touch that stops a scroll isn't a tap
+      const t = e.target.closest && e.target.closest(PRESS_SEL);
+      if (!t || t.disabled || t.closest('.nopress')) return;
+      el = t; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; tmr = setTimeout(show, 70);
+    }, { passive: true, capture: true });
+    root.addEventListener('touchmove', e => { if (el && (Math.abs(e.touches[0].clientX - x0) > 8 || Math.abs(e.touches[0].clientY - y0) > 8)) hide(false); }, { passive: true, capture: true });
+    root.addEventListener('touchend', () => { if (el && tmr) show(); hide(true); }, { passive: true, capture: true });
+    root.addEventListener('touchcancel', () => hide(false), { passive: true, capture: true });
+  }
   function wireLongPress(root, scope) {
-    let t = null, fired = false, sx = 0, sy = 0, pt = null, pa = null;
+    let t = null, fired = false, sx = 0, sy = 0;
     scope.addEventListener('touchstart', e => {
       const a = e.target.closest && e.target.closest('a[href]'); fired = false;
       if (!a || a.closest('.nav,.top,.sheet') || /^(#|javascript|mailto|tel)|\/#/.test(a.getAttribute('href'))) return;
       sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      clearTimeout(pt); pa = a; pt = setTimeout(() => { if (MOTION === 'full') a.classList.add('lp-press'); }, 150);
+      clearTimeout(t);
       t = setTimeout(() => {
         t = null; fired = true; haptic('medium');
-        a.classList.remove('lp-press'); if (MOTION === 'full') { a.classList.add('lp-lift'); setTimeout(() => a.classList.remove('lp-lift'), 460); }
         const title = (txt2(a.querySelector('.ttl,.b,.name,.subj')) || txt2(a)).slice(0, 140);
         itemMenu(root, { href: a.getAttribute('href'), title, sub: txt2(a.querySelector('.strip span,.sub,.when')).slice(0, 80), label: FAV_KIND(a.getAttribute('href'))[1] });
       }, 480);
     }, { passive: true });
-    const cancel = () => { clearTimeout(t); t = null; clearTimeout(pt); if (pa) pa.classList.remove('lp-press'); };
+    const cancel = () => { clearTimeout(t); t = null; };
     scope.addEventListener('touchmove', e => { if (t && (Math.abs(e.touches[0].clientX - sx) > 9 || Math.abs(e.touches[0].clientY - sy) > 9)) cancel(); }, { passive: true });
-    scope.addEventListener('touchend', cancel, { passive: true });
+    scope.addEventListener('touchend', cancel, { passive: true }); scope.addEventListener('touchcancel', cancel, { passive: true });
     scope.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
     scope.addEventListener('contextmenu', e => {
       const a = e.target.closest && e.target.closest('a[href]');
@@ -1504,7 +1524,7 @@
       <button class="btn-p" id="nsave" style="width:100%;margin-top:14px">Zapisz</button>
       <div class="note2">Zdjęcia są zmniejszane i zostają tylko w tym telefonie. Kopię zrobisz w Ustawieniach → Notatki i kopia.</div>`);
     const prev = sh.querySelector('#nprev'), ta = sh.querySelector('#ntext');
-    const setKind = k => { kind = k; ta.hidden = k === 'photo'; ta.placeholder = k === 'list' ? 'Każda linia to jeden punkt listy\n(pierwsza linia może być tytułem: zacznij ją od #)' : 'Treść notatki'; if (k !== 'photo') setTimeout(() => ta.focus(), 100); };
+    const setKind = k => { kind = k; ta.hidden = k === 'photo'; ta.placeholder = k === 'list' ? L('Każda linia to jeden punkt listy\n(pierwsza linia może być tytułem: zacznij ją od #)', 'One line per list item\n(the first line can be a title: start it with #)') : L('Treść notatki', 'Note text'); if (k !== 'photo') setTimeout(() => ta.focus(), 100); };
     setKind(kind);
     sh.querySelectorAll('.addb input').forEach(inp => inp.onchange = () => { files = files.concat([...inp.files]); setKind('photo');
       prev.innerHTML = files.map(f => `<div class="ph" style="background-image:url(${URL.createObjectURL(f)})"></div>`).join(''); });
@@ -1661,11 +1681,10 @@
     const row = (ic, t, d) => `<div class="row" style="align-items:flex-start;gap:14px;padding:10px 0"><div class="sic" style="flex:none">${I(ic)}</div><div class="grow"><div class="b">${t}</div><div class="muted small">${d}</div></div></div>`;
     const sh = openSheet(root, `<h2>${L('Co nowego', "What's new")}</h2><div class="muted small" style="margin-bottom:8px">${L('Wersja', 'Version')} ${esc(SKIN_VERSION)}</div>
       <div class="card" style="padding:2px 14px">
-      ${row('bell', 'Powiadomienia', NATIVE_IDU ? 'Nowe oceny, wiadomości i ogłoszenia – Ustawienia → Powiadomienia → „Sprawdź teraz”. Zaloguj się z „Zapamiętaj mnie”.' : 'Na iPhonie: nowe oceny i wiadomości jako powiadomienia.')}
-      ${row('chart', 'Kalkulator ocen', 'Oceny → rozwiń przedmiot → „Kalkulator”: ile potrzebujesz i „co jeśli”.')}
-      ${row('star', 'Przesuń w lewo', 'Wiadomość przesunięta w lewo trafia do Ważnych.')}
-      ${row('layers', 'Animacje i duże tytuły', 'Płynny pasek, przejścia jak w iOS, arkusze ciągnięte palcem. Ustawienia → Styl → Animacje.')}
-      ${NATIVE_IDU ? row('image', 'Bez internetu', 'Apka pokaże ostatnio zapisane ekrany: Start, Plan, Oceny.') : ''}
+      ${row('layers', 'Ekrany od razu', 'Po kliknięciu od razu widzisz następny ekran – jego ostatni obraz, lekko rozmyty, który wyostrza się, gdy przyjdą świeże dane z IDU.')}
+      ${row('check', 'Spokojniejsze klikanie', 'Nic już nie maleje pod palcem – wiersz tylko delikatnie się podświetla. Gdy ekran się ładuje, możesz od razu kliknąć coś innego albo „wstecz”.')}
+      ${row('users', 'Szukaj osób działa', 'Menu → Szukaj osób: uczniowie, nauczyciele i rodzice.')}
+      ${row('bell', 'Powiadomienia', NATIVE_IDU ? 'Nowe oceny, wiadomości i ogłoszenia – Ustawienia → Powiadomienia → „Sprawdź teraz”.' : 'Na iPhonie: nowe oceny i wiadomości jako powiadomienia.')}
       </div><button class="btn-p" id="wnok" style="width:100%;margin-top:14px">${L('Super', 'Got it')}</button>`);
     sh.querySelector('#wnok').onclick = () => closeSheet(sh);
   }
@@ -2002,7 +2021,6 @@
     .dmenu>summary::-webkit-details-marker{display:none}
     .dnav>a:hover,.dmenu>summary:hover,.dmenu[open]>summary{background:var(--card2);color:var(--text)}
     .dnav>a.on,.dnav .dmenu>summary.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
-    .dnav>a:active,.dmenu>summary:active{transform:scale(.97)}
     .dmenu>summary .ic.xs{opacity:.7;transition:transform .2s}.dmenu[open]>summary .ic.xs{transform:rotate(180deg)}
     .dbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
     .dmenu{position:relative}
@@ -2063,7 +2081,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.8';
+  const SKIN_VERSION = '5.9';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2092,7 +2110,7 @@
     }
     if (n.nodeType !== 1 && n.nodeType !== 11) return;
     const attrs = el => { if (el.closest('.mbody,.note,.bubble,[data-raw]')) return;
-      for (const a of ['placeholder', 'aria-label']) if (el.hasAttribute(a)) { const v = trString(el.getAttribute(a)); if (v !== el.getAttribute(a)) el.setAttribute(a, v); } };
+      for (const a of ['placeholder', 'aria-label', 'title']) if (el.hasAttribute(a)) { const v = trString(el.getAttribute(a)); if (v !== el.getAttribute(a)) el.setAttribute(a, v); } };
     if (n.nodeType === 1) attrs(n);
     const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     let c;
@@ -2142,7 +2160,7 @@
     // print-style pages (plans, class lists, calendar events) come without IDU's header
     const bare = !accLink && !$('input[type="password"]') && BARE_KINDS.includes(routeKind(document, location.pathname.replace(/\/+$/, '') || '/'));
     if (!accLink && !bare) {                    // login / logged-out pages
-      try { localStorage.removeItem('skSnap'); } catch (e) {}
+      snapsForget();
       if (!loginMode()) { vp.content = 'width=1000, user-scalable=yes'; pageStyle.remove(); }
       return;
     }
@@ -2279,47 +2297,182 @@
     try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
   const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
-  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', PREVIEWED = false;
-  // a screen you've seen before appears the moment you tap (its last picture), the fresh data replaces it a moment later
-  function showPreview(u, dir) {
+  let curKey = location.pathname + location.search, NAV_SEQ = 0, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', VEILED = '';
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* ---- saved pictures of screens: shown while a screen loads, at launch and when there's no internet ---- */
+  const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
+  const keyOf = u => { const p = u.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (u.hash || '#start') : p; };
+  // the launch picture (iOS app) is shown out of focus until the live screen is ready
+  const SNAP_CSS = APP_CSS + V5_CSS + ':host(#sk-snap) main{filter:blur(6px);opacity:.9}';
+  let SNAPS = null, snapCssOk = false, snapWriteT = 0;
+  const snapMap = () => { if (!SNAPS) { try { SNAPS = JSON.parse(localStorage.getItem('skSnap') || '{}') || {}; } catch (e) { SNAPS = {}; } } return SNAPS; };
+  const snapGet = key => { const s = key && snapMap()[key]; return s && s.h && Date.now() - s.t < 3 * 864e5 ? s : null; };
+  const snapsForget = () => { SNAPS = {}; try { localStorage.removeItem('skSnap'); } catch (e) {} };
+  function snapsWrite(now) {
+    clearTimeout(snapWriteT);
+    const run = () => {
+      const map = snapMap(), keys = Object.keys(map).sort((a, b) => map[b].t - map[a].t), keep = {};
+      let total = 0, n = 0;
+      for (const k of keys) { const len = (map[k].h || '').length; if (n >= 12 || total + len > 1.6e6) continue; keep[k] = map[k]; total += len; n++; }
+      SNAPS = keep;
+      try { localStorage.setItem('skSnap', JSON.stringify(keep)); }
+      catch (e) { try { localStorage.setItem('skSnap', JSON.stringify(keys[0] ? { [keys[0]]: map[keys[0]] } : {})); } catch (er) {} }
+      if (!snapCssOk) { snapCssOk = true; try { if (localStorage.getItem('skSnapCss') !== SNAP_CSS) localStorage.setItem('skSnapCss', SNAP_CSS); } catch (e) {} }
+    };
+    if (now) run(); else snapWriteT = setTimeout(run, 400);       // not in the middle of a tap
+  }
+  // the screen that is actually on display – on "back" the address changes before the old screen is gone,
+  // so the picture must be filed under the screen it shows, not under the new address
+  let SHOWN_KEY = '';
+  function saveSnapshot(now) {
     try {
-      const p = u.pathname.replace(/\/+$/, '') || '/', key = p === '/' ? '/' + (u.hash || '#start') : p;
-      const snap = JSON.parse(localStorage.getItem('skSnap') || '{}')[key];
-      if (!snap || !snap.h || Date.now() - snap.t > 3 * 864e5) return;
-      const y = dir === 'back' ? (snap.y || 0) : 0;
-      const anim = MOTION === 'off' ? 'none' : dir === 'fwd' ? 'skPushIn .26s cubic-bezier(.16,1,.3,1) both' : dir === 'back' ? 'skPopIn .26s cubic-bezier(.16,1,.3,1) both' : 'skFade .14s ease both';
-      const o = document.createElement('div'); o.id = 'sk-preview';
-      o.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;overflow:hidden;background:' + (store.get('skSnapBg') || '#0f1115');
-      o.attachShadow({ mode: 'open' }).innerHTML = `<style>${APP_CSS}${V5_CSS}
-        .pv{position:absolute;inset:0;overflow:hidden;animation:${anim}} .pv *{animation:none!important;transition:none!important}
-        .pv main,.pv .lt{transform:translateY(${-y}px)}</style><div class="pv">${snap.h.replace(/^<style>[^<]*<\/style>/, '')}</div>`;
-      ['click', 'touchstart'].forEach(t => o.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); }, { capture: true, passive: false }));
-      document.body.appendChild(o);
-      PREVIEWED = true;
+      const app = shellApp();
+      if (!app || !document.documentElement.classList.contains('sk-full')) return;
+      const c = app.cloneNode(true);
+      c.classList.remove('open', 'leaving', 'loading', 'veiled', 'go-fwd', 'go-back', 'navmin');
+      const cm = c.querySelector('main'); if (cm) cm.removeAttribute('style');
+      c.classList.add('still');
+      c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
+      c.querySelectorAll('.pr').forEach(e => e.classList.remove('pr'));
+      const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
+      c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
+      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { if (e.matches('.ind, .sthumb')) return; e.style.opacity = ''; e.style.transform = ''; });   // the tab pill and switch thumbs keep their place
+      const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
+      if (h.length > 300000) return;
+      snapMap()[SHOWN_KEY || snapKey()] = { t: Date.now(), h, y: Math.round(window.scrollY) };
+      snapsWrite(now);
     } catch (e) {}
   }
-  // opts.quiet: refresh in place (no page-leave animation, keeps what you see until the new data is ready)
+  let snapTimer = 0;
+  const saveSnapshotSoon = () => { clearTimeout(snapTimer); snapTimer = setTimeout(saveSnapshot, 1500); };
+
+  /* ---- the veil: while the next screen loads you already see it ----
+   * its last picture, softly out of focus (or an empty screen with placeholders the first time),
+   * and it comes into focus the moment the fresh data is in. The tab bar stays live above it, its "back" cancels,
+   * and any new tap simply takes over – nothing ever waits for IDU. */
+  const VEIL_CSS = `.pv{position:absolute;inset:0;overflow:hidden}
+    .pv.snap *{animation:none!important;transition:none!important}
+    .pv :is(.nav,.dtop,.drawer,.scrim,.ptr,.toast,.sheet,.sheet-scrim,.sugg){display:none!important}
+    .pv.snap main{filter:blur(6px) saturate(1.05);opacity:.88}.pv.snap .fab{opacity:0}
+    :host(.out){opacity:0;transition:opacity .2s ease}
+    @keyframes skVeilFwd{from{opacity:0;transform:translateX(32px)}40%{opacity:1}to{opacity:1;transform:none}}
+    @keyframes skVeilBack{from{opacity:0;transform:translateX(-32px)}40%{opacity:1}to{opacity:1;transform:none}}
+    .skc{display:block;background:var(--card);border-radius:16px;margin:0 0 10px;box-shadow:var(--shadow);animation:skPulse 1s ease-in-out infinite alternate both}
+    .skl{height:14px;border-radius:7px;background:var(--card2);margin:6px 2px 16px;animation:skPulse 1s .3s ease-in-out infinite alternate both}
+    @keyframes skPulse{from{opacity:.9}to{opacity:.45}}`;
+  let VEIL = null;
+  function skeletonHTML(app, dir, from) {
+    const sh = app.cloneNode(false);                      // same look: theme, style and layout settings
+    sh.removeAttribute('id');
+    sh.classList.remove('open', 'leaving', 'loading', 'veiled', 'go-fwd', 'go-back', 'navmin', 'scrolled', 'ltc', 'istop', 'still');
+    const tab = dir === 'tab', key = from && from.dataset ? from.dataset.tab || '' : '';
+    const label = tab && from ? (from.getAttribute('aria-label') || txt2(from.querySelector('span')) || txt2(from)).slice(0, 40) : '';
+    sh.dataset.tab = key;
+    if (tab) sh.classList.add('istop');
+    const bar = tab
+      ? `<header class="top"><button class="btn" id="menu">${I('menu')}</button><div class="title">${esc(label)}</div></header>`
+      : `<header class="top"><button class="btn" id="back">${I('back')}</button><div class="title"></div><button class="btn" id="menu">${I('menu')}</button></header>`;
+    const blocks = [78, 132, 64, 104, 64, 92].map((h, i) => `<i class="skc" style="height:${h}px;animation-delay:${300 + i * 70}ms"></i>`).join('');
+    sh.innerHTML = (tab && label ? `<div class="lt">${esc(label)}</div>` : '') + bar + `<main id="main"><div class="skl" style="width:44%"></div>${blocks}</main>`;
+    return sh.outerHTML;
+  }
+  function showVeil(u, dir, from, seq) {
+    dropVeil(true);
+    try {
+      const app = shellApp(), key = keyOf(u), snap = snapGet(key);
+      if (!snap && !app) return;
+      const y = (dir === 'back' || dir === 'swipe') && snap ? snap.y || 0 : 0;
+      // a tab switches at once (like the tab bar of any app); a step forward/back slides in over the old screen, which stays put until covered
+      const ms = MOTION === 'off' ? 0 : dir === 'fwd' || dir === 'back' ? 220 : dir === 'swipe' ? 140 : 0;
+      const anim = !ms ? 'none' : dir === 'fwd' ? `skVeilFwd ${ms}ms cubic-bezier(.2,.8,.25,1) both` : dir === 'back' ? `skVeilBack ${ms}ms cubic-bezier(.2,.8,.25,1) both` : `skFade ${ms}ms ease both`;
+      const o = document.createElement('div'); o.id = 'sk-veil';
+      // under the tab bar (20) and the menu, over everything else; lives outside <body>, so the page swap doesn't touch it
+      o.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:19;overflow:hidden;touch-action:none;background:' + (store.get('skSnapBg') || '#0f1115');
+      const r = o.attachShadow({ mode: 'open' });
+      r.innerHTML = `${appStyles(r)}<style>${VEIL_CSS}.pv{animation:${anim}}.pv main,.pv .lt{transform:translateY(${-y}px)}</style>`
+        + `<div class="pv ${snap ? 'snap' : 'skel'}">${snap ? snap.h.replace(/^<style>[^<]*<\/style>/, '') : skeletonHTML(app, dir, from)}</div>`;
+      const v = { el: o, key, dir, seq, t0: performance.now(), ms, snap: !!snap };
+      o.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (VEIL !== v) return;
+        const btn = e.composedPath().find(n => n.classList && n.classList.contains('btn'));
+        if (!btn) return;
+        if (btn.id === 'back') { if (dir === 'back' || dir === 'swipe') { NAV_DIR = 'back'; history.back(); } else cancelNav(); }
+        else if (btn.id === 'menu') { const a = shellApp(); if (a) { haptic('soft'); a.classList.add('open'); } }
+      }, true);
+      ['touchstart', 'touchmove', 'touchend'].forEach(t => o.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+      document.documentElement.appendChild(o);
+      VEIL = v;
+      if (app) app.classList.add('veiled');
+    } catch (e) {}
+  }
+  function dropVeil(instant) {
+    const v = VEIL; VEIL = null; if (!v) return;
+    const app = shellApp(); if (app) app.classList.remove('veiled');
+    if (instant || MOTION === 'off' || !v.el.isConnected) { v.el.remove(); return; }
+    v.el.style.pointerEvents = 'none';
+    requestAnimationFrame(() => v.el.classList.add('out'));
+    setTimeout(() => v.el.remove(), 280);
+  }
+  // "back" on a screen that is still loading: stay where you were
+  function cancelNav() {
+    NAV_SEQ++;
+    const app = shellApp();
+    if (app) {
+      app.classList.remove('leaving', 'loading', 'go-fwd', 'go-back');
+      const root = app.getRootNode();
+      root.querySelectorAll('.nav a, .dnav>a').forEach(x => x.classList.toggle('on', x.dataset.tab === CUR.tab)); moveInd(root);
+    }
+    dropVeil(false);
+  }
+  // where "back" goes (for loading it ahead while your finger is still on the way)
+  const prevHref = () => { const k = history.state && history.state.prev; return k ? (k.startsWith('/#') ? '/' : k) : ''; };
+
+  // a page that has to load the classic way still shows the next screen right away (if a file opens instead, the veil steps aside)
+  function hardGo(href, dir, from) {
+    const u = new URL(href, location.href);
+    saveSnapshot(true);
+    if (!/\/download$/.test(u.pathname)) {
+      NAV_SEQ++; showVeil(u, dir || 'fwd', from, NAV_SEQ);
+      const seq = NAV_SEQ; setTimeout(() => { if (VEIL && NAV_SEQ === seq) cancelNav(); }, 6000);
+    }
+    if (dir === 'back' || dir === 'swipe') location.replace(u.href); else location.href = u.href;
+  }
+  // opts.quiet: refresh in place (no veil, keeps what you see until the new data is ready)
   async function softGo(href, push, opts) {
     opts = opts || {};
     const u = new URL(href, location.href);
-    if (!softable(u)) { location.href = u.href; return false; }
-    if (navBusy) return null;
-    navBusy = true;
-    saveSnapshot();
+    if (!softable(u)) { const d = NAV_DIR; NAV_DIR = ''; if (opts.quiet) location.reload(); else hardGo(u.href, d, opts.from); return false; }
+    const seq = ++NAV_SEQ, dir = NAV_DIR; NAV_DIR = '';
     const app = shellApp();
-    if (app && !opts.quiet) { app.classList.add('leaving', 'loading'); if (NAV_DIR === 'fwd' || NAV_DIR === 'back') app.classList.add('go-' + NAV_DIR); }
-    if (!opts.quiet && NAV_DIR !== 'swipe') showPreview(u, NAV_DIR);
+    if (!opts.quiet) {
+      if (VEIL && VEIL.key === keyOf(u) && VEIL.dir === dir) VEIL.seq = seq;     // tapped twice – the same screen is already on its way
+      else showVeil(u, dir, opts.from, seq);
+      if (app) {
+        if (!VEIL) { app.classList.add('leaving'); if (dir === 'fwd' || dir === 'back') app.classList.add('go-' + dir); }   // no veil possible: the old screen fades instead
+        app.classList.remove('open'); app.querySelectorAll('.sheet').forEach(closeSheet);     // the menu or a sheet steps aside
+      }
+      saveSnapshot();                                       // the screen you're leaving – after the next one is already showing
+    }
     const y = window.scrollY;
     let pg = null;
-    try { pg = await fetchPage(u.origin + u.pathname + u.search, opts.quiet); } catch (e) {}
-    navBusy = false;
-    if (!pg && opts.quiet) return false;                 // offline – keep the current screen
-    const fin = pg ? new URL(pg.url) : u;
+    try { pg = await Promise.race([fetchPage(u.origin + u.pathname + u.search, opts.quiet), sleep(opts.quiet ? 20000 : 15000).then(() => null)]); } catch (e) {}
+    if (seq !== NAV_SEQ) return null;                       // you tapped something else meanwhile – the newest tap wins
+    if (!pg) {
+      if (opts.quiet) return false;                         // offline – keep the current screen
+      if (dir === 'back' || dir === 'swipe') location.replace(u.href); else location.href = u.href;   // the classic way (the app shows its offline screen if needed)
+      return true;
+    }
+    const fin = new URL(pg.url);
     const finPath = fin.pathname.replace(/\/+$/, '') || '/';
-    const doc = pg && pg.ok && /html/.test(pg.type) ? new DOMParser().parseFromString(pg.html, 'text/html') : null;
+    const doc = pg.ok && /html/.test(pg.type) ? new DOMParser().parseFromString(pg.html, 'text/html') : null;
     const kind = doc ? routeKind(doc, finPath) : null;
     const logged = doc && (doc.querySelector('#account a') || (BARE_KINDS.includes(kind) && !doc.querySelector('input[type="password"]')));
-    if (!logged || !kind) { location.href = (pg ? pg.url : u.href) + (pg ? u.hash : ''); return true; }
+    if (!logged || !kind) { location.href = pg.url + u.hash; return true; }
+    // the next screen finishes sliding in first, so nothing jumps
+    const veil = VEIL && VEIL.seq === seq ? VEIL : null;
+    if (veil) { const w = veil.t0 + veil.ms - performance.now(); if (w > 16) { await sleep(w); if (seq !== NAV_SEQ) return null; } }
     prefetchMap.clear();
     runCleanups();
     document.title = doc.title;
@@ -2333,11 +2486,13 @@
     else if (location.pathname + location.search !== fin.pathname + fin.search) history.replaceState({ sk: 1, prev: (history.state && history.state.prev) || '' }, '', url);
     curKey = location.pathname + location.search;
     QUIET = !!opts.quiet;
-    const wentBack = NAV_DIR === 'back' || NAV_DIR === 'swipe';
+    VEILED = veil ? (veil.snap ? 'snap' : 'skel') : '';
+    NAV_DIR = dir;
     window.scrollTo(0, 0);
     main();
     if (opts.keepScroll) window.scrollTo(0, y);
-    else if (wentBack) { try { const m = JSON.parse(localStorage.getItem('skSnap') || '{}')[snapKey()]; if (m && m.y) window.scrollTo(0, m.y); } catch (e) {} }   // back where you were
+    else if (dir === 'back' || dir === 'swipe') { const m = snapGet(snapKey()); if (m && m.y) window.scrollTo(0, m.y); }   // back where you were
+    if (veil) dropVeil(false);                             // the fresh screen comes into focus
     return true;
   }
   // pull-to-refresh / back from the background: reload the data of this screen without a white flash
@@ -2352,57 +2507,29 @@
   // nothing typed and no sheet open → safe to refresh by itself
   function canAutoRefresh() {
     const app = shellApp(); if (!app) return false;
-    if (app.querySelector('.sheet') || app.classList.contains('open')) return false;
+    if (app.querySelector('.sheet') || app.classList.contains('open') || VEIL) return false;
     return !Array.from(app.querySelectorAll('textarea, input:not([type=checkbox]):not([type=file])')).some(i => i.value && i.value.trim());
   }
-
-  /* ---- instant start: the app shows the last picture of a screen before IDU even answers ---- */
-  const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
-  // the screen that is actually on display – on "back" the address changes before the old screen is gone,
-  // so the picture must be filed under the screen it shows, not under the new address
-  let SHOWN_KEY = '';
-  function saveSnapshot() {
-    try {
-      const app = shellApp();
-      if (!app || !document.documentElement.classList.contains('sk-full')) return;
-      const c = app.cloneNode(true);
-      c.classList.remove('open', 'leaving', 'loading', 'go-fwd', 'go-back', 'navmin');
-      const cm = c.querySelector('main'); if (cm) cm.removeAttribute('style');
-      c.classList.add('still');
-      c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
-      const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
-      c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
-      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { if (e.matches('.ind, .sthumb')) return; e.style.opacity = ''; e.style.transform = ''; });   // the tab pill and switch thumbs keep their place
-      const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
-      if (h.length > 300000) return;
-      let map = {}; try { map = JSON.parse(localStorage.getItem('skSnap') || '{}'); } catch (e) {}
-      const key = SHOWN_KEY || snapKey();
-      map[key] = { t: Date.now(), h, y: Math.round(window.scrollY) };
-      Object.keys(map).sort((a, b) => map[b].t - map[a].t).slice(8).forEach(k => delete map[k]);
-      try { localStorage.setItem('skSnap', JSON.stringify(map)); }
-      catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [key]: map[key] })); }
-      if (localStorage.getItem('skSnapCss') !== APP_CSS + V5_CSS) localStorage.setItem('skSnapCss', APP_CSS + V5_CSS);   // the picture needs all the styles
-    } catch (e) {}
-  }
-  let snapTimer = 0;
-  const saveSnapshotSoon = () => { clearTimeout(snapTimer); snapTimer = setTimeout(saveSnapshot, 1500); };
 
   let navInit = false, hiddenAt = 0;
   function initNav() {
     if (navInit) return; navInit = true;
     try { history.replaceState({ sk: 1 }, '', location.href); } catch (e) {}
+    try { history.scrollRestoration = 'manual'; } catch (e) {}          // the skin puts you back where you were itself – the browser mustn't move the old screen meanwhile
     window.addEventListener('popstate', () => {
       const k = location.pathname + location.search;
-      if (k === curKey) return;            // only the #hash changed – the page handles it
+      if (k === curKey) { if (VEIL) cancelNav(); return; }     // only the #hash changed – the page handles it
       if (NAV_DIR !== 'swipe') NAV_DIR = 'back';
       softGo(location.href, false);
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { hiddenAt = Date.now(); saveSnapshot(); return; }
+      if (document.hidden) { hiddenAt = Date.now(); if (!VEIL) saveSnapshot(true); return; }
       if (hiddenAt && Date.now() - hiddenAt > 4 * 60e3 && canAutoRefresh()) refreshPage({ keepScroll: true });
       hiddenAt = 0;
     });
-    window.addEventListener('pagehide', saveSnapshot);
+    window.addEventListener('pagehide', () => { if (!VEIL) saveSnapshot(true); });
+    // back from the page cache (e.g. after a file): no half-finished change of screens
+    window.addEventListener('pageshow', ev => { if (ev.persisted) { NAV_SEQ++; dropVeil(true); const a = shellApp(); if (a) a.classList.remove('leaving', 'loading', 'go-fwd', 'go-back', 'veiled'); } });
   }
 
   /* ------------------------------------------------------------------ *
@@ -2474,12 +2601,13 @@
     root.addEventListener('click', e => { if (e.target.closest && e.target.closest('.seg > button, .seg > a')) setTimeout(() => segThumbs(root), 0); }, true);
     // a sheet (Ustawienia…), the menu or the photo viewer is open → the screen behind can't be scrolled or tapped
     const syncModal = () => {
-      const modal = !!(root.querySelector('.sheet, .viewer') || app.classList.contains('open'));
+      const modal = !!(root.querySelector('.sheet:not(.shut), .viewer') || app.classList.contains('open'));
       if (document.documentElement.classList.contains('sk-modal') === modal) return;
       document.documentElement.classList.toggle('sk-modal', modal);
       root.querySelectorAll('main, .top, .nav, .dtop, .lt').forEach(x => { try { x.inert = modal; } catch (e) {} });
     };
     const modalObs = new MutationObserver(syncModal); modalObs.observe(app, { childList: true, attributes: true, attributeFilter: ['class'] });
+    root.__syncModal = syncModal;
     cleanups.push(() => { modalObs.disconnect(); document.documentElement.classList.remove('sk-modal'); });
     root.getElementById('scrim').addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
     root.addEventListener('click', e => { const k = e.target.closest && e.target.closest('[data-kid]'); if (!k) return;
@@ -2492,6 +2620,7 @@
       if (t) haptic(t.matches('summary') ? 'soft' : 'selection');
     }, true);
     CUR.ctx = ctx; CUR.tab = tab;
+    wirePress(root);
     if (!ctx.bare) native({ type: 'badge', n: ctx.unread || 0 });
     wireNav(root);
     wireDesk(root, app);
@@ -2506,7 +2635,10 @@
     root.getElementById('menu').onclick = () => toggle(true);
     root.getElementById('scrim').onclick = () => toggle(false);
     const back = root.getElementById('back');
-    if (back) back.onclick = () => { NAV_DIR = 'back'; if (history.length > 1) history.back(); else softGo('/', true); };
+    if (back) {
+      back.onclick = () => { NAV_DIR = 'back'; if (history.length > 1) history.back(); else softGo('/', true); };
+      back.addEventListener('touchstart', () => { const h = prevHref(); if (h) prefetch(h); }, { passive: true });   // the previous screen starts loading as your finger lands
+    }
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
       const t = root.getElementById('timer'), dt = root.getElementById('dtimer');
@@ -2525,19 +2657,19 @@
       const u = new URL(href, location.href);
       if (u.origin !== location.origin) return;
       if (/\/download$/.test(u.pathname)) { e.preventDefault(); haptic('light'); toast(root, 'Otwieram plik…'); location.href = u.href; return; }
-      if (/^\/users\/sign_out/.test(u.pathname)) { try { localStorage.removeItem('skSnap'); } catch (err) {} return; }
+      if (/^\/users\/sign_out/.test(u.pathname)) { snapsForget(); return; }
       if (a.target === '_blank') return;
-      if (u.pathname === location.pathname && u.search === location.search && u.hash) return; // same page (#plan)
+      if (u.pathname === location.pathname && u.search === location.search && u.hash) { if (VEIL) cancelNav(); return; }   // same page (#plan) – and you changed your mind about a screen still loading
       e.preventDefault();
-      if (softable(u)) { NAV_DIR = a.closest('.nav, .dnav, .drawer, .dlogo, .dpop') ? 'tab' : 'fwd'; softGo(u.href, true); return; }
-      saveSnapshot();
-      app.classList.add('leaving');
-      setTimeout(() => { location.href = u.href; }, 140);
+      const dir = a.closest('.nav, .dnav, .drawer, .dlogo, .dpop') ? 'tab' : 'fwd';
+      if (softable(u)) { NAV_DIR = dir; softGo(u.href, true, { from: a }); return; }
+      app.classList.remove('open');
+      hardGo(u.href, dir, a);
     });
     // start loading a page the moment a finger touches its link
     root.addEventListener('touchstart', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
     root.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
-    onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
+    onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading', 'veiled'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
 
     // swipe back like iOS: from the left edge, and on inner pages from anywhere on the screen.
     // The page follows the finger 1:1 and the previous screen is already waiting underneath (no empty black area).
@@ -2552,13 +2684,12 @@
       const NO_FULL = 'input,textarea,select,button,label,.hs,.fchips,.chips,.seg,.days,#daylist,.sl,.cal,.grid,.tline,.viewer,.sheet,.msg,.dtop,[data-noswipe]';
       // the previous screen = the picture saved when you left it (with its scroll position)
       const buildUnder = () => {
-        let snap = null;
-        try { const prev = history.state && history.state.prev; const map = JSON.parse(localStorage.getItem('skSnap') || '{}'); snap = prev ? map[prev] : null; } catch (e) {}
+        const snap = snapGet(history.state && history.state.prev);
         const u = document.createElement('div'); u.id = 'sk-under';
         u.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--p:0;background:' + (store.get('skSnapBg') || '#0f1115');
         const r = u.attachShadow({ mode: 'open' });
         const html = snap && snap.h ? snap.h.replace(/^<style>[^<]*<\/style>/, '') : '';
-        r.innerHTML = `<style>${APP_CSS}${V5_CSS}
+        r.innerHTML = `${appStyles(r)}<style>
           .ud{transform:translateX(calc((1 - var(--p)) * -30%));will-change:transform}
           .dim{position:fixed;inset:0;background:#000;opacity:calc((1 - var(--p)) * .18);pointer-events:none}
           :host(.go) .ud{transition:transform var(--ms) cubic-bezier(.2,.8,.25,1)}
@@ -2572,6 +2703,7 @@
       if (canBack() && !isDesk()) setTimeout(() => { if (!under && host.isConnected) under = buildUnder(); }, 700);   // ready before your finger is
       const startBack = () => {
         el = target();
+        const h = prevHref(); if (h) prefetch(h);            // the fresh screen loads while you swipe
         if (!under || !under.isConnected) under = buildUnder();
         under.classList.remove('go'); under.style.setProperty('--p', 0); under.style.display = 'block';
         app.classList.add('scrolled');          // the bar gets its background, so the screen underneath doesn't show through it
@@ -2611,7 +2743,7 @@
       };
       onWin('touchstart', e => {
         const t = e.touches[0]; x0 = null;
-        if (busy || e.touches.length !== 1 || root.querySelector('.sheet, .viewer') || isDesk()) return;
+        if (busy || e.touches.length !== 1 || root.querySelector('.sheet:not(.shut), .viewer') || isDesk()) return;
         if (app.classList.contains('open')) mode = 'close';
         else if (t.clientX <= 28) mode = canBack() ? 'back' : 'menu';
         else {
@@ -2664,7 +2796,7 @@
       const reset = () => { ind.classList.add('back'); ind.classList.remove('armed'); ind.style.opacity = '0'; ind.style.transform = ''; setTimeout(() => ind.classList.remove('back'), 260); };
       onWin('touchstart', e => {
         y0 = null;
-        if (busy || e.touches.length !== 1 || window.scrollY > 2 || root.querySelector('.sheet') || app.classList.contains('open')) return;
+        if (busy || e.touches.length !== 1 || window.scrollY > 2 || root.querySelector('.sheet:not(.shut)') || app.classList.contains('open')) return;
         if (e.touches[0].clientX <= 28) return;                    // edge swipe has priority
         y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; pull = 0; armed = false;
       }, { passive: true });
@@ -2696,9 +2828,10 @@
     // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
     const hadSnap = !!document.getElementById('sk-snap');
     const dir = NAV_DIR; NAV_DIR = '';
-    let skipAnim = hadSnap || QUIET || dir === 'swipe' || PREVIEWED;
-    PREVIEWED = false;
-    let slide = !skipAnim && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
+    const veiled = VEILED; VEILED = '';
+    // a picture of this screen was just on display → it simply comes into focus; placeholders → the content settles in without sliding again
+    let skipAnim = hadSnap || QUIET || dir === 'swipe' || veiled === 'snap';
+    let slide = !skipAnim && !veiled && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
     page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; const lt = root.getElementById('lt'); if (lt) lt.textContent = s; }, setTab: k => {
@@ -3349,7 +3482,7 @@
     function subjectsView() {
       const hid = jget('skSubjHide', []), pin = jget('skSubjPin', []);
       const list = subjects.filter(s => !hid.includes(subjKey(s.name))).sort((a, b) => pin.includes(subjKey(b.name)) - pin.includes(subjKey(a.name)));
-      const when = x => !x ? '' : (x.i === 0 ? TODAY : x.i === 1 ? TOMORROW : DAY_SHORT[x.wd]) + ' ' + x.l.start + (x.l.room ? ' · s. ' + shortRoom(x.l.room) : '');
+      const when = x => !x ? '' : (x.i === 0 ? TODAY : x.i === 1 ? TOMORROW : DAY_SHORT[x.wd]) + ' ' + x.l.start + (x.l.room ? L(' · s. ', ' · rm ') + shortRoom(x.l.room) : '');
       return `<div class="search">${I('search', 'sm')}<input id="filter" placeholder="Szukaj przedmiotu" autocomplete="off"></div>
         ${klass ? `<div class="chips" style="margin:0 0 14px">
           <a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}${L('Klasa', 'Class')} ${esc(klassName)}</a>
@@ -3417,6 +3550,7 @@
           window.scrollTo(0, 0);
           wire();
           if (api.animate) api.animate();
+          saveSnapshotSoon();
         }
         let favFilter = 'all';
         const nstate = { tab: '*', key: null };
@@ -3498,7 +3632,8 @@
             root.querySelectorAll('#subjlist details').forEach(d => { d.style.display = !q || d.dataset.n.includes(q) ? '' : 'none'; });
           };
         }
-        onWin('hashchange', show);
+        // the tab you leave keeps its picture (shown when you come back to it from another screen)
+        onWin('hashchange', () => { if (!VEIL) saveSnapshot(); show(); });
         reShow = () => { const v = (location.hash || '#start').slice(1); if (v === 'start' || v === 'przedmioty') show(); };
         let wasDesk = isDesk();
         onWin('resize', () => { const d = isDesk(); if (d !== wasDesk) { wasDesk = d; redrawStart(); } });
@@ -3638,7 +3773,7 @@
           <div style="text-align:right"><div class="lbl">${L('Co jeśli', 'What if')}</div><div class="b" style="font-size:28px" id="cwhat">–</div></div></div>
         <div class="lbl" style="margin:16px 0 6px">${L('Chcę mieć średnią co najmniej', 'I want an average of at least')}</div>
         <div class="chips" id="ctg">${TARGETS.map(t => `<button class="chip ${t === target ? 'on' : ''}" data-t="${t}">${fmt(t)}</button>`).join('')}
-          <input id="ctin" type="number" inputmode="decimal" step="${isPct ? 1 : 0.05}" min="${isPct ? 1 : 1}" max="${isPct ? 100 : 6}" placeholder="${L('inna', 'other')}" style="width:76px;border:0;border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--text);font:inherit;font-size:15px"></div>
+          <input id="ctin" type="number" inputmode="decimal" step="${isPct ? 1 : 0.05}" min="${isPct ? 1 : 1}" max="${isPct ? 100 : 6}" placeholder="${L('inna', 'other')}" style="width:76px;border:0;border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--text);font:inherit;font-size:16px"></div>
         ${isPct ? '' : `<div class="lbl" style="margin:14px 0 6px">${L('Waga następnej oceny', 'Weight of the next grade')}</div><div class="seg" id="cw">${[1, 2, 3, 4, 5].map(x => `<button class="${x === w ? 'on' : ''}" data-w="${x}">${x}</button>`).join('')}</div>`}
         <div class="card" id="cneed" style="margin-top:12px;padding:14px 16px;font-size:16px;line-height:1.4"></div>
         <div class="lbl" style="margin:16px 0 6px">${L('Co jeśli dostanę…', 'What if I get…')}</div>
@@ -3750,7 +3885,7 @@
   const unexcGroups = days => Object.keys(days).filter(Boolean).sort().reverse()
     .map(d => ({ d, it: days[d].filter(x => presCode(x.status) === 'nb').sort((a, b) => a.nr - b.nr) })).filter(g => g.it.length);
   const groupLine = g => { const dt = parseDate(g.d), nrs = [...new Set(g.it.map(x => x.nr))].join(', '), ss = [...new Set(g.it.map(x => prettySubj(x.subject)))].join(', ');
-    return `${DAY_SHORT[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')} – ${g.it.length > 1 ? 'lekcje' : 'lekcja'} ${nrs} (${ss})`; };
+    return `${['Nd', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'][dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')} – ${g.it.length > 1 ? 'lekcje' : 'lekcja'} ${nrs} (${ss})`; };
 
   function presencesPage(ctx) {
     const parseCell = td => {
@@ -4269,6 +4404,9 @@
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
+      // the screen behind takes taps again right away, not only after the sheet has slid away
+      sh.classList.add('shut'); sh.style.pointerEvents = 'none'; scrim.style.pointerEvents = 'none';
+      if (root.__syncModal) root.__syncModal();
       const tr = getComputedStyle(sh).transform, cur = tr && tr !== 'none' && !isDesk() ? new DOMMatrixReadOnly(tr).m42 : 0;
       if (sh.animate && !isDesk() && MOTION !== 'off') {
         sh.style.animation = 'none';
@@ -5400,6 +5538,22 @@
   /* ------------------------------------------------------------------ *
    *  People search (sheet from the menu)
    * ------------------------------------------------------------------ */
+  // the first string argument of .name("…") in a piece of JavaScript, with its escapes undone
+  function jsStringArg(t, name) {
+    const m = new RegExp('\\.' + name + '\\(\\s*(["\'])').exec(t); if (!m) return null;
+    const q = m[1]; let j = m.index + m[0].length, out = '';
+    while (j < t.length) {
+      const ch = t[j];
+      if (ch === '\\') {
+        const n = t[j + 1];
+        if (n === 'u') { out += String.fromCharCode(parseInt(t.substr(j + 2, 4), 16) || 0); j += 6; continue; }
+        out += n === 'n' ? '\n' : n === 't' ? '\t' : n === 'r' ? '\r' : n; j += 2; continue;
+      }
+      if (ch === q) return out;
+      out += ch; j++;
+    }
+    return out;
+  }
   function openPeople(root) {
     const sh = openSheet(root, `<h2>Szukaj osób</h2><div class="muted small" style="margin-bottom:10px">Uczniowie, nauczyciele i rodzice w IDU</div>
       <div class="search">${I('search', 'sm')}<input id="pq" type="search" placeholder="Imię lub nazwisko (min. 3 litery)" autocomplete="off" autocapitalize="words"></div><div id="pres" class="plist"></div>`);
@@ -5416,8 +5570,8 @@
           const r = await fetch('/idu_users/search?search%5Bprofile_by_name%5D=' + encodeURIComponent(v), { credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/javascript, application/javascript, */*' } });
           const t = await r.text(); if (my !== seq) return;
-          const mm = t.match(/\.html\("([\s\S]*)"\)\s*;?\s*$/);
-          const html = mm ? mm[1].replace(/\\(.)/g, (x, c) => c === 'n' ? '\n' : c === 't' ? '\t' : c) : t;
+          // IDU answers with JavaScript: $('#users_search_result').html("…"); followed by more lines – read just the string
+          const html = jsStringArg(t, 'html') ?? t;
           const d = new DOMParser().parseFromString(html, 'text/html');
           const people = $$('.single_user', d).map(u => { const a = $('.user_name a', u); return a ? { n: txt(a), h: attr(a, 'href') } : null; }).filter(Boolean);
           const role = h => /^\/teachers/.test(h) ? 'nauczyciel' : /^\/parents/.test(h) ? 'rodzic' : /^\/students/.test(h) ? 'uczeń' : '';
@@ -5528,7 +5682,80 @@
     'Podpisy w dolnym pasku': 'Labels in the tab bar', 'Przywróć domyślne': 'Reset to defaults', 'Zdjęcie zapisane': 'Photo saved',
     'Nie udało się wczytać zdjęcia': 'Could not load the photo', 'Ten format zdjęcia nie jest obsługiwany': 'This photo format is not supported',
     'Brak połączenia z IDU': 'No connection to IDU', 'Twoje obecności': 'Your attendance', 'Uczący': 'Teaching', 'Nieuczący': 'Non-teaching',
-    'brak': 'none', 'Moje wypowiedzi na forach': 'My forum posts'
+    'brak': 'none', 'Moje wypowiedzi na forach': 'My forum posts',
+    // IDU's own field names on profiles and lists
+    'Data przyjścia': 'Date of joining', 'Miejscowość urodzenia': 'Place of birth', 'Nr z księgi ucznia': 'Student register no.', 'Rok przyjęcia do szkoły': 'Year of admission',
+    'Data urodzenia': 'Date of birth', 'Imię': 'First name', 'Drugie imię': 'Middle name', 'Nazwisko': 'Last name', 'Adres': 'Address', 'Telefon': 'Phone',
+    'Telefon komórkowy': 'Mobile phone', 'Podpięte aktualności': 'Pinned news', 'Moduły': 'Modules',
+    'Adres zameldowania': 'Registered address', 'Adres zamieszkania': 'Home address', 'Usprawiedliwienia': 'Excuse requests',
+    'Zaakceptowana': 'Accepted', 'Odrzucona': 'Rejected', 'Nowa': 'New', 'Oczekuje': 'Waiting',
+    'Aparat': 'Camera', 'Galeria': 'Gallery', 'Podpis (opcjonalnie)': 'Caption (optional)', 'Kafle': 'Tiles', 'Jedna strona': 'One page', 'Przedmiot': 'Subject',
+    // 5.9: Starred, notes, own tasks, settings pages, what's new, excuse texts
+    'Ważne': 'Starred', 'Notatki': 'Notes', 'Notatka': 'Note', 'Lista': 'List', 'Dodaj': 'Add', 'Osoby': 'People', 'Inne': 'Other', 'Notatki i zdjęcia': 'Notes and photos',
+    'Szukaj wszędzie': 'Search everything', 'Ostatnio szukane': 'Recent searches', 'Zdjęcie do lekcji': 'Photo for a lesson', 'Własne zadanie': 'Own task',
+    'Prośba o usprawiedliwienie': 'Excuse request', 'Opcje': 'Options', 'Kalkulator': 'Calculator', 'Wątek': 'Thread', 'Styl:': 'Style:', 'Własny': 'Custom',
+    'Usuń z Ważnych': 'Remove from Starred', 'Dodaj do Ważnych': 'Add to Starred', 'Do Ważnych': 'Star', 'Przypomnij mi…': 'Remind me…', 'Bez przypomnienia': 'No reminder',
+    'Dodaj do „Do zrobienia”': 'Add to “To do”', 'Udostępnij': 'Share', 'Kopiuj link': 'Copy link', 'Skopiowano link': 'Link copied', 'Dodano do Ważnych': 'Added to Starred',
+    'Dodano do Ważnych ★': 'Added to Starred ★', 'Dodano do Ważnych ★ (z kopią offline)': 'Added to Starred ★ (with an offline copy)', 'Usunięto z Ważnych': 'Removed from Starred',
+    'Dodano do „Do zrobienia”': 'Added to “To do”', 'Przypomnienia działają w aplikacji na iPhonie': 'Reminders work in the iPhone app', 'Dziś 18:00': 'Today 18:00',
+    'Dziś 20:00': 'Today 20:00', 'Jutro 7:30': 'Tomorrow 7:30', 'Jutro 18:00': 'Tomorrow 18:00', 'Za 3 dni': 'In 3 days', 'Za tydzień': 'In a week',
+    'Z przypomnieniem': 'With a reminder', 'Pozostałe': 'Everything else', 'Kopia offline': 'Offline copy',
+    'Przytrzymaj palec (na komputerze: kliknij prawym przyciskiem) na ogłoszeniu, wiadomości albo pliku i wybierz „Dodaj do Ważnych”. Na otwartej stronie możesz też kliknąć gwiazdkę u góry.': 'Hold your finger (on a computer: right-click) on an announcement, message or file and choose “Add to Starred”. On an open page you can also tap the star at the top.',
+    'np. Powtórzyć kinematykę': 'e.g. Revise kinematics', 'Termin': 'Due', 'Brak': 'None', 'zrobione': 'done', 'własne zadanie': 'own task', 'Dodaj zadanie': 'Add task',
+    'Twoje zdjęcia tablicy i notatki – zostają tylko w tym telefonie.': 'Your photos of the board and notes – they stay on this phone only.', 'brak notatek': 'no notes',
+    'Brak przedmiotów': 'No subjects', 'Zdjęcie': 'Photo', '+ Nowa zakładka': '+ New tab', 'Dodaj zdjęcie albo notatkę': 'Add a photo or note',
+    'Jeszcze nic tu nie ma': 'Nothing here yet', 'Pusta zakładka': 'Empty tab',
+    'Zrób zdjęcie tablicy albo zeszytu – trafi pod właściwą lekcję.': 'Take a photo of the board or your notebook – it goes under the right lesson.', 'Nowa zakładka': 'New tab',
+    'np. Mity': 'e.g. Myths', 'Zmień nazwę': 'Rename', 'Utwórz': 'Create', 'Usuń zakładkę (notatki zostaną)': 'Delete tab (notes stay)', 'Dodaj do notatek': 'Add to notes',
+    'Zakładka': 'Tab', 'Bez zakładki': 'No tab', 'Bez lekcji': 'No lesson', 'Treść notatki': 'Note text',
+    'Zdjęcia są zmniejszane i zostają tylko w tym telefonie. Kopię zrobisz w Ustawieniach → Notatki i kopia.': 'Photos are made smaller and stay on this phone only. Back them up in Settings → Notes and backup.',
+    'Zapisuję…': 'Saving…', 'Najpierw wybierz zdjęcie': 'Pick a photo first', 'Zapisano w notatkach': 'Saved to notes',
+    'Nie udało się zapisać (brak miejsca?)': 'Could not save (out of space?)', 'Zrób zdjęcie': 'Take a photo', 'Zamknij': 'Close', 'Przygotowuję kopię…': 'Preparing the backup…',
+    'To nie jest kopia notatek IDU': 'This is not an IDU notes backup', 'Twoje notatki': 'Your notes', 'zdjęcia tablicy, notatki, listy': 'board photos, notes, lists',
+    'zdjęcia i notatki': 'photos and notes', 'Dodaj zdjęcie': 'Add photo', '(bez tematu)': '(no subject)', 'Oceny, ogłoszenia, zadania': 'Grades, announcements, homework',
+    'Oceny i ogłoszenia': 'Grades and announcements',
+    'Szuka w przedmiotach, planie, ocenach, ogłoszeniach, wiadomościach, Twoich notatkach i Ważnych.': 'Searches subjects, timetable, grades, announcements, messages, your notes and Starred.',
+    'Szukaj osób w całym IDU': 'Find people in all of IDU', 'Styl i wygląd': 'Style and look', 'presety, kolory, czcionki, rogi': 'presets, colours, fonts, corners',
+    'Dolny pasek': 'Tab bar', 'kształt, napisy, zakładki': 'shape, labels, tabs', 'Układy ekranów': 'Screen layouts',
+    'Start, Plan, Przedmiot, Oceny, WF': 'Home, Timetable, Subject, Grades, PE', 'sekcje i kafelki': 'sections and tiles', 'ukryte i przypięte': 'hidden and pinned',
+    'Notatki i kopia': 'Notes and backup', 'zdjęcia, eksport, import': 'photos, export, import', 'lekcje, sprawdziany, zadania': 'lessons, tests, homework', 'jak dodać': 'how to add',
+    'Profil i język': 'Profile and language', 'zdjęcie, imię, język': 'photo, name, language', '· wszystko zmienisz tutaj': '· change anything here',
+    'Twoje dane zostają na tym urządzeniu.': 'Your data stays on this device.', 'Następna lekcja': 'Next lesson', 'Nowe oceny': 'New grades', 'WF – punkty': 'PE – points',
+    'Najbliższy sprawdzian': 'Next test',
+    'Preset to gotowy zestaw ustawień. Wybierz go, a potem zmień cokolwiek niżej.': 'A preset is a ready-made set of settings. Pick one, then change anything below.',
+    'Zapisz obecny wygląd jako mój styl': 'Save the current look as my style', 'Tło': 'Background', 'Pełne karty': 'Full cards', 'Jeden': 'One colour', 'Karty': 'Cards',
+    'Linie': 'Lines', 'Papier': 'Paper', 'Szkło': 'Glass', 'Zeszyt': 'Notebook', 'Kolor': 'Colour', 'Obecny+': 'Current+', 'Czytelność': 'Readability',
+    'Wysoki kontrast': 'High contrast', 'Nagłówki': 'Headings', 'Zwykłe': 'Plain', 'Odręczne': 'Handwritten', 'Pełne': 'Full', 'Delikatne': 'Subtle', 'Wyłączone': 'Off',
+    'Duże tytuły (jak w iOS)': 'Large titles (like iOS)', 'Rozmycie pod paskami': 'Blur under the bars', 'Mój styl': 'My style', 'Kształt': 'Shape', 'Zaokrąglony': 'Rounded',
+    'Pływający': 'Floating', 'Klasyczny': 'Classic', 'Z przyciskiem +': 'With a + button',
+    'Zaokrąglony pasek ma same ikony – aktywna przesuwa się w jasnej pigułce.': 'The rounded bar shows icons only – the active one slides in a light pill.',
+    'Napisy pod ikonami': 'Labels under the icons', 'Zmniejszaj pasek przy przewijaniu': 'Shrink the bar while scrolling', 'W górę': 'Move up', 'W dół': 'Move down',
+    'szeroki': 'wide', 'Nowości': 'Updates', 'Kafelki': 'Tiles', 'Jedna karta': 'One card', 'Oś czasu': 'Timeline', 'Tabela': 'Table', 'Układ': 'Layout',
+    'WF – jak liczyć punkty': 'PE – how points are counted', 'Największy wpis': 'Highest entry', 'Suma': 'Sum', 'Ostatni': 'Latest', 'WF – cel punktów': 'PE – points goal',
+    'Jeśli nie wiesz, jak nauczyciel liczy WF, zostaw „Największy wpis”. Zmiana działa od razu w Ocenach.': 'If you don’t know how your teacher counts PE, keep “Highest entry”. Grades change right away.',
+    'Kafelki (układ „Kafelki”)': 'Tiles (“Tiles” layout)', 'Sekcje (układ „Lista”)': 'Sections (“List” layout)',
+    'Ukryte znikną z listy przedmiotów i szukania. Przypięte są na górze.': 'Hidden ones disappear from the subject list and from search. Pinned ones stay on top.', 'Przypnij': 'Pin',
+    'Ukryj': 'Hide', 'Otwórz raz Start, żeby wczytać przedmioty': 'Open Home once to load your subjects', 'Liczę…': 'Counting…', 'Eksportuj kopię': 'Export backup',
+    'Wczytaj kopię': 'Import backup',
+    'Kopia to jeden plik z notatkami, zdjęciami, Ważnymi i własnymi zadaniami. Zapisz go w Plikach albo na komputerze – przyda się, gdy usuniesz apkę. Odświeżanie apki co 7 dni niczego nie kasuje.': 'The backup is a single file with your notes, photos, Starred items and own tasks. Keep it in Files or on a computer – handy if you ever delete the app. Re-installing the app every 7 days erases nothing.',
+    'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Przypomnienia z Ważnych ustawiasz, przytrzymując ogłoszenie albo wiadomość.': 'Reminders are worked out from your timetable and calendar, so they work even when the app is closed. Set reminders for Starred items by holding an announcement or a message.',
+    'Nowe rzeczy w IDU (sprawdzane w tle)': 'New things in IDU (checked in the background)', 'Nowe wiadomości': 'New messages', 'Nowe ogłoszenia': 'New announcements',
+    'Sprawdź teraz': 'Check now', 'Sprawdzam…': 'Checking…',
+    'iPhone sam decyduje, kiedy zajrzeć do IDU – zwykle kilka razy dziennie. Działa, jeśli przy logowaniu zaznaczysz „Zapamiętaj mnie”. Apka nigdy nie loguje się sama i nie zna Twojego hasła. Czerwona liczba na ikonie = nieprzeczytane wiadomości.': 'Your iPhone decides when to look into IDU – usually a few times a day. It works if you tick “Remember me” when you log in. The app never logs in by itself and doesn’t know your password. The red number on the icon = unread messages.',
+    'Działa tylko w aplikacji na iPhonie.': 'Only works in the iPhone app.',
+    'Widget odświeża się, gdy otworzysz Start w apce. Jeśli go nie ma na liście, uruchom ponownie telefon.': 'The widget updates whenever you open Home in the app. If it isn’t in the list, restart your phone.',
+    'Język / Language': 'Language', 'Zdjęcie zostaje tylko w tym telefonie — nie jest wysyłane do IDU.': 'The photo stays on this phone only — it is never sent to IDU.',
+    'Ekrany od razu': 'Screens right away',
+    'Po kliknięciu od razu widzisz następny ekran – jego ostatni obraz, lekko rozmyty, który wyostrza się, gdy przyjdą świeże dane z IDU.': 'Tap and the next screen is there at once – its last picture, slightly blurred, which sharpens as soon as fresh data arrives from IDU.',
+    'Spokojniejsze klikanie': 'Calmer taps',
+    'Nic już nie maleje pod palcem – wiersz tylko delikatnie się podświetla. Gdy ekran się ładuje, możesz od razu kliknąć coś innego albo „wstecz”.': 'Nothing shrinks under your finger any more – a row just lights up gently. While a screen loads, you can tap something else or “back” right away.',
+    'Szukaj osób działa': 'Find people works', 'Menu → Szukaj osób: uczniowie, nauczyciele i rodzice.': 'Menu → Find people: students, teachers and parents.',
+    'Nowe oceny, wiadomości i ogłoszenia – Ustawienia → Powiadomienia → „Sprawdź teraz”.': 'New grades, messages and announcements – Settings → Notifications → “Check now”.',
+    'Na iPhonie: nowe oceny i wiadomości jako powiadomienia.': 'On iPhone: new grades and messages as notifications.', 'Do usprawiedliwienia': 'To be excused', 'Kopiuj': 'Copy',
+    'Wyślij…': 'Send…', 'Skopiowano': 'Copied',
+    'Tekst wysyłasz sam (SMS, WhatsApp, mail) – apka nic nie wysyła do IDU.': 'You send the text yourself (SMS, WhatsApp, e-mail) – the app sends nothing to IDU.',
+    'Bez powodu': 'No reason', 'Choroba': 'Illness', 'Lekarz': 'Doctor', 'Sprawy rodzinne': 'Family matters', 'Wyjazd': 'Trip', 'Brak formularza IDU': 'The IDU form is missing',
+    'IDU nie przyjęło prośby': 'IDU did not accept the request'
   };
   const STATUS_EN = { 'Obecność': 'Present', 'Nieobecność': 'Absence', 'Spóźnienie': 'Late', 'Usprawiedliwione': 'Excused' };
   const TR_RX = [
@@ -5541,7 +5768,28 @@
     [/^(\d+) wątków$/, '$1 threads'],
     [/^Termin: (.+)$/, 'Due: $1'],
     [/^Aktualizacja: (.+)$/, 'Update: $1'],
-    [/^Sala (\S{1,8})$/, 'Room $1']
+    [/^Sala (\S{1,8})$/, 'Room $1'],
+    [/^(.*) \(rozwiń\)$/, '$1 (more)'],
+    [/^(.+) · lekcja (\d+(?:–\d+)?)$/, '$1 · lesson $2'],
+    [/^lekcje ([\d, ]+) \((.+)\)$/, 'lessons $1 ($2)'],
+    [/^lekcja (\d+) \((.+)\)$/, 'lesson $1 ($2)'],
+    [/^(\d+) zdj\. · (\d+) notatek$/, '$1 photos · $2 notes'],
+    [/^(\d+) zdjęć · (\d+) notatek · (\d+) ważnych$/, '$1 photos · $2 notes · $3 starred'],
+    [/^([\d.]+) MB w telefonie$/, '$1 MB on this phone'],
+    [/^Zakładka „(.+)”$/, 'Tab “$1”'],
+    [/^Przypomnienie: (.+)$/, 'Reminder: $1'],
+    [/^Przypomnę: (.+)$/, 'I’ll remind you: $1'],
+    [/^zapisano (.+)$/, 'saved $1'],
+    [/^Nic nie znaleziono dla „(.*)”$/, 'Nothing found for “$1”'],
+    [/^Mój styl (\d+)$/, 'My style $1'],
+    [/^Zapisano jako „(.+)”$/, (m, a) => 'Saved as “' + trString(a) + '”'],
+    [/^Zakładki \((\d+\/\d+)\) – zaznacz i ustaw kolejność$/, 'Tabs ($1) – tick and reorder'],
+    [/^Pokaż wszystkie \((\d+)\)$/, 'Show all ($1)'],
+    [/^Ukryte: (\d+) · zmienisz w Ustawieniach → Przedmioty$/, 'Hidden: $1 · change in Settings → Subjects'],
+    [/^(\d+) lekcji z (\d+) dni$/, (m, a, b) => `${a} ${a === '1' ? 'lesson' : 'lessons'} on ${b} ${b === '1' ? 'day' : 'days'}`],
+    [/^najstarsza (.+?) · gotowy tekst dla rodzica$/, 'oldest $1 · ready-made text for a parent'],
+    [/^najstarsza (.+?) · (.+)$/, 'oldest $1 · $2'],
+    [/^Nieoficjalna nakładka na IDU · wersja (.+)$/, 'Unofficial IDU skin · version $1']
   ];
   const MONTH_EN = { sty: 'Jan', lut: 'Feb', mar: 'Mar', kwi: 'Apr', maj: 'May', cze: 'Jun', lip: 'Jul', sie: 'Aug', wrz: 'Sep', 'paź': 'Oct', lis: 'Nov', gru: 'Dec' };
   const MONTH_RX = /(\d{1,2}) (sty|lut|mar|kwi|maj|cze|lip|sie|wrz|paź|lis|gru)(?=[\s,.)]|$)/g;
