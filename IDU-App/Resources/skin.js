@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.6
+// @version     5.7
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -701,7 +701,7 @@
    * ------------------------------------------------------------------ */
   const PAGE_CSS = `
   html.sk-full,html.sk-full body{background:var(--sk-bg,#0f1115)!important;margin:0!important;padding:0!important;min-width:0!important}
-  html.sk-full body>*:not(#sk-host):not(#sk-under){display:none!important}
+  html.sk-full body>*:not(#sk-host):not(#sk-under):not(#sk-preview){display:none!important}
   html.sk-modal,html.sk-modal body{overflow:hidden!important;overscroll-behavior:none}
   #sk-host{display:block!important;position:static!important;width:auto!important;margin:0!important;padding:0!important;border:0!important;float:none!important}
 
@@ -2063,7 +2063,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.6';
+  const SKIN_VERSION = '5.7';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2279,7 +2279,25 @@
     try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
   const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
-  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '', NAV_DIR = '';
+  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', PREVIEWED = false;
+  // a screen you've seen before appears the moment you tap (its last picture), the fresh data replaces it a moment later
+  function showPreview(u, dir) {
+    try {
+      const p = u.pathname.replace(/\/+$/, '') || '/', key = p === '/' ? '/' + (u.hash || '#start') : p;
+      const snap = JSON.parse(localStorage.getItem('skSnap') || '{}')[key];
+      if (!snap || !snap.h || Date.now() - snap.t > 3 * 864e5) return;
+      const y = dir === 'back' ? (snap.y || 0) : 0;
+      const anim = MOTION === 'off' ? 'none' : dir === 'fwd' ? 'skPushIn .26s cubic-bezier(.16,1,.3,1) both' : dir === 'back' ? 'skPopIn .26s cubic-bezier(.16,1,.3,1) both' : 'skFade .14s ease both';
+      const o = document.createElement('div'); o.id = 'sk-preview';
+      o.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;overflow:hidden;background:' + (store.get('skSnapBg') || '#0f1115');
+      o.attachShadow({ mode: 'open' }).innerHTML = `<style>${APP_CSS}${V5_CSS}
+        .pv{position:absolute;inset:0;overflow:hidden;animation:${anim}} .pv *{animation:none!important;transition:none!important}
+        .pv main,.pv .lt{transform:translateY(${-y}px)}</style><div class="pv">${snap.h.replace(/^<style>[^<]*<\/style>/, '')}</div>`;
+      ['click', 'touchstart'].forEach(t => o.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); }, { capture: true, passive: false }));
+      document.body.appendChild(o);
+      PREVIEWED = true;
+    } catch (e) {}
+  }
   // opts.quiet: refresh in place (no page-leave animation, keeps what you see until the new data is ready)
   async function softGo(href, push, opts) {
     opts = opts || {};
@@ -2290,6 +2308,7 @@
     saveSnapshot();
     const app = shellApp();
     if (app && !opts.quiet) { app.classList.add('leaving', 'loading'); if (NAV_DIR === 'fwd' || NAV_DIR === 'back') app.classList.add('go-' + NAV_DIR); }
+    if (!opts.quiet && NAV_DIR !== 'swipe') showPreview(u, NAV_DIR);
     const y = window.scrollY;
     let pg = null;
     try { pg = await fetchPage(u.origin + u.pathname + u.search, opts.quiet); } catch (e) {}
@@ -2353,7 +2372,7 @@
       c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
       const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
       c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
-      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { e.style.opacity = ''; e.style.transform = ''; });
+      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { if (e.matches('.ind, .sthumb')) return; e.style.opacity = ''; e.style.transform = ''; });   // the tab pill and switch thumbs keep their place
       const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
       if (h.length > 300000) return;
       let map = {}; try { map = JSON.parse(localStorage.getItem('skSnap') || '{}'); } catch (e) {}
@@ -2675,7 +2694,8 @@
     // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
     const hadSnap = !!document.getElementById('sk-snap');
     const dir = NAV_DIR; NAV_DIR = '';
-    let skipAnim = hadSnap || QUIET || dir === 'swipe';
+    let skipAnim = hadSnap || QUIET || dir === 'swipe' || PREVIEWED;
+    PREVIEWED = false;
     let slide = !skipAnim && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
