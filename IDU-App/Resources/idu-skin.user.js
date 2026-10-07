@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.2
+// @version     5.3
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -1061,6 +1061,7 @@
     const sh = openSheet(root, `<h2>Dodaj</h2><div class="menu">
       <button data-q="photo">${I('camera')}Zdjęcie do lekcji</button><button data-q="note">${I('edit')}Notatka</button>
       <button data-q="todo">${I('check')}Własne zadanie</button><a href="/internal_messages/new">${I('compose')}Nowa wiadomość</a>
+      ${CUR.ctx && CUR.ctx.parent ? `<a href="/justify_absence_requests/new">${I('pres')}Prośba o usprawiedliwienie</a>` : ''}
       <a href="/#szukaj">${I('search')}Szukaj</a></div>`);
     sh.querySelectorAll('a').forEach(a => a.addEventListener('click', () => closeSheet(sh)));
     sh.querySelector('[data-q="todo"]').onclick = () => { closeSheet(sh); todoAddSheet(root, () => { const b = root.getElementById('todoblock'); if (b && window.__skTodoRedraw) window.__skTodoRedraw(); }); };
@@ -1082,7 +1083,8 @@
     const a = k => { const [ic, label, href] = TABDEFS[k];
       const badge = k === 'mail' && ctx.unread ? ctx.unread : k === 'grades' && newGrades() && tab !== 'grades' ? newGrades() : 0;
       return `<a href="${esc(href(ctx))}" data-tab="${k}" class="${k === tab ? 'on' : ''}" title="${label}">${I(ic, 'sm')}<span class="lb">${label}</span>${badge ? `<span class="dbadge">${badge}</span>` : ''}</a>`; };
-    const more = [['notes', '/#notatki', 'edit', 'Notatki i zdjęcia'], ['pres', ctx.student + '/presences', 'pres', 'Frekwencja'], ['hw', ctx.student + '/homeworks', 'clip', 'Zadania domowe'],
+    const more = [['notes', '/#notatki', 'edit', 'Notatki i zdjęcia'], ['pres', ctx.student + '/presences', 'pres', 'Frekwencja'],
+      ...(ctx.parent ? [['just', '/justify_absence_requests', 'check', 'Usprawiedliwienia']] : []), ['hw', ctx.student + '/homeworks', 'clip', 'Zadania domowe'],
       ['subjects', '/#przedmioty', 'book', 'Przedmioty'], ['plan', '/#plan', 'calendar', 'Plan lekcji'], ['grades', ctx.student + '/grades', 'medal', 'Oceny'],
       ['ann', ctx.student + '/subject_announcements', 'bell', 'Ogłoszenia'], ['news', '/informations', 'news', 'Aktualności'], ['cal', '/calendar', 'clock', 'Kalendarz'],
       ['forum', '/forums', 'chat', 'Forum'], ['docs', '/documents/attachments', 'file', 'Dokumenty']].filter(m => !keys.includes(m[0]));
@@ -1877,7 +1879,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.2';
+  const SKIN_VERSION = '5.3';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -1966,7 +1968,9 @@
     if (isParent) {
       const kids = $$('.module .user .name a[href^="/students/"]');
       if (kids.length && !kids.some(a => attr(a, 'href') === store.get('skKid'))) { store.set('skKid', attr(kids[0], 'href')); store.set('skKidName', txt(kids[0])); }
-      kid = store.get('skKid') || (location.pathname.match(/^\/students\/\d+/) || [])[0] || '';
+      kid = store.get('skKid') || (location.pathname.match(/^\/students\/\d+/) || [])[0]
+        || (attr($('#content a[href^="/students/"]'), 'href').match(/^\/students\/\d+/) || [])[0]
+        || (attr($('#justify_absence_request_student_id'), 'value') ? '/students/' + attr($('#justify_absence_request_student_id'), 'value') : '');
     }
     const ctx = bare ? {
       student: store.get('skMe') || '/', me: store.get('skMeProfile') || store.get('skMe') || '/', name: store.get('skMeName') || '', unread: 0, timer: null, bare: true,
@@ -2008,6 +2012,9 @@
     ['studentslist', (d, p) => /\/students_list$/.test(p) && d.querySelector('ul.students, .students_list')],
     ['upload', (d, p) => /\/homework_attachments\/new(\.html)?$/.test(p) && d.querySelector('form input[type="file"]')],
     ['compose', (d, p) => /^\/internal_messages\/(new|\d+\/edit)$/.test(p) && d.querySelector('#new_message_form')],
+    ['justnew', (d, p) => /^\/justify_absence_requests\/new$/.test(p) && d.querySelector('#new_justify_absence_request')],
+    ['justone', (d, p) => /^\/justify_absence_requests\/\d+$/.test(p) && d.querySelector('#content .module h3')],
+    ['justlist', (d, p) => /^\/justify_absence_requests$/.test(p) && d.querySelector('#content')],
     ['grades', d => d.querySelector('table.marks-table')],
     ['presences', (d, p) => d.querySelector('table.presences_table') || /\/presences$/.test(p) && d.querySelector('.module table')],
     ['messages', d => d.querySelector('table.message-table')],
@@ -2042,7 +2049,7 @@
       calendar: calendarPage, profile: profilePage, forums: forumListPage, thread: threadPage, docs: docsPage, hwdetail: hwDetailPage,
       topics: topicsPage, subjects: subjectsListPage, events: eventsPage, printplan: printPlanPage, calevent: calEventPage,
       studentslist: studentsListPage, compose: composePage, room: roomPage, forumsearch: forumSearchPage, docdetail: docDetailPage,
-      files: filesPage, lesson: lessonPage, table: tablePage, upload: uploadPage };
+      files: filesPage, lesson: lessonPage, table: tablePage, upload: uploadPage, justnew: justNewPage, justone: justOnePage, justlist: justListPage };
     const k = routeKind(document, ctx.path);
     return k ? PAGES[k](ctx) : null;
   }
@@ -2061,7 +2068,8 @@
     '^/forums/[\\w-]+(/topics/[\\w-]+)?$',
     '^/(informations|callendar_events|forum/posts|documents/attachments)/\\d+$',
     '^/(klasses|teachers|parents|rooms)/\\d+(/lesson_plan)?$',
-    '^/subject_announcements/\\d+/confirm$'
+    '^/subject_announcements/\\d+/confirm$',
+    '^/justify_absence_requests(/(new|\\d+))?$'
   ].join('|'));
   // pages that change something just by opening them (mark as read) are never fetched ahead of time
   const NO_PREFETCH_RE = /\/watek$|^\/informations\/\d+$|\/confirm$|\/download$/;
@@ -2392,6 +2400,7 @@
       ${item('/#plan', 'calendar', 'Plan lekcji')}
       ${item(ctx.student + '/homeworks', 'edit', 'Zadania domowe')}
       ${item(ctx.student + '/presences', 'pres', 'Frekwencja')}
+      ${ctx.parent ? item('/justify_absence_requests', 'check', 'Usprawiedliwienia') : ''}
       ${item('/internal_messages', 'mail', 'Wiadomości', ctx.unread ? `<span class="cnt">${ctx.unread}</span>` : '')}
       <div class="dsep"></div>
       ${item('/#przedmioty', 'book', 'Przedmioty')}
@@ -2578,6 +2587,12 @@
       .filter(f => f.dueD && f.dueD > nowD && f.dueD - nowD < 48 * 3600e3).sort((a, b) => a.dueD - b.dueD);
     let feedFilter = 'all';
 
+    const justReq = [];
+    const jm = ctx.parent ? moduleBy('Ostatnie wysłane prośby o usprawiedliwienie') : null;
+    if (jm) $$('.profile-event', jm).forEach(e => { const a = $('a[href^="/justify_absence_requests/"]', e); if (a) justReq.push({ date: txt($('.date', e)), t: txt(a), href: attr(a, 'href') }); });
+    const justBlock = () => ctx.parent ? `<div class="sec"><h2>${L('Usprawiedliwienia', 'Excuse requests')}</h2><a href="/justify_absence_requests">${L('Wszystkie', 'All')}</a></div>
+      <div class="card" style="padding:2px 14px">${justReq.slice(0, 3).map(j => `<a class="trow tap" href="${esc(j.href)}"><span class="grow clip">${esc(j.t.replace(/^Dzień dobry,?\s*/i, ''))}</span><span class="muted small">${esc(j.date.replace(/,.*$/, ''))}</span></a>`).join('')}
+        <a class="trow tap" href="/justify_absence_requests/new" style="color:var(--accent);font-weight:600">${I('plus', 'sm')}<span class="grow">${L('Nowa prośba o usprawiedliwienie', 'New excuse request')}</span></a></div>` : '';
     const events = [];
     const em = moduleBy('Najbliższe wydarzenia');
     if (em) $$('.profile-event', em).forEach(e => {
@@ -2814,11 +2829,12 @@
             <div class="datebox"><b>${e.date ? e.date.getDate() : '?'}</b><span>${e.date ? MONTH_SHORT[e.date.getMonth()] : ''}</span></div>
             <div class="grow"><div class="b clip">${esc(e.title)}</div><div class="muted small">${e.date ? esc(DAY_FULL[e.date.getDay()]) + (e.date.getHours() ? ', ' + hhmm(e.date) : '') : esc(e.dateS)}</div></div></a>`).join('')}</div>` : '';
         return head + cols((SS.showNow ? nowNextCard() : '') + (SS.showFeed ? feedBlock() : ''),
-          (SS.showTodo !== false ? todoBlock() : '') + (SS.showExams ? `<div id="exams">${examsHTML()}</div>` : '') + evs);
+          (SS.showTodo !== false ? todoBlock() : '') + justBlock() + (SS.showExams ? `<div id="exams">${examsHTML()}</div>` : '') + evs);
       }
       return head
         + (SS.showNow ? nowNextCard() : '')
         + (SS.showTodo !== false ? todoBlock() : '')
+        + justBlock()
         + (SS.showExams ? `<div id="exams">${examsHTML()}</div>` : '')
         + (SS.showEvents && events.length ? `<div class="sec"><h2>Nadchodzące</h2><a href="/calendar">Kalendarz</a></div>
           <div class="hs">${events.map(e => `<a class="card ev tap" href="${esc(e.href)}">
@@ -3308,6 +3324,33 @@
   /* ------------------------------------------------------------------ *
    *  ATTENDANCE
    * ------------------------------------------------------------------ */
+  /* ---------- presences: per-day parsing (also used by the parent's excuse request) ---------- */
+  function presDays(scope) {
+    const days = {};
+    $$('table.presences_table', scope).forEach(t => {
+      const heads = $$('tr:first-child th', t).slice(1).map(th => (txt(th).match(/\d{4}-\d{2}-\d{2}/) || [''])[0]);
+      $$('tr', t).slice(1).forEach(tr => {
+        const tds = $$(':scope > td', tr);
+        const nr = (txt(tds[0]).match(/\((\d+)\)/) || [])[1];
+        tds.slice(1).forEach((td, i) => {
+          if (!td.classList.contains('lesson')) return;
+          const date = heads[i];
+          $$(':scope > div', td).forEach(div => {
+            const img = $('img', div);
+            const st = attr(img, 'alt') || attr(img, 'title') || txt(div);
+            (days[date] = days[date] || []).push({ nr: +nr, subject: attr(div, 'title') || attr(td, 'title'), status: st });
+          });
+        });
+      });
+    });
+    return days;
+  }
+  const presCode = s => /uspraw/i.test(s) ? 'u' : /nieobec/i.test(s) ? 'nb' : /spóź/i.test(s) ? 'sp' : /obec/i.test(s) ? 'ob' : '';
+  const unexcGroups = days => Object.keys(days).filter(Boolean).sort().reverse()
+    .map(d => ({ d, it: days[d].filter(x => presCode(x.status) === 'nb').sort((a, b) => a.nr - b.nr) })).filter(g => g.it.length);
+  const groupLine = g => { const dt = parseDate(g.d), nrs = [...new Set(g.it.map(x => x.nr))].join(', '), ss = [...new Set(g.it.map(x => prettySubj(x.subject)))].join(', ');
+    return `${DAY_SHORT[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}.${String(dt.getMonth() + 1).padStart(2, '0')} – ${g.it.length > 1 ? 'lekcje' : 'lekcja'} ${nrs} (${ss})`; };
+
   function presencesPage(ctx) {
     const parseCell = td => {
       const m = txt(td).match(/(\d+)\s*\/\s*(\d+)\s*\(([\d,]+)%\)/);
@@ -3326,34 +3369,15 @@
     subj.sort((a, b) => (a.ob.pct ?? 100) - (b.ob.pct ?? 100));
 
     // per-day details
-    const days = {};
-    $$('table.presences_table').forEach(t => {
-      const heads = $$('tr:first-child th', t).slice(1).map(th => (txt(th).match(/\d{4}-\d{2}-\d{2}/) || [''])[0]);
-      $$('tr', t).slice(1).forEach(tr => {
-        const tds = $$(':scope > td', tr);
-        const nr = (txt(tds[0]).match(/\((\d+)\)/) || [])[1];
-        tds.slice(1).forEach((td, i) => {
-          if (!td.classList.contains('lesson')) return;
-          const date = heads[i];
-          $$(':scope > div', td).forEach(div => {
-            const img = $('img', div);
-            const st = attr(img, 'alt') || attr(img, 'title') || txt(div);
-            (days[date] = days[date] || []).push({ nr: +nr, subject: attr(div, 'title') || attr(td, 'title'), status: st });
-          });
-        });
-      });
-    });
+    const days = presDays(document);
     const code = s => /uspraw/i.test(s) ? ['u', ST.u] : /nieobec/i.test(s) ? ['nb', ST.nb] : /spóź/i.test(s) ? ['sp', ST.sp] : /obec/i.test(s) ? ['ob', ST.ob] : ['', s.slice(0, 2).toUpperCase()];
     const dayKeys = Object.keys(days).filter(Boolean).sort().reverse();
 
     let psort = store.get('skPresSort') || 'worst', pday = 'all';
-    const unexc = []; dayKeys.forEach(d => { const it = days[d].filter(x => code(x.status)[0] === 'nb').sort((a, b) => a.nr - b.nr); if (it.length) unexc.push({ d, it }); });
+    const unexc = unexcGroups(days);
     const unexcN = unexc.reduce((n, g) => n + g.it.length, 0);
     function parentText() {
-      return 'Dzień dobry,\nproszę o usprawiedliwienie moich nieobecności:\n' + unexc.slice().reverse().map(g => {
-        const dt = parseDate(g.d), nrs = [...new Set(g.it.map(x => x.nr))].join(', '), ss = [...new Set(g.it.map(x => prettySubj(x.subject)))].join(', ');
-        return `• ${DAY_SHORT[dt.getDay()]} ${dt.getDate()}.${String(dt.getMonth() + 1).padStart(2, '0')} – lekcje ${nrs} (${ss})`;
-      }).join('\n') + '\n\nDziękuję i pozdrawiam';
+      return 'Dzień dobry,\nproszę o usprawiedliwienie moich nieobecności:\n' + unexc.slice().reverse().map(g => '• ' + groupLine(g)).join('\n') + '\n\nDziękuję i pozdrawiam';
     }
     function openUnexc(root) {
       const t = parentText();
@@ -3401,9 +3425,13 @@
               ${total.nb.just ? `<div class="stat"><span class="muted">${L('usprawiedl.', 'excused')}</span><b>${total.nb.just}</b></div>` : ''}
               <div class="stat"><span class="muted">${L('Spóźnienia', 'Late')}</span><b style="color:var(--warn)">${total.sp.n}</b></div>
             </div></div>` : ''}
-          ${unexcN ? `<button class="card row tap" id="unexc" style="width:100%;border:0;color:var(--text);text-align:left;background:color-mix(in srgb,var(--bad) 15%,var(--card))">
+          ${unexcN && ctx.parent ? `<a class="card row tap" href="/justify_absence_requests/new" style="color:var(--text);background:color-mix(in srgb,var(--bad) 15%,var(--card))">
+            <div class="grow"><div class="b">${unexcN} ${plural(unexcN, 'nieusprawiedliwiona', 'nieusprawiedliwione', 'nieusprawiedliwionych')}</div>
+            <div class="muted small">najstarsza ${esc(shortDate(parseDate(unexc[unexc.length - 1].d)))} · ${L('wybierz i wyślij prośbę do szkoły', 'pick and send an excuse request')}</div></div>${I('right', 'sm chev')}</a>`
+          : unexcN ? `<button class="card row tap" id="unexc" style="width:100%;border:0;color:var(--text);text-align:left;background:color-mix(in srgb,var(--bad) 15%,var(--card))">
             <div class="grow"><div class="b">${unexcN} ${plural(unexcN, 'nieusprawiedliwiona', 'nieusprawiedliwione', 'nieusprawiedliwionych')}</div>
             <div class="muted small">najstarsza ${esc(shortDate(parseDate(unexc[unexc.length - 1].d)))} · gotowy tekst dla rodzica</div></div>${I('right', 'sm chev')}</button>` : ''}
+          ${ctx.parent ? `<div class="chips" style="margin:10px 0 0"><a class="chip" href="/justify_absence_requests/new">${I('plus')}${L('Prośba o usprawiedliwienie', 'Excuse request')}</a><a class="chip" href="/justify_absence_requests">${I('check')}${L('Wysłane prośby', 'Sent requests')}</a></div>` : ''}
           ${subj.length ? `<div class="sec"><h2>Przedmioty</h2></div>${chipRow('ps', [{ v: 'worst', label: 'Najniższa' }, { v: 'best', label: 'Najwyższa' }, { v: 'az', label: 'A–Z' }], psort)}<div id="plist">${subjHTML()}</div>` : ''}
           ${dayKeys.length ? `<div class="sec"><h2>Ostatnie dni</h2></div>${chipRow('pd', [{ v: 'all', label: 'Wszystko' }, { v: 'nb', label: 'Nieobecności', n: cnt('nb') }, { v: 'sp', label: 'Spóźnienia', n: cnt('sp') }, { v: 'u', label: 'Usprawiedliwione', n: cnt('u') }].filter(o => o.n !== 0), pday)}<div id="pdays">${daysHTML()}</div>` : ''}`;
         const ub = root.getElementById('unexc'); if (ub) ub.onclick = () => openUnexc(root);
@@ -4521,6 +4549,115 @@
     const d = new DOMParser().parseFromString(String(h || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n'), 'text/html');
     return (d.body.textContent || '').replace(/ /g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   };
+  /* ------------------------------------------------------------------ *
+   *  Parent: excuse requests (prośby o usprawiedliwienie)
+   * ------------------------------------------------------------------ */
+  const justPill = s => { const t = String(s || '').trim(); const cl = /odrzu/i.test(t) ? 'bad' : /now/i.test(t) ? 'warn' : /zaakc|przyj|uspraw|rozpatr|zatw/i.test(t) ? 'good' : '';
+    return t ? `<span class="pill ${cl}">${esc(t)}</span>` : ''; };
+  function justListPage(ctx) {
+    const rows = $$('#content table tr').map(tr => $$(':scope > td', tr)).filter(tds => tds.length >= 4).map(tds => ({
+      who: txt($('a', tds[0])) || txt(tds[0]), body: txt(tds[1]), status: txt(tds[2]), date: txt(tds[3]), href: attr($('a', tds[4] || tds[3]), 'href') }));
+    return {
+      title: L('Usprawiedliwienia', 'Excuse requests'), tab: 'pres', top: false,
+      render(main) {
+        main.innerHTML = `<a class="btn-p" href="/justify_absence_requests/new" style="width:100%;margin-bottom:6px">${I('plus', 'sm')}${L('Nowa prośba o usprawiedliwienie', 'New excuse request')}</a>
+          <div class="sec"><h2>${L('Wysłane', 'Sent')}</h2><a href="${esc(ctx.student)}/presences">${L('Frekwencja', 'Attendance')}</a></div>
+          ${rows.length ? `<div class="card" style="padding:2px 14px">${rows.map(r => `<a class="row tap" href="${esc(r.href || '#')}" style="padding:12px 0">
+            <div class="grow" style="min-width:0"><div class="two">${esc(r.body)}</div><div class="muted small" style="margin-top:3px">${esc(r.date)}${r.who ? ' · ' + esc(r.who) : ''}</div></div>
+            ${justPill(r.status)}</a>`).join('')}</div>` : `<div class="empty">${I('check', 'big')}<div>${L('Nie ma jeszcze żadnych próśb', 'No requests yet')}</div></div>`}`;
+      }
+    };
+  }
+  function justOnePage(ctx) {
+    const mod = $('#content .module'), h3 = $('h3', mod);
+    const links = $$('a', h3), body = $(':scope > div', mod);
+    const strongs = $$(':scope > strong', mod);
+    const after = el => { let t = '', n = el && el.nextSibling; while (n && n.nodeName !== 'STRONG') { t += n.textContent; n = n.nextSibling; } return t.replace(/\s+/g, ' ').replace(/^[\s,.]+|[\s,.]+$/g, ''); };
+    const date = after(strongs.find(x => /data/i.test(txt(x)))), status = after(strongs.find(x => /status/i.test(txt(x))));
+    const ptxt = el => { const c = el.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); return c.textContent.split('\n').map(x => x.replace(/\s+/g, ' ').trim()).join('\n').trim(); };
+    const paras = body ? ($$('p', body).length ? $$('p', body).map(ptxt) : [ptxt(body)]).filter(Boolean) : [];
+    return {
+      title: L('Prośba o usprawiedliwienie', 'Excuse request'), tab: 'pres', top: false,
+      render(main) {
+        main.innerHTML = `<div class="card" style="padding:16px">
+            <div class="row" style="gap:10px;align-items:flex-start"><div class="grow"><div class="muted small">${esc(date)}</div>
+              <div class="b" style="margin-top:2px">${links[1] ? esc(txt(links[1])) : ''}</div>
+              <div class="muted small">${L('od', 'from')} ${links[0] ? esc(txt(links[0])) : ''}</div></div>${justPill(status)}</div>
+            <div style="margin-top:14px;line-height:1.5">${paras.map(t => `<p style="margin:0 0 10px">${esc(t).replace(/\n/g, '<br>')}</p>`).join('')}</div></div>
+          <div class="chips" style="margin-top:12px"><a class="chip" href="/justify_absence_requests">${I('check')}${L('Wszystkie prośby', 'All requests')}</a><a class="chip" href="${esc(ctx.student)}/presences">${I('pres')}${L('Frekwencja', 'Attendance')}</a></div>`;
+      }
+    };
+  }
+  const JUST_REASONS = [['', 'Bez powodu'], ['ill', 'Choroba', 'Nieobecność była spowodowana chorobą.'], ['doc', 'Lekarz', 'Nieobecność była spowodowana wizytą u lekarza.'],
+    ['fam', 'Sprawy rodzinne', 'Nieobecność była spowodowana ważnymi sprawami rodzinnymi.'], ['trip', 'Wyjazd', 'Nieobecność była spowodowana wyjazdem.']];
+  function justNewPage(ctx) {
+    const form = $('#new_justify_absence_request');
+    const bodyIn = $('#justify_absence_request_body', form), sid = attr($('#justify_absence_request_student_id', form), 'value');
+    const kidPath = sid ? '/students/' + sid : ctx.student;
+    return {
+      title: L('Usprawiedliwienie', 'Excuse request'), tab: 'pres', top: false,
+      render(main, root) {
+        let groups = [], picked = new Set(), reason = '', dirty = false;
+        main.innerHTML = `<div class="card row" style="gap:12px;padding:14px">${I('check')}<div class="grow"><div class="b">${L('Prośba o usprawiedliwienie', 'Excuse request')}</div>
+            <div class="muted small">${L('dotyczy', 'for')}: ${esc(ctx.kidName || L('dziecka', 'your child'))} · ${L('trafi do szkoły przez IDU', 'goes to school via IDU')}</div></div></div>
+          <div class="sec"><h2>${L('Nieusprawiedliwione', 'Unexcused')}</h2><a href="${esc(kidPath)}/presences">${L('Frekwencja', 'Attendance')}</a></div>
+          <div class="card" style="padding:2px 14px" id="jabs"><div class="nores">${L('Wczytuję nieobecności…', 'Loading absences…')}</div></div>
+          <div class="sec"><h2>${L('Powód', 'Reason')}</h2></div>${chipRow('jr', JUST_REASONS.map(r => ({ v: r[0], label: r[1] })), '')}
+          <div class="sec"><h2>${L('Treść', 'Message')}</h2><a href="#" id="jreset">${L('Od nowa', 'Reset')}</a></div>
+          <div class="card" style="padding:0"><textarea class="fta" id="jbody" style="min-height:230px" placeholder="${L('Treść prośby…', 'Message…')}">${esc(bodyIn ? bodyIn.value : '')}</textarea></div>
+          <button class="btn-p" id="jsend" style="width:100%;margin-top:14px">${I('send', 'sm')}<span>${L('Wyślij prośbę', 'Send request')}</span></button>
+          <div class="note2">${L('Wysyłasz tylko Ty – po kliknięciu „Wyślij” prośba trafia do szkoły tak samo jak z klasycznej strony IDU. Status sprawdzisz w „Usprawiedliwienia”.', 'Only you send it – after tapping “Send” the request goes to school just like from the classic IDU page.')}</div>`;
+        const ta = root.getElementById('jbody'), box = root.getElementById('jabs');
+        const make = () => {
+          const sel = groups.filter(g => picked.has(g.d)).slice().reverse();
+          const r = JUST_REASONS.find(x => x[0] === reason);
+          return 'Dzień dobry,\nproszę o usprawiedliwienie nieobecności mojego dziecka' + (sel.length ? ':\n' + sel.map(g => '• ' + groupLine(g)).join('\n') : ' w dniu …') +
+            (r && r[2] ? '\n\n' + r[2] : '') + '\n\nZ poważaniem\n' + (ctx.name || '');
+        };
+        const regen = () => { if (!dirty) ta.value = make(); };
+        if (!ta.value.trim()) ta.value = make();
+        ta.addEventListener('input', () => { dirty = true; });
+        root.getElementById('jreset').onclick = e => { e.preventDefault(); dirty = false; regen(); haptic('light'); };
+        wireChips(root, 'jr', v => { reason = v; regen(); });
+        const drawAbs = () => {
+          box.innerHTML = groups.length ? groups.map(g => `<label class="trow"><input type="checkbox" data-jd="${esc(g.d)}" ${picked.has(g.d) ? 'checked' : ''}>
+            <span class="grow"><b>${esc(DAY_FULL[parseDate(g.d).getDay()])}, ${esc(shortDate(parseDate(g.d)))}</b><span class="muted small" style="display:block">${esc(groupLine(g).replace(/^\S+ \S+ – /, ''))}</span></span>
+            <span class="st nb">${g.it.length}</span></label>`).join('') : `<div class="nores">${L('Brak nieusprawiedliwionych nieobecności 🎉 Możesz i tak napisać prośbę poniżej.', 'No unexcused absences.')}</div>`;
+          box.querySelectorAll('[data-jd]').forEach(c => c.onchange = () => { if (c.checked) picked.add(c.dataset.jd); else picked.delete(c.dataset.jd); haptic('selection'); regen(); });
+        };
+        fetch(kidPath + '/presences', { credentials: 'same-origin' }).then(r => r.text()).then(h => {
+          groups = unexcGroups(presDays(new DOMParser().parseFromString(h, 'text/html')));
+          picked = new Set(groups.map(g => g.d)); drawAbs(); regen();
+        }).catch(() => { box.innerHTML = `<div class="nores">${L('Nie udało się wczytać frekwencji – wpisz daty ręcznie.', 'Could not load attendance.')}</div>`; });
+        const sendB = root.getElementById('jsend');
+        sendB.onclick = () => {
+          const text = ta.value.trim();
+          if (!text || /w dniu …/.test(text)) { haptic('error'); toast(root, L('Zaznacz nieobecności albo wpisz daty', 'Pick absences or type the dates'), 'bad'); return; }
+          if (!form) { toast(root, 'Brak formularza IDU', 'bad'); return; }
+          const sh = openSheet(root, `<h2>${L('Wysłać prośbę do szkoły?', 'Send the request?')}</h2><div class="card" style="padding:12px 14px;white-space:pre-wrap;font-size:14px;max-height:40vh;overflow:auto">${esc(text)}</div>
+            <div class="btnrow" style="margin-top:12px"><button class="btn-s" id="jno">${L('Anuluj', 'Cancel')}</button><button class="btn-p" id="jyes">${I('send', 'sm')}<span>${L('Wyślij', 'Send')}</span></button></div>`);
+          sh.querySelector('#jno').onclick = () => closeSheet(sh);
+          sh.querySelector('#jyes').onclick = async () => {
+            const yes = sh.querySelector('#jyes'); yes.disabled = true; yes.lastChild.textContent = L('Wysyłanie…', 'Sending…');
+            try {
+              const fd = new FormData(form);
+              fd.set('justify_absence_request[body]', text.split(/\n{2,}/).map(p => '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>').join(''));
+              const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' });
+              const d = new DOMParser().parseFromString(await r.text(), 'text/html');
+              const err = d.querySelector('#errorExplanation, #error_explanation, .errorExplanation, .field_with_errors');
+              if (!r.ok || err || d.querySelector('#new_justify_absence_request')) throw new Error(txt(d.querySelector('#errorExplanation, #error_explanation, .errorExplanation')) || txt(d.querySelector('#flash-messages-section')) || 'IDU nie przyjęło prośby');
+              closeSheet(sh); haptic('success'); toast(root, L('Prośba wysłana', 'Request sent'), 'good');
+              setTimeout(() => softGo('/justify_absence_requests', false), 700);
+            } catch (e) {
+              haptic('error'); toast(root, e && e.message && e.message.length < 120 ? e.message : L('Nie udało się — spróbuj ponownie', 'Failed — try again'), 'bad');
+              yes.disabled = false; yes.lastChild.textContent = L('Wyślij', 'Send');
+            }
+          };
+        };
+      }
+    };
+  }
+
   function composePage(ctx) {
     const form = $('#new_message_form');
     const scripts = HEAD_TEXT + '\n' + $$('script').map(s => s.textContent).join('\n');
