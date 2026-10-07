@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.5
+// @version     5.6
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -440,13 +440,13 @@
   @keyframes skFade{from{opacity:0}to{opacity:1}}
   @keyframes skGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes skPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
-  .anim{animation:skIn .42s cubic-bezier(.2,.85,.25,1) both}
+  .anim{animation:skIn .36s cubic-bezier(.16,1,.3,1) both}
   main{transition:opacity .14s ease,transform .14s ease}
   .app.leaving main{opacity:0;transform:translateY(-6px)}
   .app.leaving.go-fwd main{transform:translateX(-18px)}.app.leaving.go-back main{transform:translateX(18px)}
-  @keyframes skPushIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
-  @keyframes skPopIn{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
-  main.pushIn,.lt.pushIn{animation:skPushIn .38s cubic-bezier(.2,.9,.25,1) both}main.popIn,.lt.popIn{animation:skPopIn .38s cubic-bezier(.2,.9,.25,1) both}
+  @keyframes skPushIn{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
+  @keyframes skPopIn{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:none}}
+  main.pushIn,.lt.pushIn{animation:skPushIn .3s cubic-bezier(.16,1,.3,1) both}main.popIn,.lt.popIn{animation:skPopIn .3s cubic-bezier(.16,1,.3,1) both}
   .app.softmotion .anim{animation:skFade .28s ease both}.app.softmotion main.pushIn,.app.softmotion main.popIn{animation:skFade .25s ease both}
   .app.softmotion .nav a.on .ic,.app.softmotion .fab,.app.softmotion .badge,.app.softmotion .les.cur{animation:none}
   .lp-press{transform:scale(.965)!important;transition:transform .35s cubic-bezier(.3,.7,.3,1)!important}
@@ -505,8 +505,9 @@
   /* ---- bottom sheet ---- */
   .sheet-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);animation:skFade .2s both}
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;max-height:82vh;overflow:auto;background:var(--card);
-    border-radius:22px 22px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));animation:skUp .35s cubic-bezier(.2,.85,.25,1) both}
+    border-radius:22px 22px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));animation:skUp .34s cubic-bezier(.16,1,.3,1) both}
   .sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+  .sheet,.drawer{overscroll-behavior:contain}
   .sheet h2{font-size:21px;margin:0 0 6px}
   @keyframes skUp{from{transform:translateY(100%)}to{transform:none}}
   .sheet.closing{animation:skDown .22s ease-in both}
@@ -700,7 +701,8 @@
    * ------------------------------------------------------------------ */
   const PAGE_CSS = `
   html.sk-full,html.sk-full body{background:var(--sk-bg,#0f1115)!important;margin:0!important;padding:0!important;min-width:0!important}
-  html.sk-full body>*:not(#sk-host){display:none!important}
+  html.sk-full body>*:not(#sk-host):not(#sk-under){display:none!important}
+  html.sk-modal,html.sk-modal body{overflow:hidden!important;overscroll-behavior:none}
   #sk-host{display:block!important;position:static!important;width:auto!important;margin:0!important;padding:0!important;border:0!important;float:none!important}
 
   html.sk-fb{--fb-bg:#0f1115;--fb-card:#1b1e26;--fb-card2:#252a34;--fb-text:#f2f4f8;--fb-muted:#9097a8;--fb-line:#2b303b;--fb-accent:#3d9be9}
@@ -840,7 +842,7 @@
       if (el.classList.contains('seg') && knownSegs.has(segKey(el))) return;                     // the switch itself stays put
       if (el.classList.contains('anim')) { el.classList.remove('anim'); void el.offsetWidth; }   // re-render of the same node
       if (i >= 14 || (i > 4 && el.getBoundingClientRect().top > vh * 1.1)) return;               // below the screen: no need
-      el.style.animationDelay = Math.min(i++ * 28, 300) + 'ms';
+      el.style.animationDelay = Math.min(i++ * 24, 240) + 'ms';
       el.classList.add('anim');
     });
     scope.querySelectorAll('.ring').forEach(r => {           // count the attendance ring up
@@ -886,7 +888,7 @@
         + (parseFloat(ss.marginTop) || 0) + (parseFloat(ss.marginBottom) || 0); }
     if (!d.animate || Math.abs(endH - startH) < 2) { if (!opening) d.open = false; return; }
     d.style.overflow = 'hidden';
-    const a = d.animate({ height: [startH + 'px', endH + 'px'] }, { duration: opening ? 320 : 250, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' });
+    const a = d.animate({ height: [startH + 'px', endH + 'px'] }, { duration: opening ? 280 : 220, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' });
     d._anim = a;
     a.onfinish = () => { d._anim = null; if (!opening) d.open = false; d.style.overflow = ''; a.cancel(); };
     a.oncancel = () => { d.style.overflow = ''; };
@@ -1015,6 +1017,7 @@
       app.classList.toggle('noglass', !st.glass);
     }
     const de = document.documentElement.style;
+    if (app) native({ type: 'theme', bg: th.bg, light: !!th.light });     // the app paints its own background + status bar to match
     de.setProperty('--fb-accent', acc); de.setProperty('--sk-bg', th.bg);
     de.setProperty('--fb-bg', th.bg); de.setProperty('--fb-card', th.card); de.setProperty('--fb-card2', th.card2); de.setProperty('--fb-line', th.line);
     store.set('skSnapBg', th.bg);
@@ -1118,7 +1121,7 @@
       { transform: `translateX(${prev.x}px)`, width: prev.w + 'px' },
       { transform: `translateX(${l}px) scaleY(.9)`, width: (r - l) + 'px', offset: .4 },
       { transform: `translateX(${x}px)`, width: w + 'px' }
-    ], { duration: 480, easing: 'cubic-bezier(.3,.75,.25,1)' });
+    ], { duration: 420, easing: 'cubic-bezier(.3,.8,.2,1)' });
     an.onfinish = an.oncancel = () => { ind.style.transition = ''; };
   }
   function wireNav(root) {
@@ -1289,7 +1292,7 @@
     }, { passive: true });
     scope.addEventListener('touchmove', e => {
       if (!row) return;
-      const t = e.touches[0], ddx = t.clientX - x0, ddy = t.clientY - y0;
+      const t = e.touches[0], ddx = t.clientX - x0, ddy = t.clientY - y0;   // .msg has touch-action: pan-y
       if (!on) {
         if (Math.abs(ddy) > 10 && Math.abs(ddy) > Math.abs(ddx)) { row = null; return; }   // that's a scroll
         if (ddx > -14) return;
@@ -1305,8 +1308,7 @@
       const lim = -row.offsetWidth * .55, x = dx < lim ? lim + (dx - lim) * .25 : dx;   // rubber band past the end
       row.style.transform = `translateX(${x}px)`;
       const a = dx < -90; if (a !== armed) { armed = a; haptic(a ? 'medium' : 'light'); under.classList.toggle('armed', a); }
-      if (e.cancelable) e.preventDefault();
-    }, { passive: false });
+    }, { passive: true });
     const end = () => {
       if (!row || !on) { row = null; return; }
       const r = row, u = under; row = null; on = false;
@@ -1871,6 +1873,7 @@
     color:#fff;background:color-mix(in srgb,var(--warn) 55%,#000);transition:background-color .2s,color .2s}
   .swact.armed{background:var(--warn);color:#111}
   .row>.sic{width:34px;height:34px;border-radius:10px;background:var(--card2);color:var(--accent);display:grid;place-items:center}
+  .msg{touch-action:pan-y}
   .nav .plusb{flex:none;width:58px;height:58px;margin:-24px 4px 0;border-radius:29px;border:4px solid var(--bg);background:var(--accent);color:#fff;
     display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 45%,transparent)}
   .nav .plusb .ic{width:26px;height:26px;stroke-width:2.4}
@@ -2060,7 +2063,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.5';
+  const SKIN_VERSION = '5.6';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2306,13 +2309,16 @@
     if (tok && cur) cur.setAttribute('content', tok.getAttribute('content'));
     document.body.replaceChildren(...Array.from(doc.body.childNodes).map(n => document.adoptNode(n)));
     document.documentElement.classList.remove('sk-full', 'sk-fb');
-    const url = fin.pathname + fin.search + u.hash;
-    if (push) history.pushState({ sk: 1 }, '', url); else if (location.pathname + location.search !== fin.pathname + fin.search) history.replaceState({ sk: 1 }, '', url);
+    const url = fin.pathname + fin.search + u.hash, prevKey = snapKey();
+    if (push) history.pushState({ sk: 1, prev: prevKey }, '', url);
+    else if (location.pathname + location.search !== fin.pathname + fin.search) history.replaceState({ sk: 1, prev: (history.state && history.state.prev) || '' }, '', url);
     curKey = location.pathname + location.search;
     QUIET = !!opts.quiet;
+    const wentBack = NAV_DIR === 'back' || NAV_DIR === 'swipe';
     window.scrollTo(0, 0);
     main();
     if (opts.keepScroll) window.scrollTo(0, y);
+    else if (wentBack) { try { const m = JSON.parse(localStorage.getItem('skSnap') || '{}')[snapKey()]; if (m && m.y) window.scrollTo(0, m.y); } catch (e) {} }   // back where you were
     return true;
   }
   // pull-to-refresh / back from the background: reload the data of this screen without a white flash
@@ -2333,12 +2339,16 @@
 
   /* ---- instant start: the app shows the last picture of a screen before IDU even answers ---- */
   const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
+  // the screen that is actually on display – on "back" the address changes before the old screen is gone,
+  // so the picture must be filed under the screen it shows, not under the new address
+  let SHOWN_KEY = '';
   function saveSnapshot() {
     try {
       const app = shellApp();
       if (!app || !document.documentElement.classList.contains('sk-full')) return;
       const c = app.cloneNode(true);
-      c.classList.remove('open', 'leaving', 'loading');
+      c.classList.remove('open', 'leaving', 'loading', 'go-fwd', 'go-back', 'navmin');
+      const cm = c.querySelector('main'); if (cm) cm.removeAttribute('style');
       c.classList.add('still');
       c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
       const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
@@ -2347,10 +2357,11 @@
       const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
       if (h.length > 300000) return;
       let map = {}; try { map = JSON.parse(localStorage.getItem('skSnap') || '{}'); } catch (e) {}
-      map[snapKey()] = { t: Date.now(), h };
+      const key = SHOWN_KEY || snapKey();
+      map[key] = { t: Date.now(), h, y: Math.round(window.scrollY) };
       Object.keys(map).sort((a, b) => map[b].t - map[a].t).slice(8).forEach(k => delete map[k]);
       try { localStorage.setItem('skSnap', JSON.stringify(map)); }
-      catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [snapKey()]: map[snapKey()] })); }
+      catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [key]: map[key] })); }
       if (localStorage.getItem('skSnapCss') !== APP_CSS + V5_CSS) localStorage.setItem('skSnapCss', APP_CSS + V5_CSS);   // the picture needs all the styles
     } catch (e) {}
   }
@@ -2364,7 +2375,7 @@
     window.addEventListener('popstate', () => {
       const k = location.pathname + location.search;
       if (k === curKey) return;            // only the #hash changed – the page handles it
-      NAV_DIR = 'back';
+      if (NAV_DIR !== 'swipe') NAV_DIR = 'back';
       softGo(location.href, false);
     });
     document.addEventListener('visibilitychange', () => {
@@ -2440,6 +2451,16 @@
       }
     });
     root.addEventListener('click', e => { if (e.target.closest && e.target.closest('.seg > button, .seg > a')) setTimeout(() => segThumbs(root), 0); }, true);
+    // a sheet (Ustawienia…), the menu or the photo viewer is open → the screen behind can't be scrolled or tapped
+    const syncModal = () => {
+      const modal = !!(root.querySelector('.sheet, .viewer') || app.classList.contains('open'));
+      if (document.documentElement.classList.contains('sk-modal') === modal) return;
+      document.documentElement.classList.toggle('sk-modal', modal);
+      root.querySelectorAll('main, .top, .nav, .dtop, .lt').forEach(x => { try { x.inert = modal; } catch (e) {} });
+    };
+    const modalObs = new MutationObserver(syncModal); modalObs.observe(app, { childList: true, attributes: true, attributeFilter: ['class'] });
+    cleanups.push(() => { modalObs.disconnect(); document.documentElement.classList.remove('sk-modal'); });
+    root.getElementById('scrim').addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
     root.addEventListener('click', e => { const k = e.target.closest && e.target.closest('[data-kid]'); if (!k) return;
       e.preventDefault(); e.stopPropagation(); store.set('skKid', k.dataset.kid); store.set('skKidName', k.dataset.kidn || ''); try { localStorage.removeItem('skKidSubj'); } catch (er) {}
       haptic('success'); location.href = '/'; }, true);
@@ -2497,51 +2518,120 @@
     root.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
     onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
 
-    // swipe from the left edge: back on inner pages, opens the menu on main tabs (and on the first screen)
+    // swipe back like iOS: from the left edge, and on inner pages from anywhere on the screen.
+    // The page follows the finger 1:1 and the previous screen is already waiting underneath (no empty black area).
+    // On main tabs the left edge opens the menu instead.
     (() => {
       const drawer = root.querySelector('.drawer'), scrim = root.getElementById('scrim');
-      let x0 = null, y0 = null, dx = 0, active = false, mode = '', past = false;
+      let x0 = null, y0 = null, dx = 0, active = false, mode = '', past = false, lastX = 0, lastT = 0, vx = 0, under = null, el = null, busy = false;
       const target = () => root.getElementById('main') || document.querySelector('#content') || document.body;
       const W = () => drawer.getBoundingClientRect().width || 300;
+      const SW = () => window.innerWidth || 390;
+      const canBack = () => !isTop && history.length > 1;
+      const NO_FULL = 'input,textarea,select,button,label,.hs,.fchips,.chips,.seg,.days,#daylist,.sl,.cal,.grid,.tline,.viewer,.sheet,.msg,.dtop,[data-noswipe]';
+      // the previous screen = the picture saved when you left it (with its scroll position)
+      const buildUnder = () => {
+        let snap = null;
+        try { const prev = history.state && history.state.prev; const map = JSON.parse(localStorage.getItem('skSnap') || '{}'); snap = prev ? map[prev] : null; } catch (e) {}
+        const u = document.createElement('div'); u.id = 'sk-under';
+        u.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--p:0;background:' + (store.get('skSnapBg') || '#0f1115');
+        const r = u.attachShadow({ mode: 'open' });
+        const html = snap && snap.h ? snap.h.replace(/^<style>[^<]*<\/style>/, '') : '';
+        r.innerHTML = `<style>${APP_CSS}${V5_CSS}
+          .ud{transform:translateX(calc((1 - var(--p)) * -30%));will-change:transform}
+          .dim{position:fixed;inset:0;background:#000;opacity:calc((1 - var(--p)) * .18);pointer-events:none}
+          :host(.go) .ud{transition:transform var(--ms) cubic-bezier(.2,.8,.25,1)}
+          :host(.go) .dim{transition:opacity var(--ms) cubic-bezier(.2,.8,.25,1)}
+          .ud .top,.ud .nav,.ud .fab,.ud .ptr,.ud .dtop,.ud .drawer,.ud .scrim{display:none!important}
+          .ud *{animation:none!important;transition:none!important}</style>
+          <div class="ud">${html ? `<div style="transform:translateY(${-(snap.y || 0)}px)">${html}</div>` : ''}</div><div class="dim"></div>`;
+        document.body.appendChild(u);
+        return u;
+      };
+      if (canBack() && !isDesk()) setTimeout(() => { if (!under && host.isConnected) under = buildUnder(); }, 700);   // ready before your finger is
+      const startBack = () => {
+        el = target();
+        if (!under || !under.isConnected) under = buildUnder();
+        under.classList.remove('go'); under.style.setProperty('--p', 0); under.style.display = 'block';
+        app.classList.add('scrolled');          // the bar gets its background, so the screen underneath doesn't show through it
+        Object.assign(el.style, { transition: 'none', position: 'relative', zIndex: '1', background: 'inherit', minHeight: '100vh',
+          boxShadow: '-14px 0 30px rgba(0,0,0,.22)', willChange: 'transform' });
+      };
+      const moveBack = d => {
+        const w = SW(), p = Math.min(1, d / w);
+        el.style.transform = `translateX(${d}px)`;
+        under.style.setProperty('--p', p.toFixed(4));
+        const over = d > w * .35; if (over !== past) { past = over; if (over) haptic('light'); }
+      };
+      const resetBack = () => {
+        if (el) Object.assign(el.style, { transition: '', transform: '', position: '', zIndex: '', background: '', minHeight: '', boxShadow: '', willChange: '' });
+        if (under) { under.classList.remove('go'); under.style.display = 'none'; under.style.setProperty('--p', 0); }
+        app.classList.toggle('scrolled', window.scrollY > 2);
+        busy = false;
+      };
+      const endBack = () => {
+        const w = SW(), d = Math.max(0, dx);
+        const go = (d > w * .35 && vx > -.2) || (vx > .45 && d > 20);
+        const left = go ? w - d : d, speed = Math.max(Math.abs(vx), .9);
+        const ms = Math.round(Math.min(300, Math.max(150, left / speed)));
+        busy = true;
+        el.style.transition = `transform ${ms}ms cubic-bezier(.2,.8,.25,1)`;
+        under.style.setProperty('--ms', ms + 'ms'); under.classList.add('go');
+        if (!go) { el.style.transform = 'translateX(0)'; under.style.setProperty('--p', 0); setTimeout(resetBack, ms + 30); return; }
+        el.style.transform = `translateX(${w}px)`; under.style.setProperty('--p', 1);
+        setTimeout(() => {
+          const before = curKey;
+          // only the #hash changes (same page) → just show it; a real page change replaces this screen anyway
+          window.addEventListener('popstate', () => setTimeout(() => { if (curKey === before && el && el.isConnected) resetBack(); }, 30), { once: true });
+          NAV_DIR = 'swipe';
+          if (history.length > 1) history.back(); else softGo('/', true);
+          setTimeout(() => { if (busy && el && el.isConnected) resetBack(); }, 4000);   // nothing happened → bring the page back
+        }, ms);
+      };
       onWin('touchstart', e => {
         const t = e.touches[0]; x0 = null;
-        if (e.touches.length !== 1 || root.querySelector('.sheet')) return;
-        if (app.classList.contains('open')) { mode = 'close'; x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; past = false; return; }
-        if (t.clientX > 28) return;
-        mode = isTop || history.length <= 1 ? 'menu' : 'back';
-        x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; past = false;
+        if (busy || e.touches.length !== 1 || root.querySelector('.sheet, .viewer') || isDesk()) return;
+        if (app.classList.contains('open')) mode = 'close';
+        else if (t.clientX <= 28) mode = canBack() ? 'back' : 'menu';
+        else {
+          if (!canBack()) return;
+          const path = e.composedPath ? e.composedPath() : [], node = path[0];
+          if (node && node.closest && node.closest(NO_FULL)) return;
+          if (path.some(n => n && n.nodeType === 1 && n !== document.documentElement && n !== document.body
+            && n.scrollWidth > n.clientWidth + 4 && /(auto|scroll)/.test(getComputedStyle(n).overflowX))) return;    // it scrolls sideways itself
+          mode = 'back';
+        }
+        x0 = t.clientX; y0 = t.clientY; dx = 0; active = false; past = false; lastX = t.clientX; lastT = e.timeStamp || performance.now(); vx = 0;
       }, { passive: true });
       onWin('touchmove', e => {
         if (x0 == null) return;
-        const t = e.touches[0]; dx = t.clientX - x0;
-        if (!active && Math.abs(t.clientY - y0) > 30 && Math.abs(t.clientY - y0) > Math.abs(dx)) { x0 = null; return; }
-        if (Math.abs(dx) > 10) active = true;
-        if (!active) return;
-        const over = mode === 'back' ? dx > 90 : mode === 'menu' ? dx > 70 : dx < -70;
+        const t = e.touches[0], now = e.timeStamp || performance.now();
+        dx = t.clientX - x0; const dy = t.clientY - y0;
+        if (!active) {
+          if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { x0 = null; return; }      // that's a scroll
+          if (Math.abs(dx) < 10) return;
+          if (mode === 'back' && (dx < 0 || Math.abs(dx) < Math.abs(dy) * 1.2)) { x0 = null; return; }
+          active = true; x0 = t.clientX; dx = 0; lastX = t.clientX; lastT = now;
+          if (mode === 'back') startBack();
+        }
+        if (now > lastT) { vx = .7 * ((t.clientX - lastX) / (now - lastT)) + .3 * vx; lastX = t.clientX; lastT = now; }
+        if (mode === 'back') { moveBack(Math.max(0, dx)); return; }
+        const over = mode === 'menu' ? dx > 70 : dx < -70;
         if (over !== past) { past = over; if (over) haptic('light'); }
-        if (mode === 'back') { const el = target(); el.style.transition = 'none'; el.style.transform = `translateX(${Math.max(0, dx) * 0.6}px)`; el.style.opacity = String(1 - Math.min(Math.max(dx, 0), 300) / 600); }
-        else {
-          const w = W(); const pos = mode === 'menu' ? Math.min(0, -w + Math.max(0, dx)) : Math.min(0, Math.max(-w, dx));
-          drawer.style.transition = 'none'; drawer.style.transform = `translateX(${pos}px)`;
-          scrim.style.transition = 'none'; scrim.style.pointerEvents = 'none'; scrim.style.opacity = String(1 + pos / w);
-        }
+        const w = W(); const pos = mode === 'menu' ? Math.min(0, -w + Math.max(0, dx)) : Math.min(0, Math.max(-w, dx));
+        drawer.style.transition = 'none'; drawer.style.transform = `translateX(${pos}px)`;
+        scrim.style.transition = 'none'; scrim.style.pointerEvents = 'none'; scrim.style.opacity = String(1 + pos / w);
       }, { passive: true });
-      onWin('touchend', () => {
+      const end = () => {
         if (x0 == null) return; x0 = null;
-        if (mode === 'back') {
-          const el = target(); el.style.transition = 'transform .2s ease, opacity .2s ease';
-          if (active && dx > 90) {
-            el.style.transform = 'translateX(60%)'; el.style.opacity = '0';
-            setTimeout(() => { if (history.length > 1) history.back(); else softGo('/', true); }, 150);
-            setTimeout(() => { el.style.transform = ''; el.style.opacity = ''; }, 1500);
-          } else { el.style.transform = ''; el.style.opacity = ''; }
-        } else if (active) {
-          const open = mode === 'menu' ? dx > 70 : dx > -70;
-          drawer.style.transition = ''; drawer.style.transform = ''; scrim.style.transition = ''; scrim.style.opacity = ''; scrim.style.pointerEvents = '';
-          app.classList.toggle('open', open);
-        }
+        if (!active) return;
         active = false;
-      });
+        if (mode === 'back') { endBack(); return; }
+        const open = mode === 'menu' ? dx > 70 || vx > .5 : dx > -70 && vx > -.5;
+        drawer.style.transition = ''; drawer.style.transform = ''; scrim.style.transition = ''; scrim.style.opacity = ''; scrim.style.pointerEvents = '';
+        app.classList.toggle('open', open);
+      };
+      onWin('touchend', end, { passive: true }); onWin('touchcancel', end, { passive: true });
     })();
 
     // pull down at the top of a screen to refresh it (in place, no white flash)
@@ -2584,8 +2674,8 @@
 
     // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
     const hadSnap = !!document.getElementById('sk-snap');
-    let skipAnim = hadSnap || QUIET;
     const dir = NAV_DIR; NAV_DIR = '';
+    let skipAnim = hadSnap || QUIET || dir === 'swipe';
     let slide = !skipAnim && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
@@ -2596,6 +2686,7 @@
     wireLongPress(root, mainEl);
     wireSwipeRows(root, mainEl);
     wireFavButton(root, mainEl);
+    SHOWN_KEY = snapKey();
     if (skipAnim) { app.classList.add('still'); segThumbs(mainEl); }      // same content as a moment ago → no pop-in effects
     else if (slide) { const cls = dir === 'fwd' ? 'pushIn' : 'popIn', lt = root.getElementById('lt'); mainEl.classList.add(cls); if (lt) lt.classList.add(cls);
       animateIn(mainEl, true); setTimeout(() => { mainEl.classList.remove('pushIn', 'popIn'); if (lt) lt.classList.remove('pushIn', 'popIn'); }, 600); }
@@ -3290,6 +3381,7 @@
       title: 'Start', tab: 'start', top: true,
       render(main, root, api) {
         function show() {
+          SHOWN_KEY = snapKey();
           let v = (location.hash || '#start').slice(1); try { v = decodeURIComponent(v); } catch (e) {}
           root.querySelectorAll('.sheet,.sheet-scrim').forEach(x => x.remove());
           HOMEDATA = { subjects, plan, feed, get teachers() { return teachers; } };
@@ -4164,6 +4256,7 @@
       setTimeout(() => { sh.remove(); scrim.remove(); }, 240);
     };
     scrim.onclick = close;
+    scrim.addEventListener('touchmove', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });   // the page behind stays put
     // pull the sheet down: it follows the finger, a short flick or a long pull closes it, otherwise it springs back
     let y0 = null, dy = 0, t0 = 0, dragging = false;
     sh.addEventListener('touchstart', e => { if (isDesk() || e.touches.length !== 1) return; y0 = e.touches[0].clientY; dy = 0; dragging = false; }, { passive: true });

@@ -10,7 +10,20 @@ import JavaScriptCore
 
 private let homeURL = URL(string: "https://s27.idu.edu.pl/")!
 private let iduHost = "s27.idu.edu.pl"
-private let bgColor = UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1)   // always dark
+// The colour behind the page follows the style chosen in the skin (sent as "theme"), so light styles never flash black
+private enum Theme {
+    static var bg: UIColor { UIColor(hex: UserDefaults.standard.string(forKey: "themeBg") ?? "") ?? UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1) }
+    static var light: Bool { UserDefaults.standard.bool(forKey: "themeLight") }
+}
+
+extension UIColor {
+    convenience init?(hex: String) {
+        var h = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if h.hasPrefix("#") { h.removeFirst() }
+        guard h.count == 6, let v = UInt32(h, radix: 16) else { return nil }
+        self.init(red: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255, blue: CGFloat(v & 0xff) / 255, alpha: 1)
+    }
+}
 // Newer skin versions are downloaded from GitHub in the background and used from the next launch on
 // (falls back to the last download, then to the copy built into the app).
 private let remoteSkinURL = URL(string: "https://raw.githubusercontent.com/fn5jmkbpr2-boop/idu-app/main/IDU-App/Resources/skin.js")
@@ -30,8 +43,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             WebViewController.startPath = path; handled = true
         }
         let window = UIWindow(frame: UIScreen.main.bounds)
-        window.backgroundColor = bgColor
-        window.overrideUserInterfaceStyle = .dark
+        window.backgroundColor = Theme.bg
+        window.overrideUserInterfaceStyle = Theme.light ? .light : .dark
         window.rootViewController = WebViewController()
         window.makeKeyAndVisible()
         self.window = window
@@ -158,11 +171,11 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         webView.allowsLinkPreview = false                        // no long-press previews of IDU pages
         webView.scrollView.alwaysBounceHorizontal = false
         webView.scrollView.keyboardDismissMode = .interactive
-        webView.underPageBackgroundColor = bgColor
+        webView.underPageBackgroundColor = Theme.bg
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
-        webView.backgroundColor = bgColor
-        webView.scrollView.backgroundColor = bgColor
+        webView.backgroundColor = Theme.bg
+        webView.scrollView.backgroundColor = Theme.bg
         // pull-to-refresh is done by the skin (smooth, without reloading the whole page)
 
         view = webView
@@ -181,7 +194,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         updateSkinInBackground()
     }
 
-    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+    override var preferredStatusBarStyle: UIStatusBarStyle { Theme.light ? .darkContent : .lightContent }
 
     /// Opens a page of IDU – "/#plan" only switches the tab when the start page is already open.
     func open(path: String) {
@@ -220,6 +233,18 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
                     }
                 }
             }
+        case "theme":
+            // background + status bar follow the style (Zeszyt is light: dark clock and battery)
+            guard let hex = dict["bg"] as? String, let color = UIColor(hex: hex) else { return }
+            let light = (dict["light"] as? NSNumber)?.boolValue ?? false
+            UserDefaults.standard.set(hex, forKey: "themeBg")
+            UserDefaults.standard.set(light, forKey: "themeLight")
+            webView.backgroundColor = color
+            webView.scrollView.backgroundColor = color
+            webView.underPageBackgroundColor = color
+            view.window?.backgroundColor = color
+            view.window?.overrideUserInterfaceStyle = light ? .light : .dark
+            setNeedsStatusBarAppearanceUpdate()
         case "badge":
             if Watcher.wantsMail { Watcher.setBadge((dict["n"] as? NSNumber)?.intValue ?? 0) }
         case "askNotify":

@@ -16,8 +16,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "3.1"
-        CFBundleVersion: "6"
+        CFBundleShortVersionString: "3.2"
+        CFBundleVersion: "7"
         UIUserInterfaceStyle: Dark
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [pl.idu.personal.app.refresh]
@@ -68,8 +68,8 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "3.1"
-        CFBundleVersion: "6"
+        CFBundleShortVersionString: "3.2"
+        CFBundleVersion: "7"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
