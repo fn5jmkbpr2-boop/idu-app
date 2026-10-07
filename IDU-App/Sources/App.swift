@@ -411,28 +411,62 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         present(alert, animated: true)
     }
 
-    // MARK: No internet
+    // MARK: No internet → the last saved screens (Start, Plan, Oceny…) with a "try again" bar
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         let nsError = error as NSError
         if nsError.code == NSURLErrorCancelled { return }
         // a link that turned into a download is not an error
         if nsError.domain == "WebKitErrorDomain" && (nsError.code == 102 || nsError.code == 204) { return }
-        let html = """
-        <html><head><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-        <style>body{font:17px -apple-system,sans-serif;display:flex;height:100vh;margin:0;align-items:center;justify-content:center;
-        text-align:center;background:#0f1115;color:#f2f4f8}
-        svg{width:56px;height:56px;color:#9097a8}
-        a{display:inline-block;margin-top:18px;background:#3d9be9;color:#fff;padding:13px 24px;border-radius:14px;text-decoration:none;font-weight:700}</style>
-        </head><body><div>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.6a10 10 0 0 1 14 0"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
-        <line x1="3" y1="3" x2="21" y2="21"/></svg>
-        <p>Brak połączenia z IDU</p>
-        <a href="\(homeURL.absoluteString)">Spróbuj ponownie</a></div></body></html>
-        """
-        webView.loadHTMLString(html, baseURL: nil)
+        // same origin as IDU, so the page can read the screens the skin saved on this phone
+        webView.loadHTMLString(WebViewController.offlineHTML, baseURL: URL(string: "https://\(iduHost)/offline"))
     }
+
+    static let offlineHTML = #"""
+    <!doctype html><html><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <style>
+    html,body{margin:0;background:#0f1115;color:#f2f4f8;font:16px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;-webkit-text-size-adjust:100%}
+    #snap{pointer-events:none}
+    #bar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:2147483000;padding:10px;border-radius:22px;
+      background:rgba(24,26,32,.92);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);
+      box-shadow:0 12px 30px rgba(0,0,0,.45),inset 0 0 0 .5px rgba(255,255,255,.12)}
+    #msg{font-size:13px;color:#ffcc66;text-align:center;margin:0 4px 8px;font-weight:600}
+    #tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    #tabs::-webkit-scrollbar{display:none}
+    #tabs button{flex:none;border:0;border-radius:13px;padding:9px 13px;background:#262b35;color:#f2f4f8;font:600 14px -apple-system,sans-serif}
+    #tabs button.on{background:#f2f4f8;color:#111}
+    #tabs button.retry{background:#3d9be9;color:#fff}
+    </style></head><body>
+    <div id="snap"></div>
+    <div id="bar"><div id="msg">Brak internetu</div><div id="tabs"></div></div>
+    <script>
+    (function(){
+      var early=document.getElementById('sk-early'); if(early) early.remove();
+      var x=document.getElementById('sk-snap'); if(x) x.remove();
+      var map={}, css='';
+      try{ map=JSON.parse(localStorage.getItem('skSnap')||'{}'); css=localStorage.getItem('skSnapCss')||''; var bg=localStorage.getItem('skSnapBg'); if(bg) document.body.style.background=bg; }catch(e){}
+      var names={'/#start':'Start','/#plan':'Plan lekcji','/#przedmioty':'Przedmioty','/#wazne':'Ważne','/#notatki':'Notatki','/#szukaj':'Szukaj','/internal_messages':'Wiadomości'};
+      function label(k){ if(names[k]) return names[k]; if(/grades$/.test(k)) return 'Oceny'; if(/presences$/.test(k)) return 'Frekwencja';
+        if(/homeworks$/.test(k)) return 'Zadania'; if(/watek$/.test(k)) return 'Wiadomość'; if(/^\/subjects\/\d+$/.test(k)) return 'Przedmiot'; return 'Ekran'; }
+      var keys=Object.keys(map).filter(function(k){return map[k]&&map[k].h;}).sort(function(a,b){
+        var o=['/#start','/#plan']; var ia=o.indexOf(a), ib=o.indexOf(b); if(ia>=0||ib>=0) return (ia<0?9:ia)-(ib<0?9:ib); return map[b].t-map[a].t; });
+      var snap=document.getElementById('snap'), tabs=document.getElementById('tabs'), msg=document.getElementById('msg'), root=snap.attachShadow({mode:'open'});
+      function when(t){ var d=new Date(t), now=new Date(), same=d.toDateString()===now.toDateString();
+        return (same?'dziś ':d.toLocaleDateString('pl-PL',{weekday:'short',day:'numeric',month:'short'})+' ')+d.toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}); }
+      function show(k){ var s=map[k]; if(!s) return; root.innerHTML='<style>'+css+'</style><style>.nav,.fab,.ptr,.dtop{display:none!important}</style>'+s.h; window.scrollTo(0,0);
+        msg.textContent='Brak internetu · '+label(k)+' z '+when(s.t);
+        [].forEach.call(tabs.querySelectorAll('button[data-k]'),function(b){ b.classList.toggle('on', b.getAttribute('data-k')===k); }); }
+      function retry(){ location.href='https://s27.idu.edu.pl/'; }
+      var r=document.createElement('button'); r.className='retry'; r.textContent='Spróbuj ponownie'; r.onclick=retry; tabs.appendChild(r);
+      var seen={};
+      keys.forEach(function(k){ var l=label(k); if(seen[l]) return; seen[l]=1; var b=document.createElement('button'); b.textContent=l; b.setAttribute('data-k',k); b.onclick=function(){show(k);}; tabs.appendChild(b); });
+      if(keys.length) show(keys[0]);
+      else { root.innerHTML='<div style="display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:0 30px;color:#9097a8">Brak połączenia z IDU. Ekrany, które otworzysz z internetem, będą tu potem dostępne bez sieci.</div>'; msg.textContent='Brak internetu'; }
+      window.addEventListener('online', retry);
+    })();
+    </script></body></html>
+    """#
 }
 
 // MARK: - Reminders (local notifications computed from the timetable – no server needed)

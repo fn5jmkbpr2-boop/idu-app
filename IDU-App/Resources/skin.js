@@ -2103,6 +2103,7 @@
    *  MAIN
    * ------------------------------------------------------------------ */
   function main() {
+    if (location.pathname === '/offline') return;       // the app's own "no internet" page shows saved screens by itself
     const accLink = $('#account a');
 
     // Fix the "tiny desktop page" problem
@@ -2330,7 +2331,7 @@
       Object.keys(map).sort((a, b) => map[b].t - map[a].t).slice(8).forEach(k => delete map[k]);
       try { localStorage.setItem('skSnap', JSON.stringify(map)); }
       catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [snapKey()]: map[snapKey()] })); }
-      if (localStorage.getItem('skSnapCss') !== APP_CSS) localStorage.setItem('skSnapCss', APP_CSS);
+      if (localStorage.getItem('skSnapCss') !== APP_CSS + V5_CSS) localStorage.setItem('skSnapCss', APP_CSS + V5_CSS);   // the picture needs all the styles
     } catch (e) {}
   }
   let snapTimer = 0;
