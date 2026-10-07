@@ -3451,7 +3451,66 @@
         <div class="name"><span>${esc(prettySubj(r.name))}</span><span>${all.length} ${plural(all.length, 'ocena', 'oceny', 'ocen')}</span></div>
         ${s.pts != null ? `<div class="meter sm"><i style="width:${Math.min(100, 100 * s.pts / s.target)}%"></i></div>` : ''}</summary>
         <div class="card" style="margin-top:8px">${r.cats.map(c => `<div class="cat">${esc(c.name)}</div>${c.marks.map(m => markRow(m, r.name, c.name)).join('')}`).join('')}
-        <div class="chips"><a class="chip" href="${esc(r.href)}">${I('layers')}Strona przedmiotu</a></div></div></details>`;
+        <div class="chips"><a class="chip" href="${esc(r.href)}">${I('layers')}Strona przedmiotu</a>${s.small === 'średnia' || s.small === 'średnio' ? `<button class="chip" data-calc="${esc(r.name)}">${I('chart')}Kalkulator</button>` : ''}</div></div></details>`;
+    }
+    // "what do I need?" and "what if?" – the same weighted average as above, just with grades you don't have yet
+    const SCALE = [[1, '1'], [1.5, '1+'], [1.75, '2-'], [2, '2'], [2.5, '2+'], [2.75, '3-'], [3, '3'], [3.5, '3+'], [3.75, '4-'], [4, '4'], [4.5, '4+'], [4.75, '5-'], [5, '5'], [5.5, '5+'], [5.75, '6-'], [6, '6']];
+    function openCalc(root, r) {
+      const num = r.all.filter(m => m.type !== 'cumulative' && !/%$/.test(m.value) && gradeNumber(m.value) != null && (m.type === 'numeric' || /^[0-6][+-]?$/.test(m.value)));
+      const pct = r.all.filter(m => /%$/.test(m.value));
+      const isPct = !num.length && pct.length > 0;
+      const fmt = v => isPct ? Math.round(v) + '%' : fmtAvg(v);
+      let target = isPct ? 75 : 3.75, w = 1;
+      const extra = [];
+      const totals = () => {
+        let S = 0, W = 0;
+        if (isPct) pct.forEach(m => { S += parseFloat(m.value) || 0; W += 1; });
+        else num.forEach(m => { S += gradeNumber(m.value) * m.weight; W += m.weight; });
+        extra.forEach(x => { S += x.v * x.w; W += x.w; });
+        return { S, W };
+      };
+      const need = () => {
+        const { S, W } = totals(), ww = isPct ? 1 : w, top = isPct ? 100 : 6, low = isPct ? 0 : 1;
+        const x = (target * (W + ww) - S) / ww;
+        if (x <= low) return `<b style="color:var(--good)">${L('Spokojnie', 'Relax')}</b> – ${L('nawet', 'even')} ${isPct ? '0%' : '1'} ${L('zostawi średnią co najmniej', 'keeps the average at least')} ${fmt(target)}.`;
+        if (x > top) {
+          const k = Math.ceil((target * W - S) / (ww * (top - target)));
+          return `<b style="color:var(--bad)">${L('Jedna ocena nie wystarczy', 'One grade is not enough')}</b> – ${L('potrzebujesz', 'you need')} ${k} × ${isPct ? '100%' : '6'}${isPct ? '' : ` (${L('waga', 'weight')} ${ww})`}.`;
+        }
+        if (isPct) return `${L('Potrzebujesz co najmniej', 'You need at least')} <b style="font-size:22px">${Math.ceil(x)}%</b>`;
+        const g = SCALE.find(([v]) => v >= x - 1e-9);
+        return `${L('Potrzebujesz co najmniej', 'You need at least')} <b style="font-size:22px">${g[1]}</b> <span class="muted">(${fmtAvg(x)}${w !== 1 ? ', ' + L('waga', 'weight') + ' ' + w : ''})</span>`;
+      };
+      const TARGETS = isPct ? [50, 60, 75, 90] : [1.75, 2.75, 3.75, 4.75, 5.5];
+      const ADD = isPct ? [50, 60, 70, 80, 90, 100] : ['1', '2', '3', '3+', '4', '4+', '5', '5+', '6'];
+      const now = totals();
+      const sh = openSheet(root, `<h2>${L('Kalkulator', 'Calculator')} · ${esc(prettySubj(r.name))}</h2>
+        <div class="card row" style="gap:12px;margin-top:8px"><div class="grow"><div class="lbl">${L('Teraz', 'Now')}</div><div class="b" style="font-size:28px">${now.W ? fmt(now.S / now.W) : '–'}</div>
+          <div class="muted small">${isPct ? pct.length : num.length} ${plural(isPct ? pct.length : num.length, 'ocena', 'oceny', 'ocen')}${isPct ? '' : ' · ' + L('średnia ważona', 'weighted average')}</div></div>
+          <div style="text-align:right"><div class="lbl">${L('Co jeśli', 'What if')}</div><div class="b" style="font-size:28px" id="cwhat">–</div></div></div>
+        <div class="lbl" style="margin:16px 0 6px">${L('Chcę mieć średnią co najmniej', 'I want an average of at least')}</div>
+        <div class="chips" id="ctg">${TARGETS.map(t => `<button class="chip ${t === target ? 'on' : ''}" data-t="${t}">${fmt(t)}</button>`).join('')}
+          <input id="ctin" type="number" inputmode="decimal" step="${isPct ? 1 : 0.05}" min="${isPct ? 1 : 1}" max="${isPct ? 100 : 6}" placeholder="${L('inna', 'other')}" style="width:76px;border:0;border-radius:10px;padding:8px 10px;background:var(--card2);color:var(--text);font:inherit;font-size:15px"></div>
+        ${isPct ? '' : `<div class="lbl" style="margin:14px 0 6px">${L('Waga następnej oceny', 'Weight of the next grade')}</div><div class="seg" id="cw">${[1, 2, 3, 4, 5].map(x => `<button class="${x === w ? 'on' : ''}" data-w="${x}">${x}</button>`).join('')}</div>`}
+        <div class="card" id="cneed" style="margin-top:12px;padding:14px 16px;font-size:16px;line-height:1.4"></div>
+        <div class="lbl" style="margin:16px 0 6px">${L('Co jeśli dostanę…', 'What if I get…')}</div>
+        <div class="chips" id="cadd">${ADD.map(v => `<button class="chip" data-a="${v}">${isPct ? v + '%' : v}</button>`).join('')}</div>
+        <div class="chips" id="cext" style="margin-top:6px"></div>
+        <div class="note2">${L('Liczę tak jak średnia w Ocenach: oceny z wagami, „+” = +0,5, „−” = −0,25. Progi na ocenę na koniec ustala szkoła – jeśli Twój nauczyciel ma inne, wpisz je w „inna”.', 'Same weighted average as in Grades. Your school sets the thresholds.')}</div>`);
+      const draw = () => {
+        sh.querySelector('#cneed').innerHTML = need();
+        const { S, W } = totals();
+        sh.querySelector('#cwhat').textContent = extra.length && W ? fmt(S / W) : '–';
+        sh.querySelector('#cext').innerHTML = extra.map((x, i) => `<button class="chip on" data-x="${i}">${isPct ? x.v + '%' : x.label}${!isPct && x.w !== 1 ? ' ·' + x.w : ''} ×</button>`).join('');
+        sh.querySelectorAll('#cext [data-x]').forEach(b => b.onclick = () => { extra.splice(+b.dataset.x, 1); haptic('light'); draw(); });
+      };
+      sh.querySelectorAll('#ctg [data-t]').forEach(b => b.onclick = () => { target = +b.dataset.t; sh.querySelectorAll('#ctg [data-t]').forEach(x => x.classList.toggle('on', x === b)); sh.querySelector('#ctin').value = ''; haptic('selection'); draw(); });
+      sh.querySelector('#ctin').oninput = e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (!isNaN(v) && v > 0) { target = v; sh.querySelectorAll('#ctg [data-t]').forEach(x => x.classList.remove('on')); draw(); } };
+      sh.querySelectorAll('#cw [data-w]').forEach(b => b.onclick = () => { w = +b.dataset.w; sh.querySelectorAll('#cw [data-w]').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+      sh.querySelectorAll('#cadd [data-a]').forEach(b => b.onclick = () => {
+        const v = b.dataset.a; extra.push(isPct ? { v: +v, w: 1 } : { v: gradeNumber(v), w, label: v }); haptic('light'); draw();
+      });
+      draw();
     }
     function markRow(m, subj, cat, showSubj) {
       const row = `<div class="mk" style="--c:${subjColor(subj)}"><div class="v">${gradeShort(m.value)}</div>
@@ -3501,6 +3560,8 @@
           <div id="gsortwrap" style="${view !== 'subj' ? 'display:none' : ''}">${chipRow('gs', SORTS.map(([v, label]) => ({ v, label })), sort)}</div>
           <div id="glist">${withMarks.length || without.length ? listHTML() : '<div class="empty">Brak ocen</div>'}</div>`;
         const redraw = () => { const g = root.getElementById('glist'); g.innerHTML = listHTML(); animateIn(g); };
+        main.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-calc]'); if (!b) return;
+          e.preventDefault(); const r = withMarks.find(x => x.name === b.dataset.calc); if (r) openCalc(root, r); });
         wireChips(root, 'gs', v => { sort = v; store.set('skGradeSort', v); redraw(); });
         root.querySelectorAll('#gv button').forEach(b => b.onclick = () => {
           view = b.dataset.v; store.set('skGradeView', view);
