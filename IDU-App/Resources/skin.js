@@ -781,6 +781,7 @@
     font:16px/1.45 -apple-system,BlinkMacSystemFont,sans-serif;-webkit-text-size-adjust:100%;animation:skLogin .5s cubic-bezier(.2,.85,.25,1) both}
   @keyframes skLogin{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   #sk-login .sk-brand{text-align:center;margin-bottom:22px}
+  #sk-login .sk-legal{text-align:center;color:#9097a8;font-size:12.5px;line-height:1.45;margin:18px auto 0;max-width:360px}
   #sk-login .sk-logo{width:76px;height:76px;border-radius:22px;margin:0 auto 14px;display:grid;place-items:center;
     background:linear-gradient(180deg,#3d9be9,#1e5ac8);color:#fff;font:800 26px -apple-system,sans-serif;letter-spacing:.5px;
     box-shadow:0 10px 30px rgba(30,90,200,.35)}
@@ -943,7 +944,8 @@
     const wrap = document.createElement('div');
     wrap.id = 'sk-login';
     wrap.innerHTML = `<div class="sk-brand"><div class="sk-logo">IDU</div><h1>${L('Zaloguj się', 'Log in')}</h1>
-      <div class="sk-sub">${esc(txt($('#school-name')) || L('Dziennik IDU', 'IDU school diary'))}</div></div><div class="sk-flash"></div><div class="sk-box"></div>`;
+      <div class="sk-sub">${esc(txt($('#school-name')) || L('Dziennik IDU', 'IDU school diary'))}</div></div><div class="sk-flash"></div><div class="sk-box"></div>
+      <div class="sk-legal">${L('Nieoficjalna nakładka – niezwiązana z IDU ani ze szkołą. Logujesz się na oficjalnej stronie IDU, hasło trafia tylko tam.', 'Unofficial skin – not affiliated with IDU or the school. You log in on the official IDU page; your password only goes there.')}${NATIVE_IDU ? '<br>' + L('Zaznacz „Zapamiętaj mnie”, żeby działały powiadomienia o ocenach i wiadomościach.', 'Tick “Remember me” to get notifications about grades and messages.') : ''}</div>`;
     const fl = wrap.querySelector('.sk-flash');
     flashes.forEach(f => {
       if (txt(f).length > 160) {       // long notices collapse
@@ -1610,7 +1612,7 @@
     const sh = openSheet(root, `<h2>Ustawienia</h2><div class="muted small" style="margin-bottom:12px">Styl: <b style="color:var(--text)">${esc(pr)}</b> · wszystko zmienisz tutaj</div>
       <div class="card" style="padding:2px 14px">${SET_PAGES.map(([k, ic, t, s]) => `<button class="srow" data-p="${k}"><div class="sic">${I(ic)}</div><div class="grow"><div class="b">${t}</div><div class="muted small">${s}</div></div>${I('right', 'sm chev')}</button>`).join('')}</div>
       <button class="btn-s" id="sreset" style="margin-top:18px;width:100%;justify-content:center;color:var(--bad)">Przywróć domyślne</button>
-      <div class="muted small" style="text-align:center;margin-top:14px">IDU Skin ${esc(SKIN_VERSION)}</div>`);
+      <div class="muted small" style="text-align:center;margin-top:14px;line-height:1.5">Nieoficjalna nakładka na IDU · wersja ${esc(SKIN_VERSION)}<br>Twoje dane zostają na tym urządzeniu.</div>`);
     sh.querySelectorAll('[data-p]').forEach(b => b.onclick = () => settingsPage(root, app, b.dataset.p));
     const obs = new MutationObserver(() => { if (!sh.isConnected) { obs.disconnect(); if (setDirty) { setDirty = false; softGo(location.href, false, { quiet: true }); } } });
     obs.observe(sh.parentNode, { childList: true });
