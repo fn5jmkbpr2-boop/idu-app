@@ -1,9 +1,14 @@
 // ==UserScript==
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
-// @version     5.0
+// @namespace   idu-skin
+// @version     5.1
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
+// @grant       none
+// @noframes
+// @updateURL   https://raw.githubusercontent.com/fn5jmkbpr2-boop/idu-app/main/IDU-App/Resources/idu-skin.user.js
+// @downloadURL https://raw.githubusercontent.com/fn5jmkbpr2-boop/idu-app/main/IDU-App/Resources/idu-skin.user.js
 // ==/UserScript==
 (function () {
   'use strict';
@@ -1136,6 +1141,13 @@
     scope.addEventListener('touchmove', e => { if (t && (Math.abs(e.touches[0].clientX - sx) > 9 || Math.abs(e.touches[0].clientY - sy) > 9)) cancel(); }, { passive: true });
     scope.addEventListener('touchend', cancel, { passive: true });
     scope.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
+    scope.addEventListener('contextmenu', e => {
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || a.closest('.nav,.top,.sheet') || /^(#|javascript|mailto|tel)|\/#/.test(a.getAttribute('href'))) return;
+      e.preventDefault(); if (fired) return; cancel();
+      const title = (txt2(a.querySelector('.ttl,.b,.name,.subj')) || txt2(a)).slice(0, 140);
+      itemMenu(root, { href: a.getAttribute('href'), title, sub: txt2(a.querySelector('.strip span,.sub,.when')).slice(0, 80), label: FAV_KIND(a.getAttribute('href'))[1] });
+    });
   }
   const FAV_PAGE_RE = /^\/(internal_messages\/\d+|subject_announcements\/\d+|informations\/\d+|documents\/attachments\/\d+|callendar_events\/\d+)|\/homeworks\/\d+$|\/lesson_instances\/\d+$/;
   function wireFavButton(root, mainEl) {
@@ -1717,12 +1729,27 @@
   .app[data-contrast="high"] .small{font-size:14px}.app[data-contrast="high"]{font-weight:500}
   .app.subjbold :is(.les,.now,.tl-b,.gcard){background:color-mix(in srgb,var(--c) 80%,#000)!important;color:#fff}
   .app.subjbold :is(.les,.now,.gcard) :is(.muted,.small){color:rgba(255,255,255,.82)!important}
+  @media (min-width: 900px){
+    .app .nav,.app .scrim{display:none!important}
+    .app .drawer{transform:none!important;width:270px;box-shadow:none;border-right:.5px solid var(--line);background:color-mix(in srgb,var(--card) 55%,var(--bg))}
+    .app .top{left:270px}.app .top #menu{visibility:hidden}
+    .app .drawer .dl{opacity:1;transform:none;transition:background-color .2s}.app .drawer .dl:hover{background:var(--card2)}
+    .app .drawer .dl[href="/#start"]{margin-top:4px}
+    .app main,.app:is([data-nav="pill"],[data-nav="float"]) main{margin-left:270px;max-width:1000px;padding:calc(76px + env(safe-area-inset-top)) 40px 48px}
+    .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}.tile.wide{grid-column:span 2}
+    .pgrid{grid-template-columns:repeat(5,minmax(0,1fr))}.pgridp{grid-template-columns:repeat(8,minmax(0,1fr))}
+    .counters{max-width:620px}.bigc{max-width:620px}
+    .sheet{left:50%;right:auto;width:560px;margin-left:-145px;bottom:6vh;border-radius:22px;max-height:84vh}
+    .app .sheet-scrim{left:270px}
+    .viewer img{max-width:92%;max-height:92%}
+    .hello h1{font-size:30px}
+  }
   `;
 
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.0';
+  const SKIN_VERSION = '5.1';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2069,6 +2096,8 @@
     }, true);
     CUR.ctx = ctx; CUR.tab = tab;
     wireNav(root);
+    onWin('keydown', e => { const t = (e.composedPath && e.composedPath()[0]) || e.target;
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') && !t.isContentEditable) { e.preventDefault(); goHome('szukaj'); } });
     onWin('resize', () => moveInd(root));
     root.getElementById('settings').onclick = e => { e.preventDefault(); toggle(false); openSettings(root, app); };
     root.getElementById('people').onclick = e => { e.preventDefault(); toggle(false); openPeople(root); };
@@ -2217,13 +2246,16 @@
       <a class="who" href="${esc(ctx.student)}">${meAvatar()}
         <div><b>${esc(ctx.name)}</b><span id="timer"></span></div></a>
       ${item('/#start', 'home', 'Start')}
-      ${item(ctx.student + '/grades', 'grades', 'Oceny')}
+      ${item(ctx.student + '/grades', 'medal', 'Oceny')}
       ${item('/#plan', 'calendar', 'Plan lekcji')}
       ${item(ctx.student + '/homeworks', 'edit', 'Zadania domowe')}
       ${item(ctx.student + '/presences', 'pres', 'Frekwencja')}
       ${item('/internal_messages', 'mail', 'Wiadomości', ctx.unread ? `<span class="cnt">${ctx.unread}</span>` : '')}
       <div class="dsep"></div>
       ${item('/#przedmioty', 'book', 'Przedmioty')}
+      ${item('/#wazne', 'star', 'Ważne')}
+      ${item('/#notatki', 'image', 'Notatki')}
+      ${item('/#szukaj', 'search', 'Szukaj wszędzie')}
       ${item(ctx.student + '/subject_announcements', 'bell', 'Ogłoszenia')}
       ${item('/informations', 'news', 'Aktualności')}
       ${item('/calendar', 'clock', 'Kalendarz')}
