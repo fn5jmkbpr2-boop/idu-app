@@ -1650,6 +1650,23 @@
     ['subjects', 'book', 'Przedmioty', 'ukryte i przypięte'], ['notes', 'image', 'Notatki i kopia', 'zdjęcia, eksport, import'],
     ['notify', 'bell', 'Powiadomienia', 'lekcje, sprawdziany, zadania'], ['widget', 'widget', 'Widget', 'jak dodać'], ['profile', 'user', 'Profil i język', 'zdjęcie, imię, język']];
   const TILES = { next: 'Następna lekcja', grades: 'Nowe oceny', mail: 'Wiadomości', todo: 'Do zrobienia', fav: 'Ważne', wf: 'WF – punkty', exam: 'Najbliższy sprawdzian', notes: 'Notatki' };
+  // once after an update: what's new (most of it is hidden behind gestures, so say where it is)
+  function whatsNew(root) {
+    const seen = store.get('skSeenNews');
+    if (seen === SKIN_VERSION || root.querySelector('.sheet') || (location.hash && location.hash !== '#start')) return;
+    store.set('skSeenNews', SKIN_VERSION);
+    if (!seen && !store.get('skSettings')) return;          // brand-new install: nothing is "new" yet
+    const row = (ic, t, d) => `<div class="row" style="align-items:flex-start;gap:14px;padding:10px 0"><div class="sic" style="flex:none">${I(ic)}</div><div class="grow"><div class="b">${t}</div><div class="muted small">${d}</div></div></div>`;
+    const sh = openSheet(root, `<h2>${L('Co nowego', "What's new")}</h2><div class="muted small" style="margin-bottom:8px">${L('Wersja', 'Version')} ${esc(SKIN_VERSION)}</div>
+      <div class="card" style="padding:2px 14px">
+      ${row('bell', 'Powiadomienia', NATIVE_IDU ? 'Nowe oceny, wiadomości i ogłoszenia – Ustawienia → Powiadomienia → „Sprawdź teraz”. Zaloguj się z „Zapamiętaj mnie”.' : 'Na iPhonie: nowe oceny i wiadomości jako powiadomienia.')}
+      ${row('chart', 'Kalkulator ocen', 'Oceny → rozwiń przedmiot → „Kalkulator”: ile potrzebujesz i „co jeśli”.')}
+      ${row('star', 'Przesuń w lewo', 'Wiadomość przesunięta w lewo trafia do Ważnych.')}
+      ${row('layers', 'Animacje i duże tytuły', 'Płynny pasek, przejścia jak w iOS, arkusze ciągnięte palcem. Ustawienia → Styl → Animacje.')}
+      ${NATIVE_IDU ? row('image', 'Bez internetu', 'Apka pokaże ostatnio zapisane ekrany: Start, Plan, Oceny.') : ''}
+      </div><button class="btn-p" id="wnok" style="width:100%;margin-top:14px">${L('Super', 'Got it')}</button>`);
+    sh.querySelector('#wnok').onclick = () => closeSheet(sh);
+  }
   function openSettings(root, app) {
     const st = loadSettings(), pr = PRESETS[st.preset] ? PRESETS[st.preset].label : (myPresets().find(p => p.id === st.preset) || {}).name || 'Własny';
     const sh = openSheet(root, `<h2>Ustawienia</h2><div class="muted small" style="margin-bottom:12px">Styl: <b style="color:var(--text)">${esc(pr)}</b> · wszystko zmienisz tutaj</div>
@@ -1853,6 +1870,7 @@
   .swact{position:absolute;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 20px;z-index:0;border-radius:12px;font-weight:700;font-size:14px;
     color:#fff;background:color-mix(in srgb,var(--warn) 55%,#000);transition:background-color .2s,color .2s}
   .swact.armed{background:var(--warn);color:#111}
+  .row>.sic{width:34px;height:34px;border-radius:10px;background:var(--card2);color:var(--accent);display:grid;place-items:center}
   .nav .plusb{flex:none;width:58px;height:58px;margin:-24px 4px 0;border-radius:29px;border:4px solid var(--bg);background:var(--accent);color:#fff;
     display:grid;place-items:center;box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 45%,transparent)}
   .nav .plusb .ic{width:26px;height:26px;stroke-width:2.4}
@@ -3373,6 +3391,7 @@
         jset('skSubjList', subjects.map(s => s.name));
         show();
         syncNative();
+        setTimeout(() => whatsNew(root), 900);
         const view = () => (location.hash || '#start').slice(1);
         loadExams(() => { const ex = root.getElementById('exams'); if (ex && view() === 'start') { ex.innerHTML = examsHTML(); animateIn(ex); wire(); } syncNative(); saveSnapshotSoon(); });
         refreshTeachers(() => { if (view() === 'plan') { main.innerHTML = planView(); wire(); } else if (view() === 'start') {
