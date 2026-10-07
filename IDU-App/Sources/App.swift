@@ -22,13 +22,29 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        var handled = false
+        if let item = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem, let path = AppDelegate.shortcutPath(item.type) {
+            WebViewController.startPath = path; handled = true
+        }
         let window = UIWindow(frame: UIScreen.main.bounds)
         window.backgroundColor = bgColor
         window.overrideUserInterfaceStyle = .dark
         window.rootViewController = WebViewController()
         window.makeKeyAndVisible()
         self.window = window
-        return true
+        return !handled
+    }
+
+    // long press on the app icon: Plan / Szukaj / Ważne / Zdjęcie do lekcji
+    static func shortcutPath(_ type: String) -> String? {
+        ["plan": "/#plan", "search": "/#szukaj", "fav": "/#wazne", "photo": "/#dodaj"][type]
+    }
+
+    func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem,
+                     completionHandler: @escaping (Bool) -> Void) {
+        guard let path = AppDelegate.shortcutPath(shortcutItem.type) else { completionHandler(false); return }
+        web?.open(path: path)
+        completionHandler(true)
     }
 
     // idu://plan from the widget
@@ -91,6 +107,7 @@ final class SkinMessageHandler: NSObject, WKScriptMessageHandler {
 }
 
 final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, QLPreviewControllerDataSource {
+    static var startPath: String?          // set when the app is opened from a quick action
     private var webView: WKWebView!
     private var downloadURL: URL?
     private var previewURL: URL?
@@ -151,7 +168,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         if let source = localSkin() {    // inject the skin into every IDU page
             controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         }
-        webView.load(URLRequest(url: homeURL))
+        let start = WebViewController.startPath.flatMap { URL(string: $0, relativeTo: homeURL)?.absoluteURL } ?? homeURL
+        WebViewController.startPath = nil
+        webView.load(URLRequest(url: start))
         updateSkinInBackground()
     }
 
@@ -190,6 +209,31 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
                 }
                 if granted { Reminders.reschedule() }
             }
+        case "remind":
+            // a reminder for something saved in "Ważne"
+            guard let id = dict["id"] as? String, let at = (dict["at"] as? NSNumber)?.doubleValue else { return }
+            let date = Date(timeIntervalSince1970: at)
+            guard date > Date() else { return }
+            let c = UNMutableNotificationContent()
+            c.title = (dict["title"] as? String) ?? "IDU"
+            c.body = (dict["body"] as? String) ?? ""
+            c.sound = .default
+            if let path = dict["path"] as? String { c.userInfo = ["path": path] }
+            let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            let center = UNUserNotificationCenter.current()
+            center.removePendingNotificationRequests(withIdentifiers: [id])
+            center.add(UNNotificationRequest(identifier: id, content: c, trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)), withCompletionHandler: nil)
+        case "unremind":
+            if let id = dict["id"] as? String { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id]) }
+        case "saveFile":
+            // backup of notes: save via the share sheet ("Zapisz w Plikach")
+            guard let name = dict["name"] as? String, let text = dict["text"] as? String else { return }
+            let safe = name.replacingOccurrences(of: "/", with: "-")
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(safe)
+            do { try text.write(to: url, atomically: true, encoding: .utf8) } catch { return }
+            let share = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            share.popoverPresentationController?.sourceView = view
+            present(share, animated: true)
         default:
             break
         }
@@ -405,7 +449,11 @@ enum Reminders {
         center.getNotificationSettings { status in
             let allowed = status.authorizationStatus == .authorized || status.authorizationStatus == .provisional
             guard allowed else { return }
-            center.removeAllPendingNotificationRequests()
+            // keep the reminders set from "Ważne" (ids "fav…"), refresh everything else
+            let sem = DispatchSemaphore(value: 0); var old: [String] = []
+            center.getPendingNotificationRequests { r in old = r.map { $0.identifier }.filter { !$0.hasPrefix("fav") }; sem.signal() }
+            sem.wait()
+            center.removePendingNotificationRequests(withIdentifiers: old)
             let s = Reminders.settings()
             guard s.lessons > 0 || s.exams || s.homework, let plan = IDUShared.loadPlan() else { return }
             let cal = IDUShared.calendar

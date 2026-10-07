@@ -7,19 +7,49 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+
       - name: Install XcodeGen
         run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: |
+          PROJ="$(find . -name project.yml -not -path './.git/*' | head -n 1)"
+          cd "$(dirname "$PROJ")"
+          xcodegen generate
+          echo "PROJ_DIR=$PWD" >> "$GITHUB_ENV"
+
+      - name: Build widget
+        id: widget
+        continue-on-error: true
+        run: |
+          cd "$PROJ_DIR"
+          xcodebuild -project IDU.xcodeproj -target IDUWidget -configuration Release -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
       - name: Build app
         run: |
-          SPEC=$(find . -name project.yml -not -path "./.git/*" | head -1)
-          if [ -z "$SPEC" ]; then echo "project.yml is missing - upload it to the repository"; exit 1; fi
-          cd "$(dirname "$SPEC")"
-          xcodegen generate
+          cd "$PROJ_DIR"
           xcodebuild -project IDU.xcodeproj -target IDU -configuration Release -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
-          mkdir -p "$GITHUB_WORKSPACE/Payload"
-          cp -R build/Release-iphoneos/IDU.app "$GITHUB_WORKSPACE/Payload/"
-          cd "$GITHUB_WORKSPACE" && zip -qr IDU.ipa Payload
+
+      - name: Package .ipa
+        run: |
+          cd "$PROJ_DIR"
+          APP=build/Release-iphoneos/IDU.app
+          WIDGET=build/Release-iphoneos/IDUWidget.appex
+          if [ -d "$WIDGET" ]; then
+            mkdir -p "$APP/PlugIns"
+            cp -R "$WIDGET" "$APP/PlugIns/"
+            codesign --force --sign - --entitlements Widget/IDUWidget.entitlements "$APP/PlugIns/IDUWidget.appex"
+            echo "Widget included"
+          else
+            echo "::warning::The widget did not build - the app is packaged without it (send the 'Build widget' log)"
+          fi
+          codesign --force --sign - --entitlements IDU.entitlements "$APP"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr "$GITHUB_WORKSPACE/IDU.ipa" Payload
+
       - uses: actions/upload-artifact@v4
         with:
           name: IDU-app

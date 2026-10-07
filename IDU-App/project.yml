@@ -16,16 +16,29 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "2.0"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "3.0"
+        CFBundleVersion: "5"
         UIUserInterfaceStyle: Dark
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: plan
+            UIApplicationShortcutItemTitle: Plan lekcji
+            UIApplicationShortcutItemIconType: UIApplicationShortcutIconTypeDate
+          - UIApplicationShortcutItemType: photo
+            UIApplicationShortcutItemTitle: Zdjęcie do lekcji
+            UIApplicationShortcutItemIconType: UIApplicationShortcutIconTypeCapturePhoto
+          - UIApplicationShortcutItemType: search
+            UIApplicationShortcutItemTitle: Szukaj
+            UIApplicationShortcutItemIconType: UIApplicationShortcutIconTypeSearch
+          - UIApplicationShortcutItemType: fav
+            UIApplicationShortcutItemTitle: Ważne
+            UIApplicationShortcutItemIconType: UIApplicationShortcutIconTypeFavorite
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         ITSAppUsesNonExemptEncryption: false
-        NSCameraUsageDescription: Zrób zdjęcie do profilu w aplikacji (zostaje tylko w telefonie).
+        NSCameraUsageDescription: Zrób zdjęcie tablicy do notatek albo do profilu (zostaje tylko w telefonie).
         NSPhotoLibraryUsageDescription: Wybierz zdjęcie profilowe albo plik do wysłania w IDU.
         CFBundleURLTypes:
           - CFBundleURLName: pl.idu.personal.app
@@ -53,8 +66,8 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: IDU
-        CFBundleShortVersionString: "2.0"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "3.0"
+        CFBundleVersion: "5"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
