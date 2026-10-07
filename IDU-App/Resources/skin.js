@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.4
+// @version     5.5
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -979,7 +979,7 @@
   const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, bigTitles: true, theme: 'dark', radius: 'm', density: 'normal',
     subj: 'vivid', labels: false, startTab: 'start', preset: 'obecny', head: 'system', nav: 'pill', cards: 'cards', contrast: 'normal',
     tabs: ['start', 'plan', 'subjects', 'grades', 'mail'], startLayout: 'A', tiles: ['next', 'grades', 'mail', 'todo'], tilesWide: ['next'], subjView: 'page', wfMode: 'max', wfTarget: 95, showTodo: true, nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true,
-    haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18, lang: 'pl' };
+    haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18, wGrades: true, wMail: true, wAnn: false, lang: 'pl' };
   // animations: true / 'full' = everything, 'soft' = gentle fades only, false / 'off' = none (also when the phone asks for less motion)
   const motionLevel = st => st.motion === false || st.motion === 'off' ? 'off' : st.motion === 'soft' ? 'soft' : 'full';
   const REDUCED = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
@@ -1019,7 +1019,8 @@
     return st;
   }
   // settings the iPhone app needs for reminders
-  const notifyPrefs = st => ({ type: 'notify', lessons: +st.nLesson || 0, exams: !!st.nExam, hw: !!st.nHw, hour: +st.nHour || 18, lang: st.lang === 'en' ? 'en' : 'pl' });
+  const notifyPrefs = st => ({ type: 'notify', lessons: +st.nLesson || 0, exams: !!st.nExam, hw: !!st.nHw, hour: +st.nHour || 18, lang: st.lang === 'en' ? 'en' : 'pl',
+    grades: st.wGrades !== false, mail: st.wMail !== false, ann: !!st.wAnn });
 
   function setStartKey(st) {
     const me = store.get('skMe') || '';
@@ -1629,7 +1630,7 @@
       if (['subj', 'nick', 'startLayout', 'tiles', 'tilesWide', 'subjView', 'wfMode', 'wfTarget', 'showNow', 'showTodo', 'showExams', 'showEvents', 'showFeed', 'accent', 'head', 'cards'].includes(k)) needsRedraw = true;
       if (k === 'startTab') setStartKey(cur);
       if (k === 'lang') { native(notifyPrefs(cur)); setTimeout(() => location.reload(), 150); return; }
-      if (/^n[A-Z]/.test(k)) { if ((+cur.nLesson > 0) || cur.nExam || cur.nHw) native({ type: 'askNotify' }); native(notifyPrefs(cur)); }
+      if (/^[nw][A-Z]/.test(k)) { if ((+cur.nLesson > 0) || cur.nExam || cur.nHw || (k[0] === 'w' && v)) native({ type: 'askNotify' }); native(notifyPrefs(cur)); }
     };
     const draw = () => {
       const st = loadSettings(), planNow = store.get('skPlanMode') || 'day', gNow = store.get('skGradeView') || 'subj';
@@ -1695,7 +1696,10 @@
         h = `<h2>Powiadomienia</h2>${LB('Przypomnienie przed lekcją')}${seg('nLesson', [['0', 'Wył.'], ['5', '5 min'], ['10', '10 min'], ['15', '15 min']])}
           <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('nExam', 'Sprawdzian — dzień wcześniej')}${tgl('nHw', 'Termin zadania — dzień wcześniej')}</div>
           ${LB('Godzina przypomnień „dzień wcześniej”')}${seg('nHour', [['16', '16:00'], ['18', '18:00'], ['20', '20:00']])}
-          <div class="note2 ${NATIVE_IDU ? '' : 'warn'}" id="nnote">${NATIVE_IDU ? 'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Przypomnienia z Ważnych ustawiasz, przytrzymując ogłoszenie albo wiadomość.' : 'Powiadomienia działają tylko w aplikacji IDU na iPhonie.'}</div>`;
+          <div class="note2 ${NATIVE_IDU ? '' : 'warn'}" id="nnote">${NATIVE_IDU ? 'Przypomnienia liczą się z Twojego planu i kalendarza, więc działają też przy zamkniętej apce. Przypomnienia z Ważnych ustawiasz, przytrzymując ogłoszenie albo wiadomość.' : 'Powiadomienia działają tylko w aplikacji IDU na iPhonie.'}</div>
+          ${LB('Nowe rzeczy w IDU (sprawdzane w tle)')}<div class="card" style="padding:2px 14px">${tgl('wGrades', 'Nowe oceny')}${tgl('wMail', 'Nowe wiadomości')}${tgl('wAnn', 'Nowe ogłoszenia')}</div>
+          ${NATIVE_IDU ? `<button class="btn-s" id="wcheck" style="width:100%;justify-content:center;margin-top:10px">${I('refresh', 'sm')}<span>Sprawdź teraz</span></button>` : ''}
+          <div class="note2" id="wstat">${NATIVE_IDU ? 'iPhone sam decyduje, kiedy zajrzeć do IDU – zwykle kilka razy dziennie. Działa, jeśli przy logowaniu zaznaczysz „Zapamiętaj mnie”. Apka nigdy nie loguje się sama i nie zna Twojego hasła. Czerwona liczba na ikonie = nieprzeczytane wiadomości.' : 'Działa tylko w aplikacji na iPhonie.'}</div>`;
       } else if (page === 'widget') {
         h = `<h2>Widget</h2><div class="card row" style="align-items:flex-start"><div style="color:var(--accent)">${I('widget', 'fill')}</div><div class="grow small">
           <b>Następna lekcja i sala</b><ol class="steps"><li>Przytrzymaj palec na ekranie głównym → <b>Edytuj</b> → <b>Dodaj widżet</b>.</li><li>Wyszukaj <b>IDU</b> i wybierz rozmiar.</li>
@@ -1718,6 +1722,8 @@
         save(k, /^n[A-Z]/.test(k) ? +b.dataset.v : b.dataset.v); if (k === 'nav') draw();
       });
       body.querySelectorAll('input[data-t]').forEach(i => i.onchange = () => { haptic('light'); save(i.dataset.t, i.checked); });
+      const wc = body.querySelector('#wcheck');
+      if (wc) wc.onclick = () => { haptic('light'); wc.disabled = true; wc.lastChild.textContent = 'Sprawdzam…'; native(notifyPrefs(loadSettings())); native({ type: 'checkNow' }); };
       body.querySelectorAll('.swatches button').forEach(b => b.onclick = () => { body.querySelectorAll('.swatches button').forEach(x => x.classList.toggle('on', x === b)); save('accent', b.dataset.acc); });
       body.querySelectorAll('.themes button').forEach(b => b.onclick = () => { body.querySelectorAll('.themes button').forEach(x => x.classList.toggle('on', x === b)); save('theme', b.dataset.theme); });
       body.querySelectorAll('[data-preset]').forEach(b => b.onclick = e => {
@@ -1771,6 +1777,8 @@
       };
       if (avdel) avdel.onclick = () => { try { localStorage.removeItem('skAvatar'); } catch (e) {} avprev.innerHTML = meAvatar(); avdel.style.display = 'none'; needsRedraw = true; };
     };
+    onNative('watch', r => { const el = body.querySelector('#wstat'), b = body.querySelector('#wcheck');
+      if (b) { b.disabled = false; b.lastChild.textContent = 'Sprawdź teraz'; } if (el && r && r.text) { el.textContent = r.text; haptic('success'); } });
     onNative('notify', ok => { const n = body.querySelector('#nnote'); if (n && ok === false) { n.classList.add('warn'); n.textContent = 'iPhone blokuje powiadomienia dla IDU. Włącz je w Ustawieniach iPhone’a → Powiadomienia → IDU.'; } });
     draw();
     const obs = new MutationObserver(() => { if (!sh.isConnected) { obs.disconnect(); if (needsRedraw) { setDirty = true; if (!root.querySelector('.sheet')) { setDirty = false; softGo(location.href, false, { quiet: true }); } } } });
@@ -1984,7 +1992,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.4';
+  const SKIN_VERSION = '5.5';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2360,6 +2368,7 @@
       if (t) haptic(t.matches('summary') ? 'soft' : 'selection');
     }, true);
     CUR.ctx = ctx; CUR.tab = tab;
+    if (!ctx.bare) native({ type: 'badge', n: ctx.unread || 0 });
     wireNav(root);
     wireDesk(root, app);
     onWin('keydown', e => { const t = (e.composedPath && e.composedPath()[0]) || e.target;

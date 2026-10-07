@@ -22,6 +22,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        Watcher.register()                 // background check for new grades / messages (must be registered at launch)
+        Watcher.schedule()
         var handled = false
         if let item = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem, let path = AppDelegate.shortcutPath(item.type) {
             WebViewController.startPath = path; handled = true
@@ -57,6 +59,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         Reminders.reschedule()            // keeps the next 8 days of reminders filled in
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        Watcher.schedule()
     }
 
     // reminders also show while the app is open
@@ -201,7 +207,20 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
             Reminders.reschedule()
         case "notify":
             Reminders.saveSettings(dict)
+            Watcher.saveSettings(dict)
             Reminders.reschedule()
+        case "checkNow":
+            // "Sprawdź teraz" in the notification settings: check IDU right away and answer with a short status
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] _, _ in
+                Watcher.check(manual: true) { report in
+                    let json = (try? JSONSerialization.data(withJSONObject: ["text": report.text])).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                    DispatchQueue.main.async {
+                        self?.webView.evaluateJavaScript("window.__skNative && window.__skNative('watch', \(json))", completionHandler: nil)
+                    }
+                }
+            }
+        case "badge":
+            if Watcher.wantsMail { Watcher.setBadge((dict["n"] as? NSNumber)?.intValue ?? 0) }
         case "askNotify":
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] granted, _ in
                 DispatchQueue.main.async {
