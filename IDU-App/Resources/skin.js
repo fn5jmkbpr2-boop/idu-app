@@ -1183,7 +1183,7 @@
       <details class="dmenu dme"><summary aria-label="${L('Konto', 'Account')}">${meAvatar()}${I('down', 'xs')}</summary>
         <div class="dpop right">
           <div class="dwho"><b>${esc(ctx.name)}</b><span id="dtimer"></span></div>
-          <a href="${esc(ctx.me || ctx.student)}">${I('user', 'sm')}${L('Mój profil', 'My profile')}</a>${ctx.parent ? `<a href="${esc(ctx.student)}">${I('users', 'sm')}${L('Profil dziecka', 'Child profile')}${ctx.kidName ? ' – ' + esc(ctx.kidName) : ''}</a>` : ''}
+          <a href="${esc(ctx.me || ctx.student)}">${I('user', 'sm')}${L('Mój profil', 'My profile')}</a>${ctx.parent ? `<a href="${esc(ctx.student)}">${I('users', 'sm')}${L('Profil dziecka', 'Child profile')}${ctx.kidName ? ' – ' + esc(ctx.kidName) : ''}</a>` : ''}${kidsSwitch(ctx, '')}
           <a href="#" data-dact="settings">${I('settings', 'sm')}${L('Ustawienia', 'Settings')}</a>
           <a href="#" data-dact="classic">${I('monitor', 'sm')}${L('Klasyczny widok IDU', 'Classic IDU view')}</a>
           <div class="dsep"></div>
@@ -2131,7 +2131,9 @@
     let kid = '';
     if (isParent) {
       const kids = $$('.module .user .name a[href^="/students/"]');
+      if (kids.length) store.set('skKids', JSON.stringify(kids.map(a => ({ h: attr(a, 'href'), n: txt(a) }))));
       if (kids.length && !kids.some(a => attr(a, 'href') === store.get('skKid'))) { store.set('skKid', attr(kids[0], 'href')); store.set('skKidName', txt(kids[0])); }
+      KID_ONLY = kidsCountMulti() ? store.get('skKid') || '' : '';
       kid = store.get('skKid') || (location.pathname.match(/^\/students\/\d+/) || [])[0]
         || (attr($('#content a[href^="/students/"]'), 'href').match(/^\/students\/\d+/) || [])[0]
         || (attr($('#justify_absence_request_student_id'), 'value') ? '/students/' + attr($('#justify_absence_request_student_id'), 'value') : '');
@@ -2420,6 +2422,9 @@
       }
     });
     root.addEventListener('click', e => { if (e.target.closest && e.target.closest('.seg > button, .seg > a')) setTimeout(() => segThumbs(root), 0); }, true);
+    root.addEventListener('click', e => { const k = e.target.closest && e.target.closest('[data-kid]'); if (!k) return;
+      e.preventDefault(); e.stopPropagation(); store.set('skKid', k.dataset.kid); store.set('skKidName', k.dataset.kidn || ''); try { localStorage.removeItem('skKidSubj'); } catch (er) {}
+      haptic('success'); location.href = '/'; }, true);
     const toggle = open => { if (open !== app.classList.contains('open')) haptic('soft'); app.classList.toggle('open', open); };
     // little vibrations for switches, tabs and filters
     root.addEventListener('click', e => {
@@ -2583,11 +2588,14 @@
     saveSnapshotSoon();
   }
 
+  const kidsList = ctx => { if (!ctx.parent) return []; try { const k = JSON.parse(store.get('skKids') || '[]'); return Array.isArray(k) ? k : []; } catch (e) { return []; } };
+  const kidsSwitch = (ctx, cls) => { const k = kidsList(ctx); return k.length > 1 ? k.map(x => `<a class="${cls}" href="#" data-kid="${esc(x.h)}" data-kidn="${esc(x.n)}">${I('users', cls === 'dl' ? '' : 'sm')}<span>${L('Dziecko', 'Child')}: ${esc(x.n)}${x.h === ctx.student ? ' ✓' : ''}</span></a>`).join('') : ''; };
   function drawerHTML(ctx) {
     const item = (href, ic, label, extra = '') => `<a class="dl" href="${esc(href)}">${I(ic)}<span>${label}</span>${extra}</a>`;
     return `
       <a class="who" href="${esc(ctx.me || ctx.student)}">${meAvatar()}
         <div><b>${esc(ctx.name)}</b><span id="timer"></span></div></a>
+      ${kidsSwitch(ctx, 'dl')}
       ${item('/#start', 'home', 'Start')}
       ${item(ctx.student + '/grades', 'medal', 'Oceny')}
       ${item('/#plan', 'calendar', 'Plan lekcji')}
@@ -2638,6 +2646,8 @@
   // Short display for a grade value; long text grades become a comment icon
   const gradeShort = v => (v && v.length <= 6) ? esc(v) : I('chat');
 
+  let KID_ONLY = '';          // parent with several children: show only the chosen child's lessons
+  const kidsCountMulti = () => { try { return (JSON.parse(store.get('skKids') || '[]') || []).length > 1; } catch (e) { return false; } };
   function parseSchedule(table) {
     const days = {};
     if (!table) return days;
@@ -2648,7 +2658,11 @@
       if (!m) return;
       const nr = +m[1], startT = m[2];
       const endT = m[3] || (() => { const x = mins(startT) + 40; return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); })();
-      cells.slice(1).forEach((td, i) => {
+      cells.slice(1).forEach((td0, i) => {
+        const lcs = $$('.lesson-cell', td0);
+        const whose = lc => attr($(':scope > div > a[href^="/students/"]', lc), 'href');
+        const td = KID_ONLY && lcs.length ? lcs.find(lc => !whose(lc) || whose(lc) === KID_ONLY) : td0;
+        if (!td) return;
         const a = $('.subject a', td);
         if (!a) return;
         (days[i + 1] = days[i + 1] || []).push({
