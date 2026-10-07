@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.1
+// @version     5.2
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -1055,6 +1055,7 @@
   function renderNav(root) {
     const nav = root.querySelector('.nav'); if (!nav || !CUR.ctx) return;
     nav.outerHTML = navHTML(CUR.ctx, CUR.tab); wireNav(root);
+    const dn = root.querySelector('.dnav'); if (dn) dn.innerHTML = deskLinksHTML(CUR.ctx, CUR.tab);
   }
   function openQuickAdd(root) {
     const sh = openSheet(root, `<h2>Dodaj</h2><div class="menu">
@@ -1067,6 +1068,76 @@
     sh.querySelector('[data-q="note"]').onclick = () => { closeSheet(sh); goHome('dodaj:text'); };
   }
   function goHome(hash) { if (location.pathname === '/') location.hash = hash; else softGo('/#' + hash, true); }
+
+  /* ---------- computer: menu bar at the top ---------- */
+  const isDesk = () => matchMedia('(min-width: 900px)').matches;
+  function deskTabs(st) {
+    const t = (Array.isArray(st.tabs) ? st.tabs : DEFAULT_TABS).filter(k => TABDEFS[k]);
+    const out = (t.length ? t : DEFAULT_TABS).slice(0, 5);
+    if (!out.includes('fav')) out.push('fav');
+    return out;
+  }
+  function deskLinksHTML(ctx, tab) {
+    const keys = deskTabs(loadSettings());
+    const a = k => { const [ic, label, href] = TABDEFS[k];
+      const badge = k === 'mail' && ctx.unread ? ctx.unread : k === 'grades' && newGrades() && tab !== 'grades' ? newGrades() : 0;
+      return `<a href="${esc(href(ctx))}" data-tab="${k}" class="${k === tab ? 'on' : ''}" title="${label}">${I(ic, 'sm')}<span class="lb">${label}</span>${badge ? `<span class="dbadge">${badge}</span>` : ''}</a>`; };
+    const more = [['notes', '/#notatki', 'edit', 'Notatki i zdjęcia'], ['pres', ctx.student + '/presences', 'pres', 'Frekwencja'], ['hw', ctx.student + '/homeworks', 'clip', 'Zadania domowe'],
+      ['subjects', '/#przedmioty', 'book', 'Przedmioty'], ['plan', '/#plan', 'calendar', 'Plan lekcji'], ['grades', ctx.student + '/grades', 'medal', 'Oceny'],
+      ['ann', ctx.student + '/subject_announcements', 'bell', 'Ogłoszenia'], ['news', '/informations', 'news', 'Aktualności'], ['cal', '/calendar', 'clock', 'Kalendarz'],
+      ['forum', '/forums', 'chat', 'Forum'], ['docs', '/documents/attachments', 'file', 'Dokumenty']].filter(m => !keys.includes(m[0]));
+    const inMore = more.some(m => m[0] === tab);
+    return keys.map(a).join('') + `<details class="dmenu"><summary class="${inMore ? 'on' : ''}">${I('more', 'sm')}<span class="lb">${L('Więcej', 'More')}</span>${I('down', 'xs')}</summary>
+      <div class="dpop">${more.map(m => `<a href="${esc(m[1])}">${I(m[2], 'sm')}${m[3]}</a>`).join('')}
+        <div class="dsep"></div><a href="#" data-dact="people">${I('users', 'sm')}${L('Szukaj osób', 'Find people')}</a></div></details>`;
+  }
+  function deskBarHTML(ctx, tab) {
+    return `<div class="dtop"><div class="dwrap">
+      <a class="dlogo" href="/#start" aria-label="Start" title="Start">IDU</a>
+      <nav class="dnav" aria-label="Menu">${deskLinksHTML(ctx, tab)}</nav>
+      <label class="dsearch" title="${L('Szukaj wszędzie (klawisz /)', 'Search everything (/ key)')}">${I('search', 'sm')}<input id="dsq" type="search" placeholder="${L('Szukaj wszędzie', 'Search everything')}" autocomplete="off" enterkeyhint="search"><kbd>/</kbd></label>
+      <a class="dbtn dsicon" href="/#szukaj" title="${L('Szukaj', 'Search')}" aria-label="${L('Szukaj', 'Search')}">${I('search', 'sm')}</a>
+      <button class="dbtn" data-dact="add" title="${L('Dodaj: notatka, zdjęcie, zadanie, wiadomość', 'Add')}" aria-label="${L('Dodaj', 'Add')}">${I('plus', 'sm')}</button>
+      <details class="dmenu dme"><summary aria-label="${L('Konto', 'Account')}">${meAvatar()}${I('down', 'xs')}</summary>
+        <div class="dpop right">
+          <div class="dwho"><b>${esc(ctx.name)}</b><span id="dtimer"></span></div>
+          <a href="${esc(ctx.me || ctx.student)}">${I('user', 'sm')}${L('Mój profil', 'My profile')}</a>${ctx.parent ? `<a href="${esc(ctx.student)}">${I('users', 'sm')}${L('Profil dziecka', 'Child profile')}${ctx.kidName ? ' – ' + esc(ctx.kidName) : ''}</a>` : ''}
+          <a href="#" data-dact="settings">${I('settings', 'sm')}${L('Ustawienia', 'Settings')}</a>
+          <a href="#" data-dact="classic">${I('monitor', 'sm')}${L('Klasyczny widok IDU', 'Classic IDU view')}</a>
+          <div class="dsep"></div>
+          <a class="danger" href="/users/sign_out">${I('logout', 'sm')}${L('Wyloguj', 'Log out')}</a>
+        </div></details>
+    </div></div>`;
+  }
+  function deskSearch(root, q) {
+    const inp = root.querySelector('main #sq');
+    if (inp && location.pathname === '/') { inp.value = q; inp.dispatchEvent(new Event('input')); return; }
+    window.__skQ = q; goHome('szukaj');
+  }
+  function wireDesk(root, app) {
+    const bar = root.querySelector('.dtop'); if (!bar) return;
+    const closeAll = keep => bar.querySelectorAll('details[open]').forEach(d => { if (d !== keep) d.open = false; });
+    bar.addEventListener('toggle', e => { if (e.target.open) closeAll(e.target); }, true);
+    bar.addEventListener('click', e => {
+      const b = e.target.closest('[data-dact]');
+      if (e.target.closest('.dpop a') || b) closeAll();
+      if (!b) return;
+      e.preventDefault(); const k = b.dataset.dact;
+      if (k === 'settings') openSettings(root, app);
+      else if (k === 'classic') { store.set('skClassic', '1'); location.reload(); }
+      else if (k === 'people') openPeople(root);
+      else if (k === 'add') openQuickAdd(root);
+    });
+    onWin('click', e => { const p = e.composedPath ? e.composedPath() : []; if (!p.some(n => n && n.classList && n.classList.contains('dmenu'))) closeAll(); });
+    onWin('keydown', e => { if (e.key === 'Escape') closeAll(); });
+    const q = root.getElementById('dsq');
+    q.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { q.value = ''; q.blur(); return; }
+      if (e.key !== 'Enter') return;
+      const v = q.value.trim(); e.preventDefault(); if (!v) return;
+      q.value = ''; q.blur(); deskSearch(root, v);
+    });
+  }
 
   /* ---------- Ważne ★ ---------- */
   const FAV_KIND = h => /subject_announcements/.test(h) ? ['ann', 'Ogłoszenie'] : /internal_messages/.test(h) ? ['msg', 'Wiadomość']
@@ -1428,7 +1499,8 @@
   }
   async function wireSearch(root, main) {
     const inp = main.querySelector('#sq'), res = main.querySelector('#sres'); let filter = 'all', notes = [];
-    NOTES.all().then(n => { notes = n; });
+    NOTES.all().then(n => { notes = n; if (inp.value.trim().length > 1) draw(); });
+    if (window.__skQ) { inp.value = window.__skQ; window.__skQ = ''; setTimeout(() => draw(), 0); }
     const draw = () => {
       const q = inp.value.trim(); if (q.length < 2) return;
       const secs = searchSections(q, filter, notes);
@@ -1729,27 +1801,83 @@
   .app[data-contrast="high"] .small{font-size:14px}.app[data-contrast="high"]{font-weight:500}
   .app.subjbold :is(.les,.now,.tl-b,.gcard){background:color-mix(in srgb,var(--c) 80%,#000)!important;color:#fff}
   .app.subjbold :is(.les,.now,.gcard) :is(.muted,.small){color:rgba(255,255,255,.82)!important}
+  /* ---------- computer: menu bar at the top, content in the middle ---------- */
+  .dtop{display:none}
   @media (min-width: 900px){
-    .app .nav,.app .scrim{display:none!important}
-    .app .drawer{transform:none!important;width:270px;box-shadow:none;border-right:.5px solid var(--line);background:color-mix(in srgb,var(--card) 55%,var(--bg))}
-    .app .top{left:270px}.app .top #menu{visibility:hidden}
-    .app .drawer .dl{opacity:1;transform:none;transition:background-color .2s}.app .drawer .dl:hover{background:var(--card2)}
-    .app .drawer .dl[href="/#start"]{margin-top:4px}
-    .app main,.app:is([data-nav="pill"],[data-nav="float"]) main{margin-left:270px;max-width:1000px;padding:calc(76px + env(safe-area-inset-top)) 40px 48px}
+    .app .nav,.app .scrim,.app .drawer,.ptr{display:none!important}
+    .dtop{display:block;position:fixed;top:0;left:0;right:0;z-index:22;height:62px;
+      background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(1.6) blur(20px);-webkit-backdrop-filter:saturate(1.6) blur(20px);border-bottom:.5px solid var(--line)}
+    .dwrap{max-width:1320px;height:100%;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:6px}
+    .dlogo{flex:none;width:36px;height:36px;margin-right:14px;border-radius:11px;display:grid;place-items:center;color:var(--onacc,#fff);
+      background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 78%,#fff),var(--accent));font:800 11.5px/1 -apple-system,system-ui,sans-serif;letter-spacing:.5px;
+      box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 35%,transparent);transition:transform .15s}
+    .dlogo:hover{transform:scale(1.06)}
+    .dnav{flex:1;min-width:0;display:flex;align-items:center;gap:2px}
+    .dnav>a,.dmenu>summary{position:relative;display:flex;align-items:center;gap:7px;height:38px;padding:0 12px;border-radius:11px;list-style:none;cursor:pointer;
+      color:var(--muted);font-size:14.5px;font-weight:600;white-space:nowrap;user-select:none;-webkit-user-select:none;transition:background-color .15s,color .15s}
+    .dmenu>summary::-webkit-details-marker{display:none}
+    .dnav>a:hover,.dmenu>summary:hover,.dmenu[open]>summary{background:var(--card2);color:var(--text)}
+    .dnav>a.on,.dnav .dmenu>summary.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+    .dnav>a:active,.dmenu>summary:active{transform:scale(.97)}
+    .dmenu>summary .ic.xs{opacity:.7;transition:transform .2s}.dmenu[open]>summary .ic.xs{transform:rotate(180deg)}
+    .dbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
+    .dmenu{position:relative}
+    .dpop{position:absolute;top:calc(100% + 10px);left:0;min-width:240px;max-height:calc(100vh - 90px);overflow:auto;padding:6px;z-index:5;
+      background:var(--card);color:var(--text);border:.5px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.3);animation:skDpop .16s ease both}
+    @keyframes skDpop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+    .dpop.right{left:auto;right:0}
+    .dpop a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;font-size:14.5px;font-weight:500;color:var(--text)}
+    .dpop a:hover{background:var(--card2)}.dpop a .ic{color:var(--muted)}
+    .dpop a.danger,.dpop a.danger .ic{color:var(--bad)}
+    .dpop .dsep{height:.5px;background:var(--line);margin:6px 4px}
+    .dwho{padding:10px 12px 8px}.dwho b{display:block;font-size:15px}.dwho span{font-size:12.5px;color:var(--muted)}
+    .dsearch{flex:none;display:flex;align-items:center;gap:8px;width:220px;height:38px;margin-left:10px;padding:0 8px 0 12px;border-radius:11px;cursor:text;
+      background:var(--card2);color:var(--muted);transition:width .2s ease,box-shadow .2s}
+    .dsearch:focus-within{width:300px;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 60%,transparent)}
+    .dsearch input{flex:1;min-width:0;border:0;background:none;outline:0;color:var(--text);font:inherit;font-size:14.5px;-webkit-appearance:none;appearance:none}
+    .dsearch input::-webkit-search-cancel-button{display:none}
+    .dsearch kbd{font:600 11px/1 ui-monospace,SFMono-Regular,monospace;padding:3px 6px;border-radius:6px;border:.5px solid var(--line);color:var(--muted)}
+    .dsearch:focus-within kbd{display:none}
+    .dbtn{flex:none;width:38px;height:38px;border-radius:11px;border:0;background:none;color:var(--text);display:grid;place-items:center;cursor:pointer;transition:background-color .15s}
+    .dbtn:hover{background:var(--card2)}
+    .dsicon{display:none}
+    .dme{margin-left:4px}
+    .dme>summary{height:42px;padding:0 6px 0 3px;gap:4px;border-radius:21px}
+    .dme .pav{width:34px;height:34px}
+    /* page title under the bar (scrolls with the page) */
+    .app .top{position:absolute;top:62px;min-height:0;padding:28px max(24px,calc((100% - 1180px) / 2 + 24px)) 0;z-index:5;
+      background:none;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;pointer-events:none}
+    .app .top>*{pointer-events:auto}
+    .app .top #menu{display:none}
+    .app .top .title{font-size:28px;font-weight:800;letter-spacing:-.4px}
+    .app .top #back{width:38px;height:38px;margin-right:6px;background:var(--card2)}
+    .app .top #favbtn{background:var(--card2)}
+    .app[data-tab="start"] .top{display:none}
+    .app main,.app:is([data-nav="pill"],[data-nav="float"]) main{max-width:1180px;margin:0 auto;padding:142px 24px 64px}
+    .app[data-tab="start"] main{padding-top:100px}
+    .hello{margin-bottom:6px}.hello h1{font-size:32px}.hello .iconbtn{display:none}
+    .dcols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:14px}
+    .dcol>:first-child{margin-top:0}.dcol>.sec:first-child{margin-top:4px}
+    .dcol .counters{grid-template-columns:repeat(3,minmax(0,1fr))}
     .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}.tile.wide{grid-column:span 2}
-    .pgrid{grid-template-columns:repeat(5,minmax(0,1fr))}.pgridp{grid-template-columns:repeat(8,minmax(0,1fr))}
-    .counters{max-width:620px}.bigc{max-width:620px}
-    .sheet{left:50%;right:auto;width:560px;margin-left:-145px;bottom:6vh;border-radius:22px;max-height:84vh}
-    .app .sheet-scrim{left:270px}
+    .pgrid{grid-template-columns:repeat(6,minmax(0,1fr))}.pgridp{grid-template-columns:repeat(8,minmax(0,1fr))}
+    :is(#subjlist,#glist:has(>details),#plist:has(>details)){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+    :is(#subjlist,#glist,#plist)>details{margin:0!important}
+    .sheet{left:50%;right:auto;bottom:auto;top:50%;width:580px;transform:translate(-50%,-50%);border-radius:22px;max-height:86vh;animation:skDlg .2s ease both}
+    .sheet .grab{display:none}
+    @keyframes skDlg{from{opacity:0;transform:translate(-50%,-47%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%)}}
     .viewer img{max-width:92%;max-height:92%}
-    .hello h1{font-size:30px}
+    a.tap:hover,.card.tap:hover{filter:brightness(1.06)}
+    ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--card2);border-radius:5px;border:2px solid var(--bg)}
   }
+  @media (min-width: 900px) and (max-width: 1379px){.dsearch{display:none}.dsicon{display:grid}}
+  @media (min-width: 900px) and (max-width: 1099px){.dnav>a .lb,.dnav .dmenu>summary .lb{display:none}.dnav>a,.dmenu>summary{padding:0 11px}}
   `;
 
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.1';
+  const SKIN_VERSION = '5.2';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -1832,17 +1960,26 @@
       return;
     }
 
+    // parent accounts: the profile link is /parents/N, but grades, presences … live under the child's /students/N
+    const accHref = attr(accLink, 'href'), isParent = /^\/parents\/\d+/.test(accHref);
+    let kid = '';
+    if (isParent) {
+      const kids = $$('.module .user .name a[href^="/students/"]');
+      if (kids.length && !kids.some(a => attr(a, 'href') === store.get('skKid'))) { store.set('skKid', attr(kids[0], 'href')); store.set('skKidName', txt(kids[0])); }
+      kid = store.get('skKid') || (location.pathname.match(/^\/students\/\d+/) || [])[0] || '';
+    }
     const ctx = bare ? {
-      student: store.get('skMe') || '/', name: store.get('skMeName') || '', unread: 0, timer: null, bare: true,
-      path: location.pathname.replace(/\/+$/, '') || '/'
+      student: store.get('skMe') || '/', me: store.get('skMeProfile') || store.get('skMe') || '/', name: store.get('skMeName') || '', unread: 0, timer: null, bare: true,
+      parent: store.get('skParent') === '1', path: location.pathname.replace(/\/+$/, '') || '/'
     } : {
-      student: attr(accLink, 'href'),
+      student: isParent ? kid || accHref : accHref,
+      me: accHref, parent: isParent, kidName: isParent ? store.get('skKidName') || '' : '',
       name: txt($('#login strong')),
       unread: parseInt(txt($('#messages strong')), 10) || 0,
       timer: $('.js-counter'),
       path: location.pathname.replace(/\/+$/, '') || '/'
     };
-    if (!bare) { store.set('skMe', ctx.student); store.set('skMeName', ctx.name); }
+    if (!bare) { store.set('skMe', ctx.student); store.set('skMeProfile', ctx.me); store.set('skMeName', ctx.name); store.set('skParent', isParent ? '1' : '0'); }
 
     if (CLASSIC) { mountClassicSwitch(); return; }
 
@@ -2072,7 +2209,8 @@
     watchTranslate(root);
 
     root.innerHTML = `${appStyles(root)}
-      <div class="app" id="app">
+      <div class="app" id="app" data-tab="${esc(tab)}">
+        ${deskBarHTML(ctx, tab)}
         <header class="top">
           ${isTop ? `<button class="btn" id="menu" aria-label="Menu">${I('menu')}</button>`
                   : `<button class="btn" id="back" aria-label="Wstecz">${I('back')}</button>`}
@@ -2096,8 +2234,11 @@
     }, true);
     CUR.ctx = ctx; CUR.tab = tab;
     wireNav(root);
+    wireDesk(root, app);
     onWin('keydown', e => { const t = (e.composedPath && e.composedPath()[0]) || e.target;
-      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') && !t.isContentEditable) { e.preventDefault(); goHome('szukaj'); } });
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') && !t.isContentEditable) {
+        e.preventDefault(); const dq = root.getElementById('dsq');
+        if (dq && dq.getClientRects().length) dq.focus(); else goHome('szukaj'); } });
     onWin('resize', () => moveInd(root));
     root.getElementById('settings').onclick = e => { e.preventDefault(); toggle(false); openSettings(root, app); };
     root.getElementById('people').onclick = e => { e.preventDefault(); toggle(false); openPeople(root); };
@@ -2108,8 +2249,8 @@
     if (back) back.onclick = () => { if (history.length > 1) history.back(); else softGo('/', true); };
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
-      const t = root.getElementById('timer');
-      const upd = () => { t.textContent = L('Wylogowanie za ', 'Logout in ') + txt(ctx.timer); };
+      const t = root.getElementById('timer'), dt = root.getElementById('dtimer');
+      const upd = () => { t.textContent = L('Wylogowanie za ', 'Logout in ') + txt(ctx.timer); if (dt) dt.textContent = t.textContent; };
       upd();
       const mo = new MutationObserver(upd); mo.observe(ctx.timer, { childList: true, characterData: true, subtree: true });
       cleanups.push(() => mo.disconnect());
@@ -2229,7 +2370,8 @@
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
     page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; }, setTab: k => {
-      CUR.tab = k; root.querySelectorAll('.nav a').forEach(a => a.classList.toggle('on', a.dataset.tab === k)); moveInd(root);
+      CUR.tab = k; root.querySelectorAll('.nav a, .dnav>a').forEach(a => a.classList.toggle('on', a.dataset.tab === k)); moveInd(root);
+      app.dataset.tab = k; const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
     }, animate: () => { if (!skipAnim) animateIn(mainEl); }, ctx });
     wireLongPress(root, mainEl);
     wireFavButton(root, mainEl);
@@ -2243,7 +2385,7 @@
   function drawerHTML(ctx) {
     const item = (href, ic, label, extra = '') => `<a class="dl" href="${esc(href)}">${I(ic)}<span>${label}</span>${extra}</a>`;
     return `
-      <a class="who" href="${esc(ctx.student)}">${meAvatar()}
+      <a class="who" href="${esc(ctx.me || ctx.student)}">${meAvatar()}
         <div><b>${esc(ctx.name)}</b><span id="timer"></span></div></a>
       ${item('/#start', 'home', 'Start')}
       ${item(ctx.student + '/grades', 'medal', 'Oceny')}
@@ -2314,7 +2456,8 @@
           roomHref: attr($('.location > a[href^="/rooms"]', td), 'href'),
           teacher: $$('.lesson-cell > a[href^="/teachers"], .teacher a', td).map(txt).join(', ') || attr($('.subject', td), 'title').replace(/^prowadzący:\s*/i, ''),
           klass: txt($('.klass', td)).replace(/^Klasa:\s*/i, '').replace(/\s*\([^()]*\(\d+\)\)\s*$/, ''),
-          note: $$('.lesson-cell > div', td).map(txt).filter(Boolean).join(' · '),
+          // parent view adds a "<div><a href=/students/N>Name</a></div>" to every lesson – that's not a note
+          note: $$('.lesson-cell > div', td).filter(x => !(x.children.length === 1 && x.firstElementChild.matches('a[href^="/students/"]') && txt(x) === txt(x.firstElementChild))).map(txt).filter(Boolean).join(' · '),
           links: $$('.location a', td).filter(x => $('img', x) && attr(x, 'href')).map(x => ({ t: attr($('img', x), 'alt').replace(/^link do\s*/i, ''), h: attr(x, 'href') }))
         });
       });
@@ -2347,7 +2490,23 @@
         subjById[s.href.split('/')[2]] = s.name;
       });
     }
-    const klass = subjMod ? $('a[href^="/klasses/"]', subjMod) : null;
+    const klass = subjMod ? $('a[href^="/klasses/"]', subjMod) : ctx.parent ? $('.module .user .class a[href^="/klasses/"]') : null;
+    const klassName = txt(klass).replace(/^\(|\)$/g, '');
+    // parent accounts have no "Twoja klasa i przedmioty" box → take the subjects from the child's profile (cached)
+    let reShow = null;
+    if (!subjMod && ctx.parent && /^\/students\/\d+$/.test(ctx.student)) {
+      const use = list => list.forEach(s => { const id = s.href.split('/')[2]; if (subjById[id]) return; subjects.push({ name: s.name, href: s.href, links: [] }); subjById[id] = s.name; });
+      const cached = jget('skKidSubj', null);
+      if (cached && cached.k === ctx.student && Array.isArray(cached.list)) use(cached.list);
+      if (!cached || cached.k !== ctx.student || Date.now() - cached.t > 864e5) fetch(ctx.student, { credentials: 'same-origin' }).then(r => r.text()).then(h => {
+        const d = new DOMParser().parseFromString(h, 'text/html');
+        const m = $$('.module', d).find(x => /^Przedmioty/.test(txt($('h3', x))));
+        if (!m) return;
+        const list = $$('li > b > a[href^="/subjects/"]', m).map(a => ({ name: attr(a, 'title') || txt(a), href: attr(a, 'href') }));
+        jset('skKidSubj', { k: ctx.student, t: Date.now(), list });
+        const was = subjects.length; use(list); if (!was && subjects.length && reShow) reShow();
+      }).catch(() => {});
+    }
     const klassForum = subjMod ? $('a[href^="/forums"]', subjMod) : null;
     let teachers = {}; try { teachers = JSON.parse(store.get('skTeachers') || '{}'); } catch (e) {}
     const teacherFor = l => { const t = l.teacher || teachers[l.sid] || ''; return t.length > 38 ? t.split(',')[0] + ' i in.' : t; };
@@ -2612,18 +2771,31 @@
       const SS = loadSettings(), lay = SS.startLayout || 'A';
       const dateS = new Date().toLocaleDateString(EN ? 'en-GB' : 'pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
       const head = `<div class="hello"><div class="grow"><h1>${esc(hello)}, ${esc(SS.nick || firstName)}</h1>
-          <p class="lead">${esc(dateS)}${klass ? ' · ' + esc(txt(klass)) : ''}</p></div>
+          <p class="lead">${esc(dateS)}${ctx.parent && ctx.kidName ? ' · ' + esc(ctx.kidName) : ''}${klassName ? ' · ' + esc(klassName) : ''}</p></div>
           <a class="iconbtn" href="#szukaj" aria-label="Szukaj">${I('search', 'sm')}</a><a class="iconbtn" href="#wazne" aria-label="Ważne" style="color:var(--warn)">${I('star', 'sm')}</a>
-          <a class="me tap" href="${esc(ctx.student)}" aria-label="Mój profil">${meAvatar()}</a></div>`;
+          <a class="me tap" href="${esc(ctx.me || ctx.student)}" aria-label="Mój profil">${meAvatar()}</a></div>`;
       const ni = nextInfo();
+      const cols = (l, r) => l && r ? `<div class="dcols"><div class="dcol">${l}</div><div class="dcol">${r}</div></div>` : l + r;
+      const desk = isDesk();
+      if (lay === 'B' && desk) {
+        return head + cols(feedBlock(), (ni ? `<a class="card strip1 tap" href="#plan" style="margin-top:0"><span class="sdot" style="background:${subjColor(ni.l.raw)}"></span><span class="grow clip"><b>${esc(ni.when)}</b> · ${esc(ni.l.name)}</span>${ni.l.room ? `<b>s. ${esc(shortRoom(ni.l.room))}</b>` : ''}</a>` : '')
+          + todoBlock());
+      }
       if (lay === 'B') {
         const items = todoItems();
-        return head + (ni ? `<a class="card strip1 tap" href="#plan"><span class="sdot" style="background:${subjColor(ni.l.raw)}"></span><span class="grow clip"><b>${esc(ni.when)}</b> · ${esc(ni.l.name)}</span>${ni.l.room ? `<b>s. ${esc(shortRoom(ni.l.room))}</b>` : ''}</a>` : '')
+        return head + (ni ?`<a class="card strip1 tap" href="#plan"><span class="sdot" style="background:${subjColor(ni.l.raw)}"></span><span class="grow clip"><b>${esc(ni.when)}</b> · ${esc(ni.l.name)}</span>${ni.l.room ? `<b>s. ${esc(shortRoom(ni.l.room))}</b>` : ''}</a>` : '')
           + feedBlock() + `<button class="card strip1 tap" data-act="todosheet" style="width:100%;border:0;color:var(--text);margin-top:12px"><b class="grow" style="text-align:left">${L('Do zrobienia', 'To do')}</b>${items.length ? `<span class="pill ${items.some(x => x.bad) ? 'bad' : ''}">${items.length}</span>` : ''}${I('right', 'sm chev')}</button>`;
       }
       if (lay === 'E') {
         const items = todoItems(), dl = items.find(x => x.bad);
-        return head + (ni ? `<a class="card bigc tap" href="#plan" style="--c:${subjColor(ni.l.raw)}"><div class="lbl" style="--c:var(--muted)"><span class="sdot" style="display:inline-block;background:${subjColor(ni.l.raw)};margin-right:6px"></span>${esc(ni.when)}</div>
+        const counters = `<div class="counters"><a href="${esc(ctx.student)}/grades"><b>${newGrades()}</b><span class="muted small">${L('nowe oceny', 'new grades')}</span></a>
+            <a href="/internal_messages"><b style="color:var(--accent)">${ctx.unread || 0}</b><span class="muted small">${L('wiadomości', 'messages')}</span></a>
+            <a href="#" data-act="todosheet"><b style="${dl ? 'color:var(--bad)' : ''}">${items.length}</b><span class="muted small">${L('do zrobienia', 'to do')}</span></a></div>`;
+        if (desk) return head + cols(ni ? `<a class="card bigc tap" href="#plan" style="--c:${subjColor(ni.l.raw)}"><div class="lbl" style="--c:var(--muted)"><span class="sdot" style="display:inline-block;background:${subjColor(ni.l.raw)};margin-right:6px"></span>${esc(ni.when)}</div>
+            <div class="bign">${esc(ni.l.name)}</div><div class="muted">${esc(ni.l.start)} – ${esc(ni.l.end)}</div>
+            ${ni.l.room ? `<div class="bigroom"><span class="muted small">${L('sala', 'room')}</span><b>${esc(shortRoom(ni.l.room))}</b></div>` : ''}</a>` : `<div class="card empty">${I('sun', 'big')}<div>Brak lekcji</div></div>`,
+          counters.replace('class="counters"', 'class="counters" style="margin-top:0"') + todoBlock());
+        return head + (ni ?`<a class="card bigc tap" href="#plan" style="--c:${subjColor(ni.l.raw)}"><div class="lbl" style="--c:var(--muted)"><span class="sdot" style="display:inline-block;background:${subjColor(ni.l.raw)};margin-right:6px"></span>${esc(ni.when)}</div>
             <div class="bign">${esc(ni.l.name)}</div><div class="muted">${esc(ni.l.start)} – ${esc(ni.l.end)}</div>
             ${ni.l.room ? `<div class="bigroom"><span class="muted small">${L('sala', 'room')}</span><b>${esc(shortRoom(ni.l.room))}</b></div>` : ''}</a>` : `<div class="empty">${I('sun', 'big')}<div>Brak lekcji</div></div>`)
           + `<div class="counters"><a href="${esc(ctx.student)}/grades"><b>${newGrades()}</b><span class="muted small">${L('nowe oceny', 'new grades')}</span></a>
@@ -2635,6 +2807,14 @@
         const wide = SS.tilesWide || [];
         return head + `<div class="tiles">${(SS.tiles || DEFAULTS.tiles).map(k => tileHTML(k, wide.includes(k))).join('')}</div>`
           + (SS.showFeed ? feedBlock() : '');
+      }
+      if (desk) {
+        const evs = SS.showEvents && events.length ? `<div class="sec"><h2>Nadchodzące</h2><a href="/calendar">Kalendarz</a></div>
+          <div class="card" style="padding:2px 14px">${events.map(e => `<a class="row tap" href="${esc(e.href)}">
+            <div class="datebox"><b>${e.date ? e.date.getDate() : '?'}</b><span>${e.date ? MONTH_SHORT[e.date.getMonth()] : ''}</span></div>
+            <div class="grow"><div class="b clip">${esc(e.title)}</div><div class="muted small">${e.date ? esc(DAY_FULL[e.date.getDay()]) + (e.date.getHours() ? ', ' + hhmm(e.date) : '') : esc(e.dateS)}</div></div></a>`).join('')}</div>` : '';
+        return head + cols((SS.showNow ? nowNextCard() : '') + (SS.showFeed ? feedBlock() : ''),
+          (SS.showTodo !== false ? todoBlock() : '') + (SS.showExams ? `<div id="exams">${examsHTML()}</div>` : '') + evs);
       }
       return head
         + (SS.showNow ? nowNextCard() : '')
@@ -2818,7 +2998,7 @@
       const when = x => !x ? '' : (x.i === 0 ? TODAY : x.i === 1 ? TOMORROW : DAY_SHORT[x.wd]) + ' ' + x.l.start + (x.l.room ? ' · s. ' + shortRoom(x.l.room) : '');
       return `<div class="search">${I('search', 'sm')}<input id="filter" placeholder="Szukaj przedmiotu" autocomplete="off"></div>
         ${klass ? `<div class="chips" style="margin:0 0 14px">
-          <a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}${L('Klasa', 'Class')} ${esc(txt(klass))}</a>
+          <a class="chip" href="${esc(attr(klass, 'href'))}">${I('users')}${L('Klasa', 'Class')} ${esc(klassName)}</a>
           ${klassForum ? `<a class="chip" href="${esc(attr(klassForum, 'href'))}">${I('chat')}Forum klasowe</a>` : ''}<a class="chip" href="#notatki">${I('image')}Notatki</a></div>` : ''}
         <div id="subjlist">${list.map(s => { const k = subjKey(s.name), nx = nextFor(s.name); return `<details class="card" data-n="${esc(s.name.toLowerCase())}">
           <summary class="row"><div class="av" style="background:${subjColor(s.name)}">${esc(prettySubj(s.name).charAt(0))}</div>
@@ -2964,6 +3144,9 @@
           };
         }
         onWin('hashchange', show);
+        reShow = () => { const v = (location.hash || '#start').slice(1); if (v === 'start' || v === 'przedmioty') show(); };
+        let wasDesk = isDesk();
+        onWin('resize', () => { const d = isDesk(); if (d !== wasDesk) { wasDesk = d; redrawStart(); } });
         jset('skSubjList', subjects.map(s => s.name));
         show();
         syncNative();
