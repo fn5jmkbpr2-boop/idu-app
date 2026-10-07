@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.3
+// @version     5.4
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -336,6 +336,8 @@
   .seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;margin:4px 0 14px}
   .seg a,.seg button{flex:1;text-align:center;padding:8px 0;border-radius:10px;font-weight:600;font-size:14px;color:var(--muted);border:0;background:none}
   .seg .on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+  .seg{position:relative}.seg>.sthumb{position:absolute;left:0;top:3px;bottom:3px;border-radius:10px;pointer-events:none}
+  .seg.thumbed>a,.seg.thumbed>button{position:relative;z-index:1}.seg.thumbed .on{background:transparent!important;box-shadow:none!important}
   .days{display:flex;gap:6px;margin-bottom:12px}
   .days button{flex:1;border:0;background:var(--card);border-radius:12px;padding:8px 0;font-weight:700;font-size:14px;box-shadow:var(--shadow)}
   .days button small{display:block;font-weight:500;color:var(--muted);font-size:11px}
@@ -434,13 +436,22 @@
   .alert .ic{color:var(--warn)}
 
   /* ---- motion ---- */
-  @keyframes skIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+  @keyframes skIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
   @keyframes skFade{from{opacity:0}to{opacity:1}}
   @keyframes skGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes skPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
-  .anim{animation:skIn .45s cubic-bezier(.2,.85,.25,1) both}
+  .anim{animation:skIn .42s cubic-bezier(.2,.85,.25,1) both}
   main{transition:opacity .14s ease,transform .14s ease}
   .app.leaving main{opacity:0;transform:translateY(-6px)}
+  .app.leaving.go-fwd main{transform:translateX(-18px)}.app.leaving.go-back main{transform:translateX(18px)}
+  @keyframes skPushIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+  @keyframes skPopIn{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+  main.pushIn,.lt.pushIn{animation:skPushIn .38s cubic-bezier(.2,.9,.25,1) both}main.popIn,.lt.popIn{animation:skPopIn .38s cubic-bezier(.2,.9,.25,1) both}
+  .app.softmotion .anim{animation:skFade .28s ease both}.app.softmotion main.pushIn,.app.softmotion main.popIn{animation:skFade .25s ease both}
+  .app.softmotion .nav a.on .ic,.app.softmotion .fab,.app.softmotion .badge,.app.softmotion .les.cur{animation:none}
+  .lp-press{transform:scale(.965)!important;transition:transform .35s cubic-bezier(.3,.7,.3,1)!important}
+  .lp-lift{animation:skLift .45s cubic-bezier(.2,.85,.25,1)}
+  @keyframes skLift{0%{transform:scale(.965)}45%{transform:scale(1.025)}100%{transform:none}}
   .top .title{animation:skFade .3s ease both}
   .card,.box,.gcard,.chip,.btn-p,.btn-s,.days button,.seg button,.seg a,.nav a,.dl,.les,.msg,.fab,.room{
     transition:transform .18s cubic-bezier(.2,.8,.2,1),background-color .2s,opacity .2s,box-shadow .2s}
@@ -814,16 +825,21 @@
   const PERSON_AV = `<div class="pav">${PERSON_SVG}</div>`;
 
   const ANIM_SEL = '.fi,.card,.gcard,details,.les,.msg,.ev,.hero,.alert,.sec,h1,.lead,.seg,.days,.grid,.search,.chips,.upd,.box,.tday,.empty,.reply,.brk,.dayh';
-  function animateIn(scope) {
+  const segKey = seg => seg.dataset.k || Array.from(seg.children).filter(b => !b.classList.contains('sthumb')).map(b => b.textContent.trim()).join('|');
+  function animateIn(scope, noStagger) {
     if (!scope) return;
+    const knownSegs = new Set(Object.keys(SEG_LAST));
+    segThumbs(scope);
+    if (MOTION === 'off') return;
     let i = 0;
     const vh = window.innerHeight || 800;
-    scope.querySelectorAll(ANIM_SEL).forEach(el => {
+    if (!noStagger) scope.querySelectorAll(ANIM_SEL).forEach(el => {
       const parent = el.parentElement && el.parentElement.closest(ANIM_SEL);
       if (parent && scope.contains(parent)) return;            // only animate outermost blocks
+      if (el.classList.contains('seg') && knownSegs.has(segKey(el))) return;                     // the switch itself stays put
       if (el.classList.contains('anim')) { el.classList.remove('anim'); void el.offsetWidth; }   // re-render of the same node
-      if (i >= 18 || (i > 4 && el.getBoundingClientRect().top > vh * 1.15)) return;              // below the screen: no need
-      el.style.animationDelay = Math.min(i++ * 35, 420) + 'ms';
+      if (i >= 14 || (i > 4 && el.getBoundingClientRect().top > vh * 1.1)) return;               // below the screen: no need
+      el.style.animationDelay = Math.min(i++ * 28, 300) + 'ms';
       el.classList.add('anim');
     });
     scope.querySelectorAll('.ring').forEach(r => {           // count the attendance ring up
@@ -832,6 +848,47 @@
         r.style.setProperty('--p', (target * e).toFixed(2)); if (k < 1) requestAnimationFrame(step); };
       r.style.setProperty('--p', '0'); requestAnimationFrame(step);
     });
+  }
+
+  // iOS-style segmented controls: a thumb slides to the chosen option (remembers where it was, even after a re-render)
+  const SEG_LAST = {};
+  function segThumbs(scope) {
+    if (!scope || !scope.querySelectorAll) return;
+    scope.querySelectorAll('.seg').forEach(seg => {
+      const on = seg.querySelector(':scope > .on');
+      let th = seg.querySelector(':scope > .sthumb');
+      if (!on || !seg.offsetWidth) { if (th) th.style.opacity = '0'; return; }
+      if (!th) {
+        const cs = getComputedStyle(on);
+        th = document.createElement('i'); th.className = 'sthumb';
+        th.style.background = cs.backgroundColor; th.style.boxShadow = cs.boxShadow; th.style.borderRadius = cs.borderRadius;
+        seg.prepend(th); seg.classList.add('thumbed');
+      }
+      const key = segKey(seg);
+      const x = on.offsetLeft, w = on.offsetWidth, prev = SEG_LAST[key];
+      SEG_LAST[key] = { x, w, sw: seg.offsetWidth };
+      th.style.opacity = ''; th.style.width = w + 'px'; th.style.transform = `translateX(${x}px)`;
+      if (prev && prev.sw === seg.offsetWidth && prev.x !== x && MOTION === 'full' && th.animate)
+        th.animate([{ transform: `translateX(${prev.x}px)`, width: prev.w + 'px' }, { transform: `translateX(${x}px)`, width: w + 'px' }],
+          { duration: 320, easing: 'cubic-bezier(.3,.8,.25,1)' });
+    });
+  }
+  // open/close <details> smoothly instead of jumping
+  function toggleDetails(d) {
+    if (d._anim) { d._anim.cancel(); d._anim = null; }
+    const sum = d.querySelector(':scope > summary'); if (!sum) { d.open = !d.open; return; }
+    const startH = d.getBoundingClientRect().height, opening = !d.open;
+    let endH;
+    if (opening) { d.open = true; endH = d.getBoundingClientRect().height; }
+    else { const cs = getComputedStyle(d), ss = getComputedStyle(sum);
+      endH = sum.getBoundingClientRect().height + ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'].reduce((n, k) => n + (parseFloat(cs[k]) || 0), 0)
+        + (parseFloat(ss.marginTop) || 0) + (parseFloat(ss.marginBottom) || 0); }
+    if (!d.animate || Math.abs(endH - startH) < 2) { if (!opening) d.open = false; return; }
+    d.style.overflow = 'hidden';
+    const a = d.animate({ height: [startH + 'px', endH + 'px'] }, { duration: opening ? 320 : 250, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' });
+    d._anim = a;
+    a.onfinish = () => { d._anim = null; if (!opening) d.open = false; d.style.overflow = ''; a.cancel(); };
+    a.oncancel = () => { d.style.overflow = ''; };
   }
 
   // Pages I haven't redesigned: dark colours, tables -> cards, no photos
@@ -919,10 +976,14 @@
     graphite: { bg: '#18181b', card: '#232327', card2: '#2e2e33', line: '#36363c', label: 'Grafit' },
     plum: { bg: '#130f1a', card: '#1e1828', card2: '#2a2236', line: '#33293f', label: 'Śliwkowy' }
   };
-  const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, theme: 'dark', radius: 'm', density: 'normal',
+  const DEFAULTS = { size: 'm', font: 'system', accent: 'blue', motion: true, bigTitles: true, theme: 'dark', radius: 'm', density: 'normal',
     subj: 'vivid', labels: false, startTab: 'start', preset: 'obecny', head: 'system', nav: 'pill', cards: 'cards', contrast: 'normal',
     tabs: ['start', 'plan', 'subjects', 'grades', 'mail'], startLayout: 'A', tiles: ['next', 'grades', 'mail', 'todo'], tilesWide: ['next'], subjView: 'page', wfMode: 'max', wfTarget: 95, showTodo: true, nick: '', showNow: true, showDue: true, showExams: true, showEvents: true, showFeed: true, glass: true,
     haptics: true, nLesson: 0, nExam: false, nHw: false, nHour: 18, lang: 'pl' };
+  // animations: true / 'full' = everything, 'soft' = gentle fades only, false / 'off' = none (also when the phone asks for less motion)
+  const motionLevel = st => st.motion === false || st.motion === 'off' ? 'off' : st.motion === 'soft' ? 'soft' : 'full';
+  const REDUCED = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  let MOTION = 'full';
   function loadSettings() {
     let o = {}; try { o = JSON.parse(store.get('skSettings') || '{}'); } catch (e) {}
     return Object.assign({}, DEFAULTS, o);
@@ -931,14 +992,15 @@
     const st = loadSettings();
     const acc = ACCENTS[st.accent] || ACCENTS.blue;
     const th = THEMES[st.theme] || THEMES.dark;
-    SUBJ_MODE = st.subj; SUBJ_MONO = acc; HAPTICS = st.haptics !== false;
+    SUBJ_MODE = st.subj; SUBJ_MONO = acc; HAPTICS = st.haptics !== false; MOTION = REDUCED ? 'off' : motionLevel(st);
     if (app) {
       app.style.setProperty('--accent', acc);
       app.style.setProperty('--bg', th.bg); app.style.setProperty('--card', th.card);
       app.style.setProperty('--card2', th.card2); app.style.setProperty('--line', th.line);
       app.dataset.size = st.size; app.dataset.radius = st.radius; app.dataset.density = st.density;
       app.classList.toggle('rounded', st.font === 'rounded');
-      app.classList.toggle('nomotion', !st.motion);
+      app.classList.toggle('nomotion', MOTION === 'off'); app.classList.toggle('softmotion', MOTION === 'soft');
+      app.classList.toggle('bigt', st.bigTitles !== false);
       const light = !!th.light;
       app.style.setProperty('--text', th.text || '#f2f4f8');
       app.style.setProperty('--muted', st.contrast === 'high' ? (light ? '#3a4256' : '#c5cad4') : (th.muted || '#9097a8'));
@@ -989,7 +1051,7 @@
     oled: { label: 'OLED', theme: 'amoled', accent: 'white', cards: 'lines', contrast: 'high', size: 'l' },
     mono: { label: 'Mono', theme: 'mono', accent: 'white', head: 'mono', subj: 'mono', radius: 's' },
     bento: { label: 'Bento', theme: 'bento', font: 'rounded', radius: 'l', startLayout: 'C' },
-    glass: { label: 'Szkło', theme: 'glass', accent: 'iosblue', nav: 'float', labels: true, radius: 'l', cards: 'glass' },
+    glass: { label: 'Szkło', theme: 'glass', accent: 'iosblue', nav: 'float', labels: true, radius: 'l', cards: 'cards' },
     zeszyt: { label: 'Zeszyt', theme: 'paper', accent: 'navy', head: 'hand', nav: 'bar', labels: true, cards: 'paper' },
     kolor: { label: 'Kolor', theme: 'kolor', subj: 'bold', radius: 'l' }
   };
@@ -1037,17 +1099,32 @@
       ? keys.slice(0, half).map(a).join('') + `<button class="plusb" id="navplus" aria-label="Dodaj">${I('plus')}</button>` + keys.slice(half).map(a).join('')
       : keys.map(a).join('')}</nav>`;
   }
-  function moveInd(root) {
+  let IND_LAST = null;
+  function moveInd(root, instant) {
     const nav = root && root.querySelector('.nav'); if (!nav) return;
     const ind = nav.querySelector('.ind'), a = nav.querySelector('a.on'); if (!ind) return;
-    if (!a) { ind.style.opacity = '0'; return; }
-    ind.style.opacity = ''; ind.style.width = a.offsetWidth + 'px'; ind.style.transform = `translateX(${a.offsetLeft}px)`;
+    if (!a) { ind.style.opacity = '0'; IND_LAST = null; return; }
+    const x = a.offsetLeft, w = a.offsetWidth, prev = IND_LAST;
+    IND_LAST = { x, w };
+    const liquid = !instant && prev && (prev.x !== x || prev.w !== w) && MOTION === 'full' && ind.animate && getComputedStyle(ind).display !== 'none';
+    if (liquid) ind.style.transition = 'none';
+    ind.style.opacity = ''; ind.style.width = w + 'px'; ind.style.transform = `translateX(${x}px)`;
+    if (!liquid) return;
+    const l = Math.min(prev.x, x), r = Math.max(prev.x + prev.w, x + w);
+    const an = ind.animate([
+      { transform: `translateX(${prev.x}px)`, width: prev.w + 'px' },
+      { transform: `translateX(${l}px) scaleY(.9)`, width: (r - l) + 'px', offset: .4 },
+      { transform: `translateX(${x}px)`, width: w + 'px' }
+    ], { duration: 480, easing: 'cubic-bezier(.3,.75,.25,1)' });
+    an.onfinish = an.oncancel = () => { ind.style.transition = ''; };
   }
   function wireNav(root) {
     root.querySelectorAll('.nav a').forEach(a => a.addEventListener('click', e => {
       if (a.classList.contains('on') && (a.getAttribute('href').split('#')[0] === location.pathname || a.getAttribute('href') === '/#' + (location.hash.slice(1) || 'start'))) {
-        e.preventDefault(); e.stopPropagation(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        e.preventDefault(); e.stopPropagation(); window.scrollTo({ top: 0, behavior: MOTION === 'off' ? 'auto' : 'smooth' }); return;
       }
+      // the pill moves right away – the next screen loads behind it
+      root.querySelectorAll('.nav a').forEach(x => x.classList.toggle('on', x === a)); moveInd(root);
     }, true));
     const plus = root.getElementById('navplus'); if (plus) plus.onclick = () => openQuickAdd(root);
     requestAnimationFrame(() => { const nav = root.querySelector('.nav'); if (nav) nav.classList.add('noanim'); moveInd(root); requestAnimationFrame(() => nav && nav.classList.remove('noanim')); });
@@ -1199,18 +1276,20 @@
   }
   // hold a finger on any link (announcement, message, file …) → menu
   function wireLongPress(root, scope) {
-    let t = null, fired = false, sx = 0, sy = 0;
+    let t = null, fired = false, sx = 0, sy = 0, pt = null, pa = null;
     scope.addEventListener('touchstart', e => {
       const a = e.target.closest && e.target.closest('a[href]'); fired = false;
       if (!a || a.closest('.nav,.top,.sheet') || /^(#|javascript|mailto|tel)|\/#/.test(a.getAttribute('href'))) return;
       sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+      clearTimeout(pt); pa = a; pt = setTimeout(() => { if (MOTION === 'full') a.classList.add('lp-press'); }, 150);
       t = setTimeout(() => {
         t = null; fired = true; haptic('medium');
+        a.classList.remove('lp-press'); if (MOTION === 'full') { a.classList.add('lp-lift'); setTimeout(() => a.classList.remove('lp-lift'), 460); }
         const title = (txt2(a.querySelector('.ttl,.b,.name,.subj')) || txt2(a)).slice(0, 140);
         itemMenu(root, { href: a.getAttribute('href'), title, sub: txt2(a.querySelector('.strip span,.sub,.when')).slice(0, 80), label: FAV_KIND(a.getAttribute('href'))[1] });
       }, 480);
     }, { passive: true });
-    const cancel = () => { clearTimeout(t); t = null; };
+    const cancel = () => { clearTimeout(t); t = null; clearTimeout(pt); if (pa) pa.classList.remove('lp-press'); };
     scope.addEventListener('touchmove', e => { if (t && (Math.abs(e.touches[0].clientX - sx) > 9 || Math.abs(e.touches[0].clientY - sy) > 9)) cancel(); }, { passive: true });
     scope.addEventListener('touchend', cancel, { passive: true });
     scope.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
@@ -1249,7 +1328,7 @@
     const rem = list.filter(f => f.remind > now), rest = list.filter(f => !(f.remind > now));
     return chipRow('fk', K.map(([v, label]) => ({ v, label, n: v === 'all' ? all.length : null })), filter) +
       (list.length ? (rem.length ? `<div class="sec"><h2>Z przypomnieniem</h2></div>${rem.map(card).join('')}` : '') + (rest.length ? `${rem.length ? '<div class="sec"><h2>Pozostałe</h2></div>' : ''}${rest.map(card).join('')}` : '')
-        : `<div class="empty">${I('star', 'big')}<div>Nic tu jeszcze nie ma</div><div class="muted small" style="max-width:280px">Przytrzymaj palec na ogłoszeniu, wiadomości albo pliku i wybierz „Dodaj do Ważnych”. Na otwartej stronie możesz też kliknąć gwiazdkę u góry.</div></div>`);
+        : `<div class="empty">${I('star', 'big')}<div>Nic tu jeszcze nie ma</div><div class="muted small" style="max-width:300px;margin:8px auto 0">Przytrzymaj palec (na komputerze: kliknij prawym przyciskiem) na ogłoszeniu, wiadomości albo pliku i wybierz „Dodaj do Ważnych”. Na otwartej stronie możesz też kliknąć gwiazdkę u góry.</div></div>`);
   }
 
   /* ---------- own to-dos ---------- */
@@ -1554,7 +1633,7 @@
     };
     const draw = () => {
       const st = loadSettings(), planNow = store.get('skPlanMode') || 'day', gNow = store.get('skGradeView') || 'subj';
-      const val = k => k === 'plan' ? planNow : k === 'gview' ? gNow : String(st[k]);
+      const val = k => k === 'plan' ? planNow : k === 'gview' ? gNow : k === 'motion' ? motionLevel(st) : String(st[k]);
       const seg = (key, opts) => `<div class="seg" data-k="${key}">${opts.map(([v, l]) => `<button data-v="${v}" class="${val(key) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
       const tgl = (key, label) => `<label class="tgl"><span>${label}</span><input type="checkbox" data-t="${key}" ${st[key] ? 'checked' : ''}><i></i></label>`;
       const LB = t => `<div class="lbl" style="--c:var(--muted)">${t}</div>`;
@@ -1582,11 +1661,12 @@
           ${LB('Nagłówki')}${seg('head', [['system', 'Zwykłe'], ['mono', 'Mono'], ['hand', 'Odręczne']])}
           ${LB('Zaokrąglenie')}${seg('radius', [['s', 'Małe'], ['m', 'Średnie'], ['l', 'Duże']])}
           ${LB('Gęstość')}${seg('density', [['compact', 'Kompaktowa'], ['normal', 'Normalna']])}
-          <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('motion', 'Animacje')}${tgl('glass', 'Rozmycie pod paskami')}${tgl('haptics', 'Wibracje przy dotyku')}</div>`;
+          ${LB('Animacje')}${seg('motion', [['full', 'Pełne'], ['soft', 'Delikatne'], ['off', 'Wyłączone']])}
+          <div class="card" style="padding:2px 14px;margin-top:12px">${tgl('bigTitles', 'Duże tytuły (jak w iOS)')}${tgl('glass', 'Rozmycie pod paskami')}${tgl('haptics', 'Wibracje przy dotyku')}</div>`;
       } else if (page === 'bar') {
         const tabs = navTabs(st), max = st.nav === 'plus' ? 4 : 5;
         h = `<h2>Dolny pasek</h2>${LB('Kształt')}${seg('nav', [['pill', 'Zaokrąglony'], ['float', 'Pływający'], ['bar', 'Klasyczny'], ['plus', 'Z przyciskiem +']])}
-          <div class="card" style="padding:2px 14px;margin-top:12px">${st.nav === 'pill' ? '<div class="muted small" style="padding:12px 0">Zaokrąglony pasek ma same ikony – aktywna przesuwa się w jasnej pigułce.</div>' : tgl('labels', 'Napisy pod ikonami')}${tgl('motion', 'Animacje')}</div>
+          <div class="card" style="padding:2px 14px;margin-top:12px">${st.nav === 'pill' ? '<div class="muted small" style="padding:12px 0">Zaokrąglony pasek ma same ikony – aktywna przesuwa się w jasnej pigułce.</div>' : tgl('labels', 'Napisy pod ikonami')}</div>
           ${LB(`Zakładki (${tabs.length}/${max}) – zaznacz i ustaw kolejność`)}${orderList('otabs', TABDEFS, tabs)}
           ${LB('Po otwarciu apki pokaż')}${seg('startTab', [['start', 'Start'], ['plan', 'Plan'], ['grades', 'Oceny'], ['mail', 'Poczta']])}`;
       } else if (page === 'screens') {
@@ -1803,6 +1883,29 @@
   .app[data-contrast="high"] .small{font-size:14px}.app[data-contrast="high"]{font-weight:500}
   .app.subjbold :is(.les,.now,.tl-b,.gcard){background:color-mix(in srgb,var(--c) 80%,#000)!important;color:#fff}
   .app.subjbold :is(.les,.now,.gcard) :is(.muted,.small){color:rgba(255,255,255,.82)!important}
+  /* ---------- iOS-style large titles + bars that appear only when content scrolls under them ---------- */
+  .lt{display:none}
+  @media (max-width: 899px){
+    .app.bigt.istop:not([data-tab="start"]) .lt{display:block;position:absolute;left:0;right:0;top:calc(54px + env(safe-area-inset-top));max-width:680px;margin:0 auto;padding:0 18px;
+      font-size:33px;font-weight:800;letter-spacing:-.7px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1;pointer-events:none;transition:opacity .2s ease}
+    .app.bigt.istop:not([data-tab="start"]) main{padding-top:calc(106px + env(safe-area-inset-top))}
+    .app.bigt.istop:not([data-tab="start"]) .top .title{animation:none;opacity:0;transform:translateY(5px);transition:opacity .22s ease,transform .22s ease}
+    .app.bigt.istop.ltc:not([data-tab="start"]) .top .title{opacity:1;transform:none}
+    .app.bigt.istop.ltc .lt{opacity:0}
+    .app.bigt.istop[data-tab="start"] .top .title{animation:none;opacity:0;transition:opacity .22s ease}
+    .app.bigt.istop.ltc[data-tab="start"] .top .title{opacity:1}
+    .app:not(.noglass) .top{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background-color .25s ease,border-color .25s ease}
+    .app:not(.noglass).scrolled .top{background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom-color:var(--line);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px)}
+    .app[data-theme="glass"] .sheet{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));border-radius:32px;padding-bottom:22px;background:color-mix(in srgb,var(--card) 74%,transparent);
+      backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.14)}
+    .app[data-theme="glass"]:not(.noglass).scrolled .top{background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(26px) saturate(1.9);-webkit-backdrop-filter:blur(26px) saturate(1.9)}
+  }
+  .app[data-head="hand"] .lt{font-family:'Caveat',cursive;font-weight:700;letter-spacing:0;font-size:38px}
+  .app[data-head="mono"] .lt{font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.5px;font-size:28px}
+  /* Szkło (iOS 26): glass only on the controls layer – bars, tab bar, sheets – content stays solid */
+  .app[data-theme="glass"]:is([data-nav="pill"],[data-nav="float"]) .nav{background:color-mix(in srgb,var(--card) 52%,transparent);backdrop-filter:blur(26px) saturate(1.9);-webkit-backdrop-filter:blur(26px) saturate(1.9);
+    box-shadow:0 12px 34px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 .5px rgba(255,255,255,.14)}
+  .app[data-theme="glass"][data-nav="float"] .nav .ind{background:rgba(255,255,255,.13);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 .5px rgba(255,255,255,.12)}
   /* ---------- computer: menu bar at the top, content in the middle ---------- */
   .dtop{display:none}
   @media (min-width: 900px){
@@ -1868,6 +1971,8 @@
     .sheet{left:50%;right:auto;bottom:auto;top:50%;width:580px;transform:translate(-50%,-50%);border-radius:22px;max-height:86vh;animation:skDlg .2s ease both}
     .sheet .grab{display:none}
     @keyframes skDlg{from{opacity:0;transform:translate(-50%,-47%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%)}}
+    .sheet.closing{animation:skDlgOut .18s ease-in both}
+    @keyframes skDlgOut{to{opacity:0;transform:translate(-50%,-48%) scale(.98)}}
     .viewer img{max-width:92%;max-height:92%}
     a.tap:hover,.card.tap:hover{filter:brightness(1.06)}
     ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--card2);border-radius:5px;border:2px solid var(--bg)}
@@ -1879,7 +1984,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.3';
+  const SKIN_VERSION = '5.4';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2092,7 +2197,7 @@
     try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
   const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
-  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '';
+  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '', NAV_DIR = '';
   // opts.quiet: refresh in place (no page-leave animation, keeps what you see until the new data is ready)
   async function softGo(href, push, opts) {
     opts = opts || {};
@@ -2102,7 +2207,7 @@
     navBusy = true;
     saveSnapshot();
     const app = shellApp();
-    if (app && !opts.quiet) app.classList.add('leaving', 'loading');
+    if (app && !opts.quiet) { app.classList.add('leaving', 'loading'); if (NAV_DIR === 'fwd' || NAV_DIR === 'back') app.classList.add('go-' + NAV_DIR); }
     const y = window.scrollY;
     let pg = null;
     try { pg = await fetchPage(u.origin + u.pathname + u.search, opts.quiet); } catch (e) {}
@@ -2180,6 +2285,7 @@
     window.addEventListener('popstate', () => {
       const k = location.pathname + location.search;
       if (k === curKey) return;            // only the #hash changed – the page handles it
+      NAV_DIR = 'back';
       softGo(location.href, false);
     });
     document.addEventListener('visibilitychange', () => {
@@ -2219,6 +2325,7 @@
     root.innerHTML = `${appStyles(root)}
       <div class="app" id="app" data-tab="${esc(tab)}">
         ${deskBarHTML(ctx, tab)}
+        ${isTop ? `<div class="lt" id="lt" aria-hidden="true">${esc(title)}</div>` : ''}
         <header class="top">
           ${isTop ? `<button class="btn" id="menu" aria-label="Menu">${I('menu')}</button>`
                   : `<button class="btn" id="back" aria-label="Wstecz">${I('back')}</button>`}
@@ -2234,6 +2341,18 @@
 
     const app = root.getElementById('app');
     applySettings(app);
+    app.classList.toggle('istop', !!isTop);
+    // iOS: the bar gets its background only when something scrolls under it; the big title shrinks into the bar
+    const onScroll = () => { const y = window.scrollY; app.classList.toggle('scrolled', y > 2); app.classList.toggle('ltc', y > 36); };
+    onScroll(); onWin('scroll', onScroll, { passive: true });
+    root.addEventListener('click', e => {
+      const sm = e.target.closest && e.target.closest('summary');
+      if (sm && MOTION === 'full' && !e.defaultPrevented) {
+        const d = sm.parentElement, inner = e.target.closest('a, button, input, label, select, textarea');
+        if (d && d.tagName === 'DETAILS' && !d.classList.contains('dmenu') && (!inner || !sm.contains(inner) || inner === sm)) { e.preventDefault(); toggleDetails(d); }
+      }
+    });
+    root.addEventListener('click', e => { if (e.target.closest && e.target.closest('.seg > button, .seg > a')) setTimeout(() => segThumbs(root), 0); }, true);
     const toggle = open => { if (open !== app.classList.contains('open')) haptic('soft'); app.classList.toggle('open', open); };
     // little vibrations for switches, tabs and filters
     root.addEventListener('click', e => {
@@ -2247,14 +2366,14 @@
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') && !t.isContentEditable) {
         e.preventDefault(); const dq = root.getElementById('dsq');
         if (dq && dq.getClientRects().length) dq.focus(); else goHome('szukaj'); } });
-    onWin('resize', () => moveInd(root));
+    onWin('resize', () => { moveInd(root, true); segThumbs(root); });
     root.getElementById('settings').onclick = e => { e.preventDefault(); toggle(false); openSettings(root, app); };
     root.getElementById('people').onclick = e => { e.preventDefault(); toggle(false); openPeople(root); };
     if (tab === 'grades') store.set('skNewGrades', '0');
     root.getElementById('menu').onclick = () => toggle(true);
     root.getElementById('scrim').onclick = () => toggle(false);
     const back = root.getElementById('back');
-    if (back) back.onclick = () => { if (history.length > 1) history.back(); else softGo('/', true); };
+    if (back) back.onclick = () => { NAV_DIR = 'back'; if (history.length > 1) history.back(); else softGo('/', true); };
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
       const t = root.getElementById('timer'), dt = root.getElementById('dtimer');
@@ -2277,7 +2396,7 @@
       if (a.target === '_blank') return;
       if (u.pathname === location.pathname && u.search === location.search && u.hash) return; // same page (#plan)
       e.preventDefault();
-      if (softable(u)) { softGo(u.href, true); return; }
+      if (softable(u)) { NAV_DIR = a.closest('.nav, .dnav, .drawer, .dlogo, .dpop') ? 'tab' : 'fwd'; softGo(u.href, true); return; }
       saveSnapshot();
       app.classList.add('leaving');
       setTimeout(() => { location.href = u.href; }, 140);
@@ -2375,16 +2494,21 @@
     // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
     const hadSnap = !!document.getElementById('sk-snap');
     let skipAnim = hadSnap || QUIET;
+    const dir = NAV_DIR; NAV_DIR = '';
+    let slide = !skipAnim && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
-    page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; }, setTab: k => {
+    page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; const lt = root.getElementById('lt'); if (lt) lt.textContent = s; }, setTab: k => {
       CUR.tab = k; root.querySelectorAll('.nav a, .dnav>a').forEach(a => a.classList.toggle('on', a.dataset.tab === k)); moveInd(root);
       app.dataset.tab = k; const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
-    }, animate: () => { if (!skipAnim) animateIn(mainEl); }, ctx });
+    }, animate: () => { if (!skipAnim) animateIn(mainEl, slide); }, ctx });
     wireLongPress(root, mainEl);
     wireFavButton(root, mainEl);
-    if (skipAnim) app.classList.add('still');      // same content as a moment ago → no pop-in effects
+    if (skipAnim) { app.classList.add('still'); segThumbs(mainEl); }      // same content as a moment ago → no pop-in effects
+    else if (slide) { const cls = dir === 'fwd' ? 'pushIn' : 'popIn', lt = root.getElementById('lt'); mainEl.classList.add(cls); if (lt) lt.classList.add(cls);
+      animateIn(mainEl, true); setTimeout(() => { mainEl.classList.remove('pushIn', 'popIn'); if (lt) lt.classList.remove('pushIn', 'popIn'); }, 600); }
     else animateIn(mainEl);
+    slide = false;
     QUIET = false;
     skipAnim = false;
     saveSnapshotSoon();
@@ -3865,13 +3989,45 @@
     const sh = document.createElement('div'); sh.className = 'sheet';
     sh.innerHTML = '<div class="grab"></div>' + html;
     haptic('soft');
-    const close = () => { sh.classList.add('closing'); scrim.style.opacity = '0'; scrim.style.transition = 'opacity .2s';
-      setTimeout(() => { sh.remove(); scrim.remove(); }, 220); };
+    let closed = false;
+    const close = () => {
+      if (closed) return; closed = true;
+      const tr = getComputedStyle(sh).transform, cur = tr && tr !== 'none' && !isDesk() ? new DOMMatrixReadOnly(tr).m42 : 0;
+      if (sh.animate && !isDesk() && MOTION !== 'off') {
+        sh.style.animation = 'none';
+        sh.animate([{ transform: `translateY(${cur}px)` }, { transform: `translateY(${sh.offsetHeight + 40}px)` }], { duration: 240, easing: 'cubic-bezier(.4,0,.9,.6)', fill: 'forwards' });
+      } else sh.classList.add('closing');
+      scrim.style.animation = 'none'; scrim.style.transition = 'opacity .22s'; scrim.style.opacity = '0';
+      setTimeout(() => { sh.remove(); scrim.remove(); }, 240);
+    };
     scrim.onclick = close;
-    let y0 = null;
-    sh.addEventListener('touchstart', e => { y0 = sh.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
-    sh.addEventListener('touchend', e => { if (y0 != null && e.changedTouches[0].clientY - y0 > 70) close(); y0 = null; });
+    // pull the sheet down: it follows the finger, a short flick or a long pull closes it, otherwise it springs back
+    let y0 = null, dy = 0, t0 = 0, dragging = false;
+    sh.addEventListener('touchstart', e => { if (isDesk() || e.touches.length !== 1) return; y0 = e.touches[0].clientY; dy = 0; dragging = false; }, { passive: true });
+    sh.addEventListener('touchmove', e => {
+      if (y0 == null) return;
+      const y = e.touches[0].clientY;
+      if (!dragging) {
+        if (sh.scrollTop > 0 || y - y0 < -4) { y0 = null; return; }
+        if (y - y0 < 6) return;
+        if (e.target.closest && e.target.closest('input,textarea,select,.hs,.fchips')) { y0 = null; return; }
+        dragging = true; y0 = y; t0 = performance.now(); sh.style.animation = 'none'; scrim.style.animation = 'none';
+      }
+      dy = Math.max(0, y - y0);
+      sh.style.transition = 'none'; sh.style.transform = `translateY(${dy}px)`;
+      scrim.style.transition = 'none'; scrim.style.opacity = String(Math.max(0, 1 - dy / ((sh.offsetHeight || 400) * 1.1)));
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    sh.addEventListener('touchend', () => {
+      if (y0 == null) return; y0 = null;
+      if (!dragging) return; dragging = false;
+      const v = dy / Math.max(16, performance.now() - t0);
+      if (dy > 130 || (dy > 24 && v > .55)) { haptic('light'); close(); return; }
+      sh.style.transition = 'transform .34s cubic-bezier(.2,.9,.25,1)'; sh.style.transform = '';
+      scrim.style.transition = 'opacity .25s'; scrim.style.opacity = '';
+    });
     app.appendChild(scrim); app.appendChild(sh);
+    setTimeout(() => segThumbs(sh), 0);
     return sh;
   }
 
