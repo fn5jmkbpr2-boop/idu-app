@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.7
+// @version     5.8
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -2063,7 +2063,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.7';
+  const SKIN_VERSION = '5.8';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2439,6 +2439,8 @@
           ${isTop ? `<button class="btn" id="menu" aria-label="Menu">${I('menu')}</button>`
                   : `<button class="btn" id="back" aria-label="Wstecz">${I('back')}</button>`}
           <div class="title" id="title">${esc(title)}</div>
+          <a class="btn" id="tsearch" href="/#szukaj" ${tab === 'start' ? '' : 'hidden'} aria-label="Szukaj">${I('search')}</a>
+          <a class="btn" id="tstar" href="/#wazne" ${tab === 'start' ? '' : 'hidden'} aria-label="Ważne" style="color:var(--warn)">${I('star')}</a>
           <button class="btn" id="favbtn" hidden aria-label="Ważne">${I('star')}</button>
           ${isTop ? '' : `<button class="btn" id="menu" aria-label="Menu">${I('menu')}</button>`}
         </header>
@@ -2701,7 +2703,8 @@
     document.documentElement.classList.add('sk-full');
     page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; const lt = root.getElementById('lt'); if (lt) lt.textContent = s; }, setTab: k => {
       CUR.tab = k; root.querySelectorAll('.nav a, .dnav>a').forEach(a => a.classList.toggle('on', a.dataset.tab === k)); moveInd(root);
-      app.dataset.tab = k; const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
+      app.dataset.tab = k; ['tsearch', 'tstar'].forEach(id => { const b = root.getElementById(id); if (b) b.hidden = k !== 'start'; });   // shortcuts in the bar on Start
+      const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
     }, animate: () => { if (!skipAnim) animateIn(mainEl, slide); }, ctx });
     wireLongPress(root, mainEl);
     wireSwipeRows(root, mainEl);
@@ -3123,7 +3126,6 @@
       const dateS = new Date().toLocaleDateString(EN ? 'en-GB' : 'pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
       const head = `<div class="hello"><div class="grow"><h1>${esc(hello)}, ${esc(SS.nick || firstName)}</h1>
           <p class="lead">${esc(dateS)}${ctx.parent && ctx.kidName ? ' · ' + esc(ctx.kidName) : ''}${klassName ? ' · ' + esc(klassName) : ''}</p></div>
-          <a class="iconbtn" href="#szukaj" aria-label="Szukaj">${I('search', 'sm')}</a><a class="iconbtn" href="#wazne" aria-label="Ważne" style="color:var(--warn)">${I('star', 'sm')}</a>
           <a class="me tap" href="${esc(ctx.me || ctx.student)}" aria-label="Mój profil">${meAvatar()}</a></div>`;
       const ni = nextInfo();
       const cols = (l, r) => l && r ? `<div class="dcols"><div class="dcol">${l}</div><div class="dcol">${r}</div></div>` : l + r;
