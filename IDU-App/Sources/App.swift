@@ -3,6 +3,7 @@ import WebKit
 import WidgetKit
 import UserNotifications
 import QuickLook
+import JavaScriptCore
 
 // IDU – personal app: opens the official IDU site (s27.idu.edu.pl) directly,
 // full screen, with the mobile skin. No other servers are involved.
@@ -271,6 +272,13 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         return parts.enumerated().reduce(0) { $0 + $1.element / pow(100, Double($1.offset)) }
     }
 
+    /// true when the downloaded skin is valid JavaScript (checked with the phone's own engine, without running it)
+    static func compiles(_ source: String) -> Bool {
+        guard let ctx = JSContext() else { return true }
+        ctx.setObject(source, forKeyedSubscript: "src" as NSString)
+        return ctx.evaluateScript("(function(){ try { new Function(src); return true; } catch (e) { return false; } })()")?.toBool() ?? false
+    }
+
     private func localSkin() -> String? {
         let bundled = Bundle.main.url(forResource: "skin", withExtension: "js").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
         let cached = cachedSkinFile.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
@@ -283,7 +291,8 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         let request = URLRequest(url: remote, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         URLSession.shared.dataTask(with: request) { data, response, _ in
             guard let data = data, (response as? HTTPURLResponse)?.statusCode == 200,
-                  let text = String(data: data, encoding: .utf8), text.contains("@name        IDU Skin") else { return }
+                  let text = String(data: data, encoding: .utf8), text.contains("@name        IDU Skin"),
+                  WebViewController.compiles(text) else { return }   // a broken update is never used
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? text.write(to: file, atomically: true, encoding: .utf8)
         }.resume()

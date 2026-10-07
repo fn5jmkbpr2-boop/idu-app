@@ -3,6 +3,17 @@ on:
   workflow_dispatch:
   push:
 jobs:
+  skin:
+    # the skin goes straight to phones and browsers from this repo, so it must at least parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skin is valid JavaScript and both copies are the same
+        run: |
+          node --check IDU-App/Resources/skin.js
+          cmp IDU-App/Resources/skin.js IDU-App/Resources/idu-skin.user.js
+          grep -q "@name        IDU Skin" IDU-App/Resources/skin.js
+
   build:
     runs-on: macos-15
     steps:
