@@ -218,6 +218,9 @@
     background:var(--bg);min-height:100vh;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   button{font:inherit;color:inherit}
+  /* phone: an app, not a web page – long-pressing a button doesn't select its text; message and note text can still be copied */
+  @media (hover:none){.app{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+    .app :is(.mbody,.note,.article,input,textarea,select,[contenteditable],.fta,.selectable){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}}
   .ic{width:22px;height:22px;flex:none;display:block}
   .ic.sm{width:18px;height:18px}.ic.xs{width:15px;height:15px}
 
@@ -227,7 +230,6 @@
     background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(1.6) blur(18px);
     -webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:.5px solid var(--line)}
   .top .btn{width:40px;height:40px;border:0;background:none;border-radius:12px;display:grid;place-items:center;color:var(--accent)}
-  .top .btn:active{background:var(--card2)}
   .top .title{flex:1;min-width:0;font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:2px}
   main{padding:calc(64px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
 
@@ -254,7 +256,6 @@
   .who b{display:block;font-size:17px}
   .who span{color:var(--muted);font-size:13px}
   .dl{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:12px;font-size:16px;font-weight:500}
-  .dl:active{background:var(--card2)}
   .dl .ic{color:var(--muted)}
   .dl.danger{color:var(--bad)}.dl.danger .ic{color:var(--bad)}
   .dsep{height:.5px;background:var(--line);margin:8px 10px}
@@ -272,7 +273,6 @@
 
   /* cards */
   .card{display:block;background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
-  a.card:active,.tap:active{transform:scale(.985);opacity:.9}
   .row{display:flex;align-items:center;gap:12px}
   .grow{flex:1;min-width:0}
   .b{font-weight:700}
@@ -436,41 +436,35 @@
   .alert .ic{color:var(--warn)}
 
   /* ---- motion ---- */
-  @keyframes skIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+  @keyframes skIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes skFade{from{opacity:0}to{opacity:1}}
   @keyframes skGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
   @keyframes skPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
   .anim{animation:skIn .36s cubic-bezier(.16,1,.3,1) both}
   main{transition:opacity .14s ease,transform .14s ease}
   .app.leaving main{opacity:0;transform:translateY(-6px)}
+  .app.veiled .top,.app.veiled .lt,.app.veiled .fab{visibility:hidden}
   .app.leaving.go-fwd main{transform:translateX(-18px)}.app.leaving.go-back main{transform:translateX(18px)}
   @keyframes skPushIn{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
   @keyframes skPopIn{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:none}}
   main.pushIn,.lt.pushIn{animation:skPushIn .3s cubic-bezier(.16,1,.3,1) both}main.popIn,.lt.popIn{animation:skPopIn .3s cubic-bezier(.16,1,.3,1) both}
   .app.softmotion .anim{animation:skFade .28s ease both}.app.softmotion main.pushIn,.app.softmotion main.popIn{animation:skFade .25s ease both}
   .app.softmotion .nav a.on .ic,.app.softmotion .fab,.app.softmotion .badge,.app.softmotion .les.cur{animation:none}
-  .lp-press{transform:scale(.965)!important;transition:transform .35s cubic-bezier(.3,.7,.3,1)!important}
-  .lp-lift{animation:skLift .45s cubic-bezier(.2,.85,.25,1)}
-  @keyframes skLift{0%{transform:scale(.965)}45%{transform:scale(1.025)}100%{transform:none}}
   .top .title{animation:skFade .3s ease both}
   .card,.box,.gcard,.chip,.btn-p,.btn-s,.days button,.seg button,.seg a,.nav a,.dl,.les,.msg,.fab,.room{
-    transition:transform .18s cubic-bezier(.2,.8,.2,1),background-color .2s,opacity .2s,box-shadow .2s}
-  .card:active,.box:active,.gcard:active,.chip:active,.btn-p:active,.btn-s:active,.days button:active,.les:active,.msg:active,.dl:active{transform:scale(.97)}
-  .nav a:active .ic{transform:scale(.85)}
-  .nav a .ic{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
-  .nav a.on .ic{animation:skPop .4s cubic-bezier(.2,.8,.2,1)}
-  .fab{animation:skPop .5s .25s cubic-bezier(.2,.8,.2,1) both}
-  .fab:active{transform:scale(.9)}
-  .badge{animation:skPop .45s .2s both}
+    transition:background-color .2s,opacity .2s,box-shadow .2s,color .2s}
+  /* touch feedback like iOS lists: the row lights up under your finger – nothing moves or shrinks */
+  .app{--hl:color-mix(in srgb,var(--text) 10%,transparent)}
+  .pr{background-image:linear-gradient(var(--hl),var(--hl))!important}
+  :is(.top .btn,.sec a,.today-btn,.hero a,.mbody a,.lt a).pr{background-image:none!important;opacity:.4;transition:none}
+  :is(.nav a,.seg>a,.seg>button,.dnav>a,.tgl,.tok button,.plusb).pr{background-image:none!important}
+  .fab{animation:skFade .3s .15s ease both}
   details[open]>*:not(summary){animation:skIn .3s cubic-bezier(.2,.85,.25,1) both}
   details>summary .ic{transition:transform .25s}
   details[open]>summary .ic.chev{transform:rotate(180deg)}
   .meter i{transform-origin:left;animation:skGrow .8s .15s cubic-bezier(.2,.85,.25,1) both}
   .les.cur{animation:skIn .45s both,skGlow 2.4s 1s ease-in-out infinite}
   @keyframes skGlow{0%,100%{box-shadow:0 0 0 0 rgba(47,191,113,.0)}50%{box-shadow:0 0 0 6px rgba(47,191,113,.18)}}
-  .drawer .dl{opacity:0;transform:translateX(-12px);transition:opacity .25s,transform .3s cubic-bezier(.2,.85,.25,1),background-color .2s}
-  .app.open .drawer .dl{opacity:1;transform:none}
-  ${Array.from({length:18},(_,i)=>`.app.open .drawer .dl:nth-of-type(${i+1}){transition-delay:${40+i*22}ms}`).join('')}
   .scrim{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 
@@ -479,7 +473,6 @@
   .calhead{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
   .calhead h1{flex:1;margin:0;font-size:22px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .iconbtn{width:40px;height:40px;border-radius:12px;border:0;background:var(--card);color:var(--text);display:grid;place-items:center;box-shadow:var(--shadow)}
-  .iconbtn:active{transform:scale(.92)}
   .today-btn{border:0;background:var(--card2);color:var(--accent);font-weight:700;font-size:14px;border-radius:12px;padding:10px 12px}
   .cal{background:var(--card);border-radius:18px;padding:10px 8px 8px;box-shadow:var(--shadow);touch-action:pan-y;overflow:hidden}
   .cal .wd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
@@ -490,7 +483,6 @@
   .cal .d.wk .n{color:var(--muted)}
   .cal .d.today .n{color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
   .cal .d.sel .n{background:var(--accent);color:#fff;box-shadow:none}
-  .cal .d:active{background:var(--card2)}
   .cal .dots{display:flex;gap:3px;height:6px}
   .cal .dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
   .slideL{animation:skSlideL .3s cubic-bezier(.2,.85,.25,1)}
@@ -544,17 +536,15 @@
   .sheet .lbl{margin:16px 2px 6px}
   .sheet .seg{margin:0}
   .swatches{display:flex;gap:12px;flex-wrap:wrap}
-  .swatches button{width:36px;height:36px;border-radius:50%;border:0;background:var(--c);box-shadow:0 0 0 0 var(--c);transition:box-shadow .2s,transform .2s}
+  .swatches button{width:36px;height:36px;border-radius:50%;border:0;background:var(--c);box-shadow:0 0 0 0 var(--c);transition:box-shadow .2s}
   .swatches button.on{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--c)}
-  .swatches button:active{transform:scale(.9)}
   .fchips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 12px;padding:2px 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .fchips::-webkit-scrollbar{display:none}
   .fchips button{flex:none;border:0;border-radius:20px;padding:8px 14px;font-size:14px;font-weight:600;background:var(--card);color:var(--muted);
-    box-shadow:var(--shadow);display:flex;gap:6px;align-items:center;transition:background-color .2s,color .2s,transform .15s}
+    box-shadow:var(--shadow);display:flex;gap:6px;align-items:center;transition:background-color .2s,color .2s}
   .fchips button span{font-size:12px;background:var(--card2);border-radius:10px;padding:1px 7px;color:var(--muted)}
   .fchips button.on{background:var(--accent);color:#fff}
   .fchips button.on span{background:rgba(255,255,255,.25);color:#fff}
-  .fchips button:active{transform:scale(.94)}
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
   .toolbar .search{flex:1;margin:0}
   .sortbtn{border:0;background:var(--card2);color:var(--text);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap}
@@ -575,10 +565,9 @@
   .sgroup{margin:22px 2px 2px;font-size:20px;font-weight:800;letter-spacing:-.3px}
   .themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
   .themes button{border:0;border-radius:14px;background:var(--b);color:#fff;padding:10px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;
-    font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1.5px var(--line);transition:transform .15s,box-shadow .2s}
+    font-size:12px;font-weight:600;box-shadow:inset 0 0 0 1.5px var(--line);transition:box-shadow .2s}
   .themes button i{width:100%;height:22px;border-radius:7px;background:var(--c2)}
   .themes button.on{box-shadow:inset 0 0 0 2.5px var(--accent)}
-  .themes button:active{transform:scale(.95)}
   .tgl{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--line);font-size:15px;cursor:pointer}
   .tgl:last-child{border:0}
   .tgl span{flex:1}
@@ -666,7 +655,7 @@
   .frow2>label{color:var(--muted);font-size:15px;padding-top:8px;min-width:46px}
   .tokens{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;padding:2px 0}
   .tok{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--accent) 22%,var(--card2));
-    border-radius:16px;padding:5px 5px 5px 11px;font-size:14px;font-weight:600;animation:skPop .3s both;max-width:100%}
+    border-radius:16px;padding:5px 5px 5px 11px;font-size:14px;font-weight:600;animation:skFade .2s both;max-width:100%}
   .tok span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tok button{border:0;background:rgba(255,255,255,.14);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;padding:0;flex:none}
   .tok button .ic{width:12px;height:12px}
@@ -675,7 +664,6 @@
   .sugg{margin:-6px 0 12px;background:var(--card2);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.45);overflow:hidden;animation:skIn .2s both}
   .sugg button{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;padding:10px 14px;text-align:left;border-bottom:.5px solid var(--line)}
   .sugg button:last-child{border:0}
-  .sugg button:active{background:var(--card)}
   .sugg .av,.plist .av{width:34px;height:34px;font-size:13px}
   .sugg .muted{padding:12px 14px;font-size:14px}
   .btnrow{display:flex;gap:10px;margin-top:4px}
@@ -701,7 +689,7 @@
    * ------------------------------------------------------------------ */
   const PAGE_CSS = `
   html.sk-full,html.sk-full body{background:var(--sk-bg,#0f1115)!important;margin:0!important;padding:0!important;min-width:0!important}
-  html.sk-full body>*:not(#sk-host):not(#sk-under):not(#sk-preview){display:none!important}
+  html.sk-full body>*:not(#sk-host):not(#sk-under){display:none!important}
   html.sk-modal,html.sk-modal body{overflow:hidden!important;overscroll-behavior:none}
   #sk-host{display:block!important;position:static!important;width:auto!important;margin:0!important;padding:0!important;border:0!important;float:none!important}
 
@@ -805,7 +793,7 @@
   #sk-login .sk-box input[type=submit],#sk-login .sk-box button{display:block!important;width:100%!important;margin-top:16px!important;
     background-color:#1e88e5!important;color:#fff!important;border:0!important;border-radius:14px!important;padding:14px!important;
     font-size:17px!important;font-weight:700!important;-webkit-appearance:none;text-align:center!important}
-  #sk-login .sk-box input[type=submit]:active,#sk-login .sk-box button:active{transform:scale(.98)}
+  #sk-login .sk-box input[type=submit]:active,#sk-login .sk-box button:active{opacity:.8}
   #sk-login .sk-box a{color:#3d9be9!important;font-size:14px}
   #sk-login .sk-box iframe{max-width:100%!important}
   #sk-login .sk-box *:not(input):not(button):not(label):not(select){padding:0!important;margin-top:0!important;margin-bottom:0!important;
@@ -1323,23 +1311,45 @@
     scope.addEventListener('click', e => { if (moved && e.target.closest && e.target.closest('a.msg')) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
   }
 
+  // a row lights up while your finger rests on it (after a moment, so scrolling past doesn't flash anything); quick taps flash briefly
+  const PRESS_SEL = 'a[href],button,summary,label,.tap,[data-press]';
+  function wirePress(root) {
+    let el = null, x0 = 0, y0 = 0, tmr = 0, on = 0, scrolledAt = 0;
+    const show = () => { tmr = 0; if (el) { el.classList.add('pr'); on = performance.now(); } };
+    const hide = late => {
+      clearTimeout(tmr); tmr = 0;
+      const e = el; el = null; if (!e) return;
+      const keep = late ? Math.max(0, 130 - (performance.now() - on)) : 0;
+      if (keep) setTimeout(() => e.classList.remove('pr'), keep); else e.classList.remove('pr');
+    };
+    onWin('scroll', () => { scrolledAt = performance.now(); if (el) hide(false); }, { passive: true });
+    root.addEventListener('touchstart', e => {
+      hide(false);
+      if (e.touches.length !== 1 || performance.now() - scrolledAt < 120) return;     // a touch that stops a scroll isn't a tap
+      const t = e.target.closest && e.target.closest(PRESS_SEL);
+      if (!t || t.disabled || t.closest('.nopress')) return;
+      el = t; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; tmr = setTimeout(show, 70);
+    }, { passive: true, capture: true });
+    root.addEventListener('touchmove', e => { if (el && (Math.abs(e.touches[0].clientX - x0) > 8 || Math.abs(e.touches[0].clientY - y0) > 8)) hide(false); }, { passive: true, capture: true });
+    root.addEventListener('touchend', () => { if (el && tmr) show(); hide(true); }, { passive: true, capture: true });
+    root.addEventListener('touchcancel', () => hide(false), { passive: true, capture: true });
+  }
   function wireLongPress(root, scope) {
-    let t = null, fired = false, sx = 0, sy = 0, pt = null, pa = null;
+    let t = null, fired = false, sx = 0, sy = 0;
     scope.addEventListener('touchstart', e => {
       const a = e.target.closest && e.target.closest('a[href]'); fired = false;
       if (!a || a.closest('.nav,.top,.sheet') || /^(#|javascript|mailto|tel)|\/#/.test(a.getAttribute('href'))) return;
       sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-      clearTimeout(pt); pa = a; pt = setTimeout(() => { if (MOTION === 'full') a.classList.add('lp-press'); }, 150);
+      clearTimeout(t);
       t = setTimeout(() => {
         t = null; fired = true; haptic('medium');
-        a.classList.remove('lp-press'); if (MOTION === 'full') { a.classList.add('lp-lift'); setTimeout(() => a.classList.remove('lp-lift'), 460); }
         const title = (txt2(a.querySelector('.ttl,.b,.name,.subj')) || txt2(a)).slice(0, 140);
         itemMenu(root, { href: a.getAttribute('href'), title, sub: txt2(a.querySelector('.strip span,.sub,.when')).slice(0, 80), label: FAV_KIND(a.getAttribute('href'))[1] });
       }, 480);
     }, { passive: true });
-    const cancel = () => { clearTimeout(t); t = null; clearTimeout(pt); if (pa) pa.classList.remove('lp-press'); };
+    const cancel = () => { clearTimeout(t); t = null; };
     scope.addEventListener('touchmove', e => { if (t && (Math.abs(e.touches[0].clientX - sx) > 9 || Math.abs(e.touches[0].clientY - sy) > 9)) cancel(); }, { passive: true });
-    scope.addEventListener('touchend', cancel, { passive: true });
+    scope.addEventListener('touchend', cancel, { passive: true }); scope.addEventListener('touchcancel', cancel, { passive: true });
     scope.addEventListener('click', e => { if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; } }, true);
     scope.addEventListener('contextmenu', e => {
       const a = e.target.closest && e.target.closest('a[href]');
@@ -2002,7 +2012,6 @@
     .dmenu>summary::-webkit-details-marker{display:none}
     .dnav>a:hover,.dmenu>summary:hover,.dmenu[open]>summary{background:var(--card2);color:var(--text)}
     .dnav>a.on,.dnav .dmenu>summary.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
-    .dnav>a:active,.dmenu>summary:active{transform:scale(.97)}
     .dmenu>summary .ic.xs{opacity:.7;transition:transform .2s}.dmenu[open]>summary .ic.xs{transform:rotate(180deg)}
     .dbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;line-height:1}
     .dmenu{position:relative}
@@ -2142,7 +2151,7 @@
     // print-style pages (plans, class lists, calendar events) come without IDU's header
     const bare = !accLink && !$('input[type="password"]') && BARE_KINDS.includes(routeKind(document, location.pathname.replace(/\/+$/, '') || '/'));
     if (!accLink && !bare) {                    // login / logged-out pages
-      try { localStorage.removeItem('skSnap'); } catch (e) {}
+      snapsForget();
       if (!loginMode()) { vp.content = 'width=1000, user-scalable=yes'; pageStyle.remove(); }
       return;
     }
@@ -2279,47 +2288,169 @@
     try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
   const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
-  let curKey = location.pathname + location.search, navBusy = false, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', PREVIEWED = false;
-  // a screen you've seen before appears the moment you tap (its last picture), the fresh data replaces it a moment later
-  function showPreview(u, dir) {
+  let curKey = location.pathname + location.search, NAV_SEQ = 0, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', VEILED = '';
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* ---- saved pictures of screens: shown while a screen loads, at launch and when there's no internet ---- */
+  const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
+  const keyOf = u => { const p = u.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (u.hash || '#start') : p; };
+  // the launch picture (iOS app) is shown out of focus until the live screen is ready
+  const SNAP_CSS = APP_CSS + V5_CSS + ':host(#sk-snap) main{filter:blur(6px);opacity:.9}';
+  let SNAPS = null, snapCssOk = false, snapWriteT = 0;
+  const snapMap = () => { if (!SNAPS) { try { SNAPS = JSON.parse(localStorage.getItem('skSnap') || '{}') || {}; } catch (e) { SNAPS = {}; } } return SNAPS; };
+  const snapGet = key => { const s = key && snapMap()[key]; return s && s.h && Date.now() - s.t < 3 * 864e5 ? s : null; };
+  const snapsForget = () => { SNAPS = {}; try { localStorage.removeItem('skSnap'); } catch (e) {} };
+  function snapsWrite(now) {
+    clearTimeout(snapWriteT);
+    const run = () => {
+      const map = snapMap(), keys = Object.keys(map).sort((a, b) => map[b].t - map[a].t), keep = {};
+      let total = 0, n = 0;
+      for (const k of keys) { const len = (map[k].h || '').length; if (n >= 12 || total + len > 1.6e6) continue; keep[k] = map[k]; total += len; n++; }
+      SNAPS = keep;
+      try { localStorage.setItem('skSnap', JSON.stringify(keep)); }
+      catch (e) { try { localStorage.setItem('skSnap', JSON.stringify(keys[0] ? { [keys[0]]: map[keys[0]] } : {})); } catch (er) {} }
+      if (!snapCssOk) { snapCssOk = true; try { if (localStorage.getItem('skSnapCss') !== SNAP_CSS) localStorage.setItem('skSnapCss', SNAP_CSS); } catch (e) {} }
+    };
+    if (now) run(); else snapWriteT = setTimeout(run, 400);       // not in the middle of a tap
+  }
+  // the screen that is actually on display – on "back" the address changes before the old screen is gone,
+  // so the picture must be filed under the screen it shows, not under the new address
+  let SHOWN_KEY = '';
+  function saveSnapshot(now) {
     try {
-      const p = u.pathname.replace(/\/+$/, '') || '/', key = p === '/' ? '/' + (u.hash || '#start') : p;
-      const snap = JSON.parse(localStorage.getItem('skSnap') || '{}')[key];
-      if (!snap || !snap.h || Date.now() - snap.t > 3 * 864e5) return;
-      const y = dir === 'back' ? (snap.y || 0) : 0;
-      const anim = MOTION === 'off' ? 'none' : dir === 'fwd' ? 'skPushIn .26s cubic-bezier(.16,1,.3,1) both' : dir === 'back' ? 'skPopIn .26s cubic-bezier(.16,1,.3,1) both' : 'skFade .14s ease both';
-      const o = document.createElement('div'); o.id = 'sk-preview';
-      o.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;overflow:hidden;background:' + (store.get('skSnapBg') || '#0f1115');
-      o.attachShadow({ mode: 'open' }).innerHTML = `<style>${APP_CSS}${V5_CSS}
-        .pv{position:absolute;inset:0;overflow:hidden;animation:${anim}} .pv *{animation:none!important;transition:none!important}
-        .pv main,.pv .lt{transform:translateY(${-y}px)}</style><div class="pv">${snap.h.replace(/^<style>[^<]*<\/style>/, '')}</div>`;
-      ['click', 'touchstart'].forEach(t => o.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); }, { capture: true, passive: false }));
-      document.body.appendChild(o);
-      PREVIEWED = true;
+      const app = shellApp();
+      if (!app || !document.documentElement.classList.contains('sk-full')) return;
+      const c = app.cloneNode(true);
+      c.classList.remove('open', 'leaving', 'loading', 'veiled', 'go-fwd', 'go-back', 'navmin');
+      const cm = c.querySelector('main'); if (cm) cm.removeAttribute('style');
+      c.classList.add('still');
+      c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
+      c.querySelectorAll('.pr').forEach(e => e.classList.remove('pr'));
+      const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
+      c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
+      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { if (e.matches('.ind, .sthumb')) return; e.style.opacity = ''; e.style.transform = ''; });   // the tab pill and switch thumbs keep their place
+      const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
+      if (h.length > 300000) return;
+      snapMap()[SHOWN_KEY || snapKey()] = { t: Date.now(), h, y: Math.round(window.scrollY) };
+      snapsWrite(now);
     } catch (e) {}
   }
-  // opts.quiet: refresh in place (no page-leave animation, keeps what you see until the new data is ready)
+  let snapTimer = 0;
+  const saveSnapshotSoon = () => { clearTimeout(snapTimer); snapTimer = setTimeout(saveSnapshot, 1500); };
+
+  /* ---- the veil: while the next screen loads you already see it ----
+   * its last picture, softly out of focus (or an empty screen with placeholders the first time),
+   * and it comes into focus the moment the fresh data is in. The tab bar stays live above it, its "back" cancels,
+   * and any new tap simply takes over – nothing ever waits for IDU. */
+  const VEIL_CSS = `.pv{position:absolute;inset:0;overflow:hidden}
+    .pv.snap *{animation:none!important;transition:none!important}
+    .pv :is(.nav,.dtop,.drawer,.scrim,.ptr,.toast,.sheet,.sheet-scrim,.sugg){display:none!important}
+    .pv.snap main{filter:blur(6px) saturate(1.05);opacity:.88}.pv.snap .fab{opacity:0}
+    :host(.out){opacity:0;transition:opacity .2s ease}
+    .skc{display:block;background:var(--card);border-radius:16px;margin:0 0 10px;box-shadow:var(--shadow);animation:skPulse 1s ease-in-out infinite alternate both}
+    .skl{height:14px;border-radius:7px;background:var(--card2);margin:6px 2px 16px;animation:skPulse 1s .3s ease-in-out infinite alternate both}
+    @keyframes skPulse{from{opacity:.9}to{opacity:.45}}`;
+  let VEIL = null;
+  function skeletonHTML(app, dir, from) {
+    const sh = app.cloneNode(false);                      // same look: theme, style and layout settings
+    sh.removeAttribute('id');
+    sh.classList.remove('open', 'leaving', 'loading', 'veiled', 'go-fwd', 'go-back', 'navmin', 'scrolled', 'ltc', 'istop', 'still');
+    const tab = dir === 'tab', key = from && from.dataset ? from.dataset.tab || '' : '';
+    const label = tab && from ? (from.getAttribute('aria-label') || txt2(from.querySelector('span')) || txt2(from)).slice(0, 40) : '';
+    sh.dataset.tab = key;
+    if (tab) sh.classList.add('istop');
+    const bar = tab
+      ? `<header class="top"><button class="btn" id="menu">${I('menu')}</button><div class="title">${esc(label)}</div></header>`
+      : `<header class="top"><button class="btn" id="back">${I('back')}</button><div class="title"></div><button class="btn" id="menu">${I('menu')}</button></header>`;
+    const blocks = [78, 132, 64, 104, 64, 92].map((h, i) => `<i class="skc" style="height:${h}px;animation-delay:${300 + i * 70}ms"></i>`).join('');
+    sh.innerHTML = (tab && label ? `<div class="lt">${esc(label)}</div>` : '') + bar + `<main id="main"><div class="skl" style="width:44%"></div>${blocks}</main>`;
+    return sh.outerHTML;
+  }
+  function showVeil(u, dir, from, seq) {
+    dropVeil(true);
+    try {
+      const app = shellApp(), key = keyOf(u), snap = snapGet(key);
+      if (!snap && !app) return;
+      const y = (dir === 'back' || dir === 'swipe') && snap ? snap.y || 0 : 0;
+      const ms = MOTION === 'off' ? 0 : dir === 'fwd' || dir === 'back' ? 260 : dir === 'swipe' ? 160 : 120;
+      const anim = !ms ? 'none' : dir === 'fwd' ? `skPushIn ${ms}ms cubic-bezier(.16,1,.3,1) both` : dir === 'back' ? `skPopIn ${ms}ms cubic-bezier(.16,1,.3,1) both` : `skFade ${ms}ms ease both`;
+      const o = document.createElement('div'); o.id = 'sk-veil';
+      // under the tab bar (20) and the menu, over everything else; lives outside <body>, so the page swap doesn't touch it
+      o.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:19;overflow:hidden;touch-action:none;background:' + (store.get('skSnapBg') || '#0f1115');
+      const r = o.attachShadow({ mode: 'open' });
+      r.innerHTML = `${appStyles(r)}<style>${VEIL_CSS}.pv{animation:${anim}}.pv main,.pv .lt{transform:translateY(${-y}px)}</style>`
+        + `<div class="pv ${snap ? 'snap' : 'skel'}">${snap ? snap.h.replace(/^<style>[^<]*<\/style>/, '') : skeletonHTML(app, dir, from)}</div>`;
+      const v = { el: o, key, dir, seq, t0: performance.now(), ms, snap: !!snap };
+      o.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (VEIL !== v) return;
+        const btn = e.composedPath().find(n => n.classList && n.classList.contains('btn'));
+        if (!btn) return;
+        if (btn.id === 'back') { if (dir === 'back' || dir === 'swipe') { NAV_DIR = 'back'; history.back(); } else cancelNav(); }
+        else if (btn.id === 'menu') { const a = shellApp(); if (a) { haptic('soft'); a.classList.add('open'); } }
+      }, true);
+      ['touchstart', 'touchmove', 'touchend'].forEach(t => o.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+      document.documentElement.appendChild(o);
+      VEIL = v;
+      if (app) app.classList.add('veiled');
+    } catch (e) {}
+  }
+  function dropVeil(instant) {
+    const v = VEIL; VEIL = null; if (!v) return;
+    const app = shellApp(); if (app) app.classList.remove('veiled');
+    if (instant || MOTION === 'off' || !v.el.isConnected) { v.el.remove(); return; }
+    v.el.style.pointerEvents = 'none';
+    requestAnimationFrame(() => v.el.classList.add('out'));
+    setTimeout(() => v.el.remove(), 280);
+  }
+  // "back" on a screen that is still loading: stay where you were
+  function cancelNav() {
+    NAV_SEQ++;
+    const app = shellApp();
+    if (app) {
+      app.classList.remove('leaving', 'loading', 'go-fwd', 'go-back');
+      const root = app.getRootNode();
+      root.querySelectorAll('.nav a, .dnav>a').forEach(x => x.classList.toggle('on', x.dataset.tab === CUR.tab)); moveInd(root);
+    }
+    dropVeil(false);
+  }
+  // where "back" goes (for loading it ahead while your finger is still on the way)
+  const prevHref = () => { const k = history.state && history.state.prev; return k ? (k.startsWith('/#') ? '/' : k) : ''; };
+
+  // opts.quiet: refresh in place (no veil, keeps what you see until the new data is ready)
   async function softGo(href, push, opts) {
     opts = opts || {};
     const u = new URL(href, location.href);
     if (!softable(u)) { location.href = u.href; return false; }
-    if (navBusy) return null;
-    navBusy = true;
-    saveSnapshot();
+    const seq = ++NAV_SEQ, dir = NAV_DIR; NAV_DIR = '';
     const app = shellApp();
-    if (app && !opts.quiet) { app.classList.add('leaving', 'loading'); if (NAV_DIR === 'fwd' || NAV_DIR === 'back') app.classList.add('go-' + NAV_DIR); }
-    if (!opts.quiet && NAV_DIR !== 'swipe') showPreview(u, NAV_DIR);
+    if (!opts.quiet) {
+      if (VEIL && VEIL.key === keyOf(u) && VEIL.dir === dir) VEIL.seq = seq;     // tapped twice – the same screen is already on its way
+      else showVeil(u, dir, opts.from, seq);
+      if (app) {
+        app.classList.add('leaving'); if (dir === 'fwd' || dir === 'back') app.classList.add('go-' + dir);
+        app.classList.remove('open'); app.querySelectorAll('.sheet').forEach(closeSheet);     // the menu or a sheet steps aside
+      }
+      saveSnapshot();                                       // the screen you're leaving – after the next one is already showing
+    }
     const y = window.scrollY;
     let pg = null;
-    try { pg = await fetchPage(u.origin + u.pathname + u.search, opts.quiet); } catch (e) {}
-    navBusy = false;
-    if (!pg && opts.quiet) return false;                 // offline – keep the current screen
-    const fin = pg ? new URL(pg.url) : u;
+    try { pg = await Promise.race([fetchPage(u.origin + u.pathname + u.search, opts.quiet), sleep(opts.quiet ? 20000 : 15000).then(() => null)]); } catch (e) {}
+    if (seq !== NAV_SEQ) return null;                       // you tapped something else meanwhile – the newest tap wins
+    if (!pg) {
+      if (opts.quiet) return false;                         // offline – keep the current screen
+      if (dir === 'back' || dir === 'swipe') location.replace(u.href); else location.href = u.href;   // the classic way (the app shows its offline screen if needed)
+      return true;
+    }
+    const fin = new URL(pg.url);
     const finPath = fin.pathname.replace(/\/+$/, '') || '/';
-    const doc = pg && pg.ok && /html/.test(pg.type) ? new DOMParser().parseFromString(pg.html, 'text/html') : null;
+    const doc = pg.ok && /html/.test(pg.type) ? new DOMParser().parseFromString(pg.html, 'text/html') : null;
     const kind = doc ? routeKind(doc, finPath) : null;
     const logged = doc && (doc.querySelector('#account a') || (BARE_KINDS.includes(kind) && !doc.querySelector('input[type="password"]')));
-    if (!logged || !kind) { location.href = (pg ? pg.url : u.href) + (pg ? u.hash : ''); return true; }
+    if (!logged || !kind) { location.href = pg.url + u.hash; return true; }
+    // the next screen finishes sliding in first, so nothing jumps
+    const veil = VEIL && VEIL.seq === seq ? VEIL : null;
+    if (veil) { const w = veil.t0 + veil.ms - performance.now(); if (w > 16) { await sleep(w); if (seq !== NAV_SEQ) return null; } }
     prefetchMap.clear();
     runCleanups();
     document.title = doc.title;
@@ -2333,11 +2464,13 @@
     else if (location.pathname + location.search !== fin.pathname + fin.search) history.replaceState({ sk: 1, prev: (history.state && history.state.prev) || '' }, '', url);
     curKey = location.pathname + location.search;
     QUIET = !!opts.quiet;
-    const wentBack = NAV_DIR === 'back' || NAV_DIR === 'swipe';
+    VEILED = veil ? (veil.snap ? 'snap' : 'skel') : '';
+    NAV_DIR = dir;
     window.scrollTo(0, 0);
     main();
     if (opts.keepScroll) window.scrollTo(0, y);
-    else if (wentBack) { try { const m = JSON.parse(localStorage.getItem('skSnap') || '{}')[snapKey()]; if (m && m.y) window.scrollTo(0, m.y); } catch (e) {} }   // back where you were
+    else if (dir === 'back' || dir === 'swipe') { const m = snapGet(snapKey()); if (m && m.y) window.scrollTo(0, m.y); }   // back where you were
+    if (veil) dropVeil(false);                             // the fresh screen comes into focus
     return true;
   }
   // pull-to-refresh / back from the background: reload the data of this screen without a white flash
@@ -2352,40 +2485,9 @@
   // nothing typed and no sheet open → safe to refresh by itself
   function canAutoRefresh() {
     const app = shellApp(); if (!app) return false;
-    if (app.querySelector('.sheet') || app.classList.contains('open')) return false;
+    if (app.querySelector('.sheet') || app.classList.contains('open') || VEIL) return false;
     return !Array.from(app.querySelectorAll('textarea, input:not([type=checkbox]):not([type=file])')).some(i => i.value && i.value.trim());
   }
-
-  /* ---- instant start: the app shows the last picture of a screen before IDU even answers ---- */
-  const snapKey = () => { const p = location.pathname.replace(/\/+$/, '') || '/'; return p === '/' ? '/' + (location.hash || '#start') : p; };
-  // the screen that is actually on display – on "back" the address changes before the old screen is gone,
-  // so the picture must be filed under the screen it shows, not under the new address
-  let SHOWN_KEY = '';
-  function saveSnapshot() {
-    try {
-      const app = shellApp();
-      if (!app || !document.documentElement.classList.contains('sk-full')) return;
-      const c = app.cloneNode(true);
-      c.classList.remove('open', 'leaving', 'loading', 'go-fwd', 'go-back', 'navmin');
-      const cm = c.querySelector('main'); if (cm) cm.removeAttribute('style');
-      c.classList.add('still');
-      c.querySelectorAll('.sheet,.sheet-scrim,.ptr,.toast,.sugg').forEach(e => e.remove());
-      const dr = c.querySelector('.drawer'); if (dr) dr.innerHTML = '';
-      c.querySelectorAll('.anim').forEach(e => { e.classList.remove('anim'); e.style.animationDelay = ''; });
-      c.querySelectorAll('[style*="opacity"], [style*="transform"]').forEach(e => { if (e.matches('.ind, .sthumb')) return; e.style.opacity = ''; e.style.transform = ''; });   // the tab pill and switch thumbs keep their place
-      const h = '<style>*{animation:none!important;transition:none!important}</style>' + c.outerHTML;
-      if (h.length > 300000) return;
-      let map = {}; try { map = JSON.parse(localStorage.getItem('skSnap') || '{}'); } catch (e) {}
-      const key = SHOWN_KEY || snapKey();
-      map[key] = { t: Date.now(), h, y: Math.round(window.scrollY) };
-      Object.keys(map).sort((a, b) => map[b].t - map[a].t).slice(8).forEach(k => delete map[k]);
-      try { localStorage.setItem('skSnap', JSON.stringify(map)); }
-      catch (e) { localStorage.setItem('skSnap', JSON.stringify({ [key]: map[key] })); }
-      if (localStorage.getItem('skSnapCss') !== APP_CSS + V5_CSS) localStorage.setItem('skSnapCss', APP_CSS + V5_CSS);   // the picture needs all the styles
-    } catch (e) {}
-  }
-  let snapTimer = 0;
-  const saveSnapshotSoon = () => { clearTimeout(snapTimer); snapTimer = setTimeout(saveSnapshot, 1500); };
 
   let navInit = false, hiddenAt = 0;
   function initNav() {
@@ -2393,16 +2495,18 @@
     try { history.replaceState({ sk: 1 }, '', location.href); } catch (e) {}
     window.addEventListener('popstate', () => {
       const k = location.pathname + location.search;
-      if (k === curKey) return;            // only the #hash changed – the page handles it
+      if (k === curKey) { if (VEIL) cancelNav(); return; }     // only the #hash changed – the page handles it
       if (NAV_DIR !== 'swipe') NAV_DIR = 'back';
       softGo(location.href, false);
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { hiddenAt = Date.now(); saveSnapshot(); return; }
+      if (document.hidden) { hiddenAt = Date.now(); if (!VEIL) saveSnapshot(true); return; }
       if (hiddenAt && Date.now() - hiddenAt > 4 * 60e3 && canAutoRefresh()) refreshPage({ keepScroll: true });
       hiddenAt = 0;
     });
-    window.addEventListener('pagehide', saveSnapshot);
+    window.addEventListener('pagehide', () => { if (!VEIL) saveSnapshot(true); });
+    // back from the page cache (e.g. after a file): no half-finished change of screens
+    window.addEventListener('pageshow', ev => { if (ev.persisted) { NAV_SEQ++; dropVeil(true); const a = shellApp(); if (a) a.classList.remove('leaving', 'loading', 'go-fwd', 'go-back', 'veiled'); } });
   }
 
   /* ------------------------------------------------------------------ *
@@ -2492,6 +2596,7 @@
       if (t) haptic(t.matches('summary') ? 'soft' : 'selection');
     }, true);
     CUR.ctx = ctx; CUR.tab = tab;
+    wirePress(root);
     if (!ctx.bare) native({ type: 'badge', n: ctx.unread || 0 });
     wireNav(root);
     wireDesk(root, app);
@@ -2506,7 +2611,10 @@
     root.getElementById('menu').onclick = () => toggle(true);
     root.getElementById('scrim').onclick = () => toggle(false);
     const back = root.getElementById('back');
-    if (back) back.onclick = () => { NAV_DIR = 'back'; if (history.length > 1) history.back(); else softGo('/', true); };
+    if (back) {
+      back.onclick = () => { NAV_DIR = 'back'; if (history.length > 1) history.back(); else softGo('/', true); };
+      back.addEventListener('touchstart', () => { const h = prevHref(); if (h) prefetch(h); }, { passive: true });   // the previous screen starts loading as your finger lands
+    }
     root.getElementById('classic').onclick = e => { e.preventDefault(); store.set('skClassic', '1'); location.reload(); };
     if (ctx.timer) {
       const t = root.getElementById('timer'), dt = root.getElementById('dtimer');
@@ -2525,11 +2633,11 @@
       const u = new URL(href, location.href);
       if (u.origin !== location.origin) return;
       if (/\/download$/.test(u.pathname)) { e.preventDefault(); haptic('light'); toast(root, 'Otwieram plik…'); location.href = u.href; return; }
-      if (/^\/users\/sign_out/.test(u.pathname)) { try { localStorage.removeItem('skSnap'); } catch (err) {} return; }
+      if (/^\/users\/sign_out/.test(u.pathname)) { snapsForget(); return; }
       if (a.target === '_blank') return;
       if (u.pathname === location.pathname && u.search === location.search && u.hash) return; // same page (#plan)
       e.preventDefault();
-      if (softable(u)) { NAV_DIR = a.closest('.nav, .dnav, .drawer, .dlogo, .dpop') ? 'tab' : 'fwd'; softGo(u.href, true); return; }
+      if (softable(u)) { NAV_DIR = a.closest('.nav, .dnav, .drawer, .dlogo, .dpop') ? 'tab' : 'fwd'; softGo(u.href, true, { from: a }); return; }
       saveSnapshot();
       app.classList.add('leaving');
       setTimeout(() => { location.href = u.href; }, 140);
@@ -2537,7 +2645,7 @@
     // start loading a page the moment a finger touches its link
     root.addEventListener('touchstart', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
     root.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && !a.getAttribute('href').startsWith('#')) prefetch(a.getAttribute('href')); }, { passive: true });
-    onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
+    onWin('pageshow', ev => { if (ev.persisted) { app.classList.remove('leaving', 'loading', 'veiled'); const m = root.getElementById('main'); if (m) { m.style.transform = ''; m.style.opacity = ''; } } });
 
     // swipe back like iOS: from the left edge, and on inner pages from anywhere on the screen.
     // The page follows the finger 1:1 and the previous screen is already waiting underneath (no empty black area).
@@ -2552,13 +2660,12 @@
       const NO_FULL = 'input,textarea,select,button,label,.hs,.fchips,.chips,.seg,.days,#daylist,.sl,.cal,.grid,.tline,.viewer,.sheet,.msg,.dtop,[data-noswipe]';
       // the previous screen = the picture saved when you left it (with its scroll position)
       const buildUnder = () => {
-        let snap = null;
-        try { const prev = history.state && history.state.prev; const map = JSON.parse(localStorage.getItem('skSnap') || '{}'); snap = prev ? map[prev] : null; } catch (e) {}
+        const snap = snapGet(history.state && history.state.prev);
         const u = document.createElement('div'); u.id = 'sk-under';
         u.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;overflow:hidden;display:none;--p:0;background:' + (store.get('skSnapBg') || '#0f1115');
         const r = u.attachShadow({ mode: 'open' });
         const html = snap && snap.h ? snap.h.replace(/^<style>[^<]*<\/style>/, '') : '';
-        r.innerHTML = `<style>${APP_CSS}${V5_CSS}
+        r.innerHTML = `${appStyles(r)}<style>
           .ud{transform:translateX(calc((1 - var(--p)) * -30%));will-change:transform}
           .dim{position:fixed;inset:0;background:#000;opacity:calc((1 - var(--p)) * .18);pointer-events:none}
           :host(.go) .ud{transition:transform var(--ms) cubic-bezier(.2,.8,.25,1)}
@@ -2572,6 +2679,7 @@
       if (canBack() && !isDesk()) setTimeout(() => { if (!under && host.isConnected) under = buildUnder(); }, 700);   // ready before your finger is
       const startBack = () => {
         el = target();
+        const h = prevHref(); if (h) prefetch(h);            // the fresh screen loads while you swipe
         if (!under || !under.isConnected) under = buildUnder();
         under.classList.remove('go'); under.style.setProperty('--p', 0); under.style.display = 'block';
         app.classList.add('scrolled');          // the bar gets its background, so the screen underneath doesn't show through it
@@ -2696,9 +2804,10 @@
     // after a quiet refresh or an instant-start picture the content is already on screen → no entrance animation
     const hadSnap = !!document.getElementById('sk-snap');
     const dir = NAV_DIR; NAV_DIR = '';
-    let skipAnim = hadSnap || QUIET || dir === 'swipe' || PREVIEWED;
-    PREVIEWED = false;
-    let slide = !skipAnim && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
+    const veiled = VEILED; VEILED = '';
+    // a picture of this screen was just on display → it simply comes into focus; placeholders → the content settles in without sliding again
+    let skipAnim = hadSnap || QUIET || dir === 'swipe' || veiled === 'snap';
+    let slide = !skipAnim && !veiled && (dir === 'fwd' || dir === 'back') && MOTION !== 'off';
     const mainEl = root.getElementById('main');
     document.documentElement.classList.add('sk-full');
     page.render(mainEl, root, { setTitle: s => { root.getElementById('title').textContent = s; const lt = root.getElementById('lt'); if (lt) lt.textContent = s; }, setTab: k => {
@@ -3417,6 +3526,7 @@
           window.scrollTo(0, 0);
           wire();
           if (api.animate) api.animate();
+          saveSnapshotSoon();
         }
         let favFilter = 'all';
         const nstate = { tab: '*', key: null };
@@ -3498,7 +3608,8 @@
             root.querySelectorAll('#subjlist details').forEach(d => { d.style.display = !q || d.dataset.n.includes(q) ? '' : 'none'; });
           };
         }
-        onWin('hashchange', show);
+        // the tab you leave keeps its picture (shown when you come back to it from another screen)
+        onWin('hashchange', () => { if (!VEIL) saveSnapshot(); show(); });
         reShow = () => { const v = (location.hash || '#start').slice(1); if (v === 'start' || v === 'przedmioty') show(); };
         let wasDesk = isDesk();
         onWin('resize', () => { const d = isDesk(); if (d !== wasDesk) { wasDesk = d; redrawStart(); } });
@@ -5400,6 +5511,22 @@
   /* ------------------------------------------------------------------ *
    *  People search (sheet from the menu)
    * ------------------------------------------------------------------ */
+  // the first string argument of .name("…") in a piece of JavaScript, with its escapes undone
+  function jsStringArg(t, name) {
+    const m = new RegExp('\\.' + name + '\\(\\s*(["\'])').exec(t); if (!m) return null;
+    const q = m[1]; let j = m.index + m[0].length, out = '';
+    while (j < t.length) {
+      const ch = t[j];
+      if (ch === '\\') {
+        const n = t[j + 1];
+        if (n === 'u') { out += String.fromCharCode(parseInt(t.substr(j + 2, 4), 16) || 0); j += 6; continue; }
+        out += n === 'n' ? '\n' : n === 't' ? '\t' : n === 'r' ? '\r' : n; j += 2; continue;
+      }
+      if (ch === q) return out;
+      out += ch; j++;
+    }
+    return out;
+  }
   function openPeople(root) {
     const sh = openSheet(root, `<h2>Szukaj osób</h2><div class="muted small" style="margin-bottom:10px">Uczniowie, nauczyciele i rodzice w IDU</div>
       <div class="search">${I('search', 'sm')}<input id="pq" type="search" placeholder="Imię lub nazwisko (min. 3 litery)" autocomplete="off" autocapitalize="words"></div><div id="pres" class="plist"></div>`);
@@ -5416,8 +5543,8 @@
           const r = await fetch('/idu_users/search?search%5Bprofile_by_name%5D=' + encodeURIComponent(v), { credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/javascript, application/javascript, */*' } });
           const t = await r.text(); if (my !== seq) return;
-          const mm = t.match(/\.html\("([\s\S]*)"\)\s*;?\s*$/);
-          const html = mm ? mm[1].replace(/\\(.)/g, (x, c) => c === 'n' ? '\n' : c === 't' ? '\t' : c) : t;
+          // IDU answers with JavaScript: $('#users_search_result').html("…"); followed by more lines – read just the string
+          const html = jsStringArg(t, 'html') ?? t;
           const d = new DOMParser().parseFromString(html, 'text/html');
           const people = $$('.single_user', d).map(u => { const a = $('.user_name a', u); return a ? { n: txt(a), h: attr(a, 'href') } : null; }).filter(Boolean);
           const role = h => /^\/teachers/.test(h) ? 'nauczyciel' : /^\/parents/.test(h) ? 'rodzic' : /^\/students/.test(h) ? 'uczeń' : '';
