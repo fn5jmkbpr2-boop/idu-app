@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.9
+// @version     5.9.1
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -2081,7 +2081,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.9';
+  const SKIN_VERSION = '5.9.1';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -3701,6 +3701,12 @@
       });
       if (w) return { big: fmtAvg(sum / w), small: 'średnia' };
       if (pct.length) return { big: Math.round(pct.reduce((a, b) => a + b, 0) / pct.length) + '%', small: 'średnio' };
+      // points from a test (9/16) in an ordinary subject: a percentage of everything there was to get – the PE goal is only for PE
+      if (cum.length && !/\bwf\b|wychowanie fiz/i.test(r.name)) {
+        const got = cum.reduce((a, m) => a + (parseFloat(m.points) || 0), 0), max = cum.reduce((a, m) => a + (parseFloat(m.max) || 0), 0);
+        const g = Math.round(got * 10) / 10, mx = Math.round(max * 10) / 10;
+        if (max > 0) return { big: Math.round(got / max * 100) + '%', small: L(`punkty ${g}/${mx}`, `points ${g}/${mx}`) };
+      }
       if (cum.length) {
         // the teacher keeps a running total – by default show the biggest entry (setting: sum / last)
         const S = loadSettings(), target = +S.wfTarget || 95, vals = cum.map(m => parseFloat(m.points) || 0);
