@@ -212,7 +212,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     private func cameBack() {
         let away = hiddenAt.map { Date().timeIntervalSince($0) } ?? 0
         hiddenAt = nil
-        if Date().timeIntervalSince(lastSkinCheck) > 30 * 60 { updateSkinInBackground() }
+        if Date().timeIntervalSince(lastSkinCheck) > 10 * 60 { updateSkinInBackground() }
         if away > 5 * 60, let source = localSkin(), version(of: source) > loadedSkinVersion {
             installScripts(source)
             webView.reload()
@@ -248,6 +248,12 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
             Reminders.saveSettings(dict)
             Watcher.saveSettings(dict)
             Reminders.reschedule()
+        case "applySkin":
+            // the skin said "switch now" (you weren't in the middle of anything, or you tapped the button)
+            if let source = localSkin(), version(of: source) > loadedSkinVersion {
+                installScripts(source)
+                webView.reload()
+            }
         case "checkNow":
             // "Sprawdź teraz" in the notification settings: check IDU right away and answer with a short status
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] _, _ in
@@ -346,6 +352,11 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
                   WebViewController.compiles(text) else { return }   // a broken update is never used
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? text.write(to: file, atomically: true, encoding: .utf8)
+            // newer than what's running: tell the page – it switches right away if you're not busy, otherwise shows a button
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, self.version(of: text) > self.loadedSkinVersion else { return }
+                self.webView.evaluateJavaScript("window.__skNative && window.__skNative('skinReady', 1)", completionHandler: nil)
+            }
         }.resume()
     }
 

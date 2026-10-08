@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.9.2
+// @version     5.10
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -630,6 +630,8 @@
     background:color-mix(in srgb,var(--card2) 94%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     color:var(--text);border-radius:14px;padding:11px 16px;font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center;
     box-shadow:0 8px 26px rgba(0,0,0,.45);animation:skToast .35s cubic-bezier(.2,.85,.25,1) both;width:max-content;max-width:88vw}
+  .newspill{border:0;font-family:inherit;cursor:pointer}.newspill b{color:var(--accent);margin-left:2px}.newspill .ic{color:var(--warn)}
+  .toast.out{opacity:0;transition:opacity .3s}
   .toast .ic{width:18px;height:18px}
   .toast.bad .ic{color:var(--bad)}.toast.good .ic{color:var(--good)}
   .toast.out{opacity:0;transition:opacity .25s}
@@ -1403,6 +1405,10 @@
   const todoList = () => jget('skTodos', []);
   const todoSave = a => jset('skTodos', a.slice(0, 200));
   function todoAdd(t, extra) { const a = todoList(); a.unshift(Object.assign({ id: uid(), t: String(t).slice(0, 200), done: false, at: Date.now() }, extra || {})); todoSave(a); }
+  // homework from IDU you've already done – remembered only on this phone (IDU itself doesn't know)
+  const hwDoneList = () => jget('skHwDone', []);
+  const hwIsDone = h => !!h && hwDoneList().includes(favKey(h));
+  function hwSetDone(h, on) { const k = favKey(h), a = hwDoneList().filter(x => x !== k); if (on) a.unshift(k); jset('skHwDone', a.slice(0, 400)); }
   function todoToggle(id, v) { const a = todoList(), x = a.find(y => y.id === id); if (x) { x.done = v; x.doneAt = Date.now(); } todoSave(a.filter(y => !y.done || Date.now() - (y.doneAt || 0) < 864e5)); }
   function todoAddSheet(root, after) {
     let due = null;
@@ -1673,18 +1679,28 @@
     ['notify', 'bell', 'Powiadomienia', 'lekcje, sprawdziany, zadania'], ['widget', 'widget', 'Widget', 'jak dodać'], ['profile', 'user', 'Profil i język', 'zdjęcie, imię, język']];
   const TILES = { next: 'Następna lekcja', grades: 'Nowe oceny', mail: 'Wiadomości', todo: 'Do zrobienia', fav: 'Ważne', wf: 'WF – punkty', exam: 'Najbliższy sprawdzian', notes: 'Notatki' };
   // once after an update: what's new (most of it is hidden behind gestures, so say where it is)
+  // what's new: only when there really is something new (small fixes stay quiet), and only as a small button – never a window in your way
+  const NEWS_ID = '5.10';
   function whatsNew(root) {
-    const seen = store.get('skSeenNews');
-    if (seen === SKIN_VERSION || root.querySelector('.sheet') || (location.hash && location.hash !== '#start')) return;
-    store.set('skSeenNews', SKIN_VERSION);
+    const seen = store.get('skSeenNews') || '';
+    if (seen === NEWS_ID || root.querySelector('.sheet') || (location.hash && location.hash !== '#start')) return;
+    store.set('skSeenNews', NEWS_ID);
     if (!seen && !store.get('skSettings')) return;          // brand-new install: nothing is "new" yet
+    const app = root.getElementById('app'); if (!app) return;
+    const pill = document.createElement('button'); pill.className = 'toast newspill';
+    pill.innerHTML = `${I('star', 'sm')}<span>Nowości w apce</span><b>Zobacz</b>`;
+    pill.onclick = () => { pill.remove(); openNews(root); };
+    app.appendChild(pill);
+    setTimeout(() => { pill.classList.add('out'); setTimeout(() => pill.remove(), 320); }, 7000);
+  }
+  function openNews(root) {
     const row = (ic, t, d) => `<div class="row" style="align-items:flex-start;gap:14px;padding:10px 0"><div class="sic" style="flex:none">${I(ic)}</div><div class="grow"><div class="b">${t}</div><div class="muted small">${d}</div></div></div>`;
     const sh = openSheet(root, `<h2>${L('Co nowego', "What's new")}</h2><div class="muted small" style="margin-bottom:8px">${L('Wersja', 'Version')} ${esc(SKIN_VERSION)}</div>
       <div class="card" style="padding:2px 14px">
-      ${row('layers', 'Ekrany od razu', 'Po kliknięciu od razu widzisz następny ekran – jego ostatni obraz, lekko rozmyty, który wyostrza się, gdy przyjdą świeże dane z IDU.')}
-      ${row('check', 'Spokojniejsze klikanie', 'Nic już nie maleje pod palcem – wiersz tylko delikatnie się podświetla. Gdy ekran się ładuje, możesz od razu kliknąć coś innego albo „wstecz”.')}
-      ${row('users', 'Szukaj osób działa', 'Menu → Szukaj osób: uczniowie, nauczyciele i rodzice.')}
-      ${row('bell', 'Powiadomienia', NATIVE_IDU ? 'Nowe oceny, wiadomości i ogłoszenia – Ustawienia → Powiadomienia → „Sprawdź teraz”.' : 'Na iPhonie: nowe oceny i wiadomości jako powiadomienia.')}
+      ${row('check', 'Zadania do odhaczenia', 'W „Do zrobienia” i w Zadaniach domowych zaznacz zadanie jako zrobione – znika z listy. Pamięta to tylko Twój telefon.')}
+      ${row('medal', 'Nowe oceny widać od razu', 'Nowe oceny mają znaczek NOWE, a przedmiot pokazuje, ile ich doszło. Otwarte przedmioty zostają otwarte, gdy wracasz.')}
+      ${row('chart', 'Oceny w punktach', 'Kartkówka na punkty (np. 9/16) liczy się w procentach. Cel 95 punktów jest tylko dla WF.')}
+      ${row('layers', 'Ekrany od razu', 'Po kliknięciu od razu widzisz następny ekran – rozmyty obraz, który wyostrza się, gdy przyjdą świeże dane. Nic nie maleje pod palcem.')}
       </div><button class="btn-p" id="wnok" style="width:100%;margin-top:14px">${L('Super', 'Got it')}</button>`);
     sh.querySelector('#wnok').onclick = () => closeSheet(sh);
   }
@@ -1929,6 +1945,10 @@
   .app input[type=checkbox]:not(.tgl input):checked::after{content:'';width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
   .trow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:.5px solid var(--line);color:var(--text)}
   .trow:last-of-type{border-bottom:0}.trow .done{text-decoration:line-through;opacity:.55}
+  .hwchk{flex:none;width:26px;height:26px;margin:-2px 2px 0 0;border-radius:50%;border:2px solid var(--line);background:none;color:transparent;display:grid;place-items:center;padding:0}
+  .hwchk.on{background:var(--good);border-color:var(--good);color:#fff}
+  .box.hwdone .ttl{text-decoration:line-through;opacity:.55}.box.hwdone .strip{opacity:.5}
+  .gnew{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;letter-spacing:.3px;background:#fff;color:var(--c,#333);border-radius:7px;padding:1px 6px;vertical-align:1px}
   .tdot{width:9px;height:9px;border-radius:5px;background:var(--accent);flex:none;margin:0 7px}.tdot.bad{background:var(--bad)}
   .tadd{border:0;background:none;color:var(--accent);font-weight:600;padding:10px 0;display:flex;gap:6px;align-items:center}
   .hello .iconbtn{flex:none}
@@ -2081,7 +2101,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.9.2';
+  const SKIN_VERSION = '5.10';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2090,6 +2110,20 @@
   const nativeCbs = {};
   function onNative(type, fn) { (nativeCbs[type] = nativeCbs[type] || []).push(fn); }
   window.__skNative = (type, val) => { (nativeCbs[type] || []).forEach(f => { try { f(val); } catch (e) {} }); };
+  // the app (3.3+) has downloaded a newer look: switch to it at once if you're not in the middle of something, otherwise offer a button
+  let lastTouchAt = 0;
+  window.addEventListener('touchstart', () => { lastTouchAt = Date.now(); }, { passive: true, capture: true });
+  onNative('skinReady', () => {
+    const app = shellApp();
+    const busy = Date.now() - lastTouchAt < 4000 || VEIL || !app || !canAutoRefresh();
+    if (!busy) { native({ type: 'applySkin' }); return; }
+    if (!app) return;
+    const pill = document.createElement('button'); pill.className = 'toast newspill';
+    pill.innerHTML = `${I('refresh', 'sm')}<span>Nowa wersja gotowa</span><b>Włącz</b>`;
+    pill.onclick = () => { pill.remove(); native({ type: 'applySkin' }); };
+    app.querySelectorAll('.toast').forEach(t => t.remove()); app.appendChild(pill);
+    setTimeout(() => { pill.classList.add('out'); setTimeout(() => pill.remove(), 320); }, 10000);
+  });
 
   /* ---- English: the app's own words are swapped as they appear (IDU's content is left alone) ---- */
   const SKIP_TR = '.mbody,.note,.bubble,textarea,style,[data-raw],.tok,.who b';
@@ -2851,8 +2885,6 @@
     QUIET = false;
     skipAnim = false;
     saveSnapshotSoon();
-    // one-time check that the update arrived (shown once, then never again)
-    if (store.get('skUpdTest') !== SKIN_VERSION) { store.set('skUpdTest', SKIN_VERSION); setTimeout(() => toast(root, 'TEST ✓ – ' + L('działa wersja', 'running version') + ' ' + SKIN_VERSION, 'good'), 600); }
   }
 
   const kidsList = ctx => { if (!ctx.parent) return []; try { const k = JSON.parse(store.get('skKids') || '[]'); return Array.isArray(k) ? k : []; } catch (e) { return []; } };
@@ -3205,11 +3237,13 @@
       const own = todoList().filter(t => !t.done);
       return [].concat(
         pendingAnn.map(a => ({ kind: 'ann', t: L('Potwierdź: ', 'Confirm: ') + a.title, href: a.href, tag: 'IDU', bad: true })),
-        dueSoon.map(h => ({ kind: 'hw', t: h.title, href: h.href, tag: relTime(h.dueD) + ', ' + hhmm(h.dueD), bad: h.dueD - Date.now() < 864e5 })),
+        dueSoon.filter(h => !hwIsDone(h.href)).map(h => ({ kind: 'hw', t: h.title, href: h.href, tag: relTime(h.dueD) + ', ' + hhmm(h.dueD), bad: h.dueD - Date.now() < 864e5 })),
         own.sort((a, b) => (a.due || 9e15) - (b.due || 9e15)).map(t => ({ kind: 'own', id: t.id, t: t.t, href: t.href, tag: t.due ? relTime(new Date(t.due)) : '', bad: t.due && t.due - Date.now() < 864e5 })));
     }
     function todoRows(items) {
-      return items.map(x => x.kind === 'own'
+      return items.map(x => x.kind === 'hw'
+        ? `<label class="trow"><input type="checkbox" data-hwdone="${esc(x.href)}"><span class="grow clip"><a href="${esc(x.href)}">${esc(x.t)}</a></span><span class="muted small" style="${x.bad ? 'color:var(--bad)' : ''}">${esc(x.tag)}</span></label>`
+        : x.kind === 'own'
         ? `<label class="trow"><input type="checkbox" data-todo="${esc(x.id)}"><span class="grow">${x.href ? `<a href="${esc(x.href)}">${esc(x.t)}</a>` : esc(x.t)}</span><span class="muted small">${esc(x.tag)}</span></label>`
         : `<a class="trow tap" href="${esc(x.href)}"><span class="tdot ${x.bad ? 'bad' : ''}"></span><span class="grow clip">${esc(x.t)}</span><span class="muted small" style="${x.bad ? 'color:var(--bad)' : ''}">${esc(x.tag)}</span></a>`).join('');
     }
@@ -3320,6 +3354,7 @@
         <button class="btn-p" id="tsa" style="width:100%;margin-top:12px">${I('plus', 'sm')}${L('Dodaj zadanie', 'Add a task')}</button>`;
       const sh = openSheet(root, draw());
       const wireS = () => {
+        sh.querySelectorAll('[data-hwdone]').forEach(c => c.onchange = () => { hwSetDone(c.dataset.hwdone, c.checked); haptic('success'); c.closest('.trow').querySelector('.grow').classList.toggle('done', c.checked); redraw(); });
         sh.querySelectorAll('[data-todo]').forEach(c => c.onchange = () => { todoToggle(c.dataset.todo, c.checked); haptic('success'); c.closest('.trow').querySelector('.grow').classList.toggle('done', c.checked); redraw(); });
         sh.querySelector('#tsa').onclick = () => todoAddSheet(root, () => { sh.innerHTML = '<div class="grab"></div>' + draw(); wireS(); redraw(); });
       };
@@ -3579,6 +3614,8 @@
         function wire() {
           main.querySelectorAll('[data-todo]').forEach(c => c.onchange = () => { todoToggle(c.dataset.todo, c.checked); haptic('success');
             c.closest('.trow').querySelector('.grow').classList.toggle('done', c.checked); setTimeout(redrawTodo, 700); });
+          main.querySelectorAll('[data-hwdone]').forEach(c => c.onchange = () => { hwSetDone(c.dataset.hwdone, c.checked); haptic('success');
+            c.closest('.trow').querySelector('.grow').classList.toggle('done', c.checked); setTimeout(redrawTodo, 700); });
           main.querySelectorAll('[data-act]').forEach(b => b.onclick = e => { e.preventDefault(); const a = b.dataset.act;
             if (a === 'todoadd') todoAddSheet(root, redrawTodo); else if (a === 'todomore') { todoOpen = true; redrawTodo(); } else if (a === 'todosheet') openTodoSheet(root, redrawStart); });
           wireChips(root, 'fk', v => { favFilter = v; main.innerHTML = favView(v); wire(); });
@@ -3723,6 +3760,17 @@
 
     const withMarks = rows.filter(r => r.cats.length);
     const without = rows.filter(r => !r.cats.length);
+    // grades you haven't seen here yet get a NEW mark (the very first time nothing is marked)
+    const seenMarks = jget('skSeenMarks', null), seenSet = new Set(seenMarks || []), allKeys = [];
+    withMarks.forEach(r => {
+      r.newN = 0; const cnt = {};
+      r.cats.forEach(c => c.marks.forEach(m => {
+        const base = [r.name, m.value, m.date, m.desc].join('|'); cnt[base] = (cnt[base] || 0) + 1;
+        const k = base + '|' + cnt[base]; allKeys.push(k);                  // two identical entries are still two grades
+        m.isNew = !!seenMarks && !seenSet.has(k); if (m.isNew) r.newN++;
+      }));
+    });
+    const markSeen = () => jset('skSeenMarks', allKeys.slice(-3000));
     withMarks.forEach(r => {
       const all = [].concat(...r.cats.map(c => c.marks.map(m => Object.assign({ cat: c.name, d: parseDate(m.date) }, m))));
       r.all = all;
@@ -3736,10 +3784,10 @@
 
     function subjCard(r) {
       const s = r.sum, all = r.all;
-      return `<details style="margin-bottom:12px"><summary class="gcard tap" style="--c:${subjColor(r.name)};margin:0">
+      return `<details data-subj="${esc(r.name)}" style="margin-bottom:12px"><summary class="gcard tap" style="--c:${subjColor(r.name)};margin:0">
         <div class="top2"><div class="avg">${esc(s.big)}<small>${esc(s.small)}</small></div>
         <div class="marks">${all.slice(-8).map(m => `<span>${gradeShort(m.value)}</span>`).join('')}</div></div>
-        <div class="name"><span>${esc(prettySubj(r.name))}</span><span>${all.length} ${plural(all.length, 'ocena', 'oceny', 'ocen')}</span></div>
+        <div class="name"><span>${esc(prettySubj(r.name))}${r.newN ? ` <b class="gnew">${r.newN} ${L(r.newN === 1 ? 'nowa' : 'nowe', 'new')}</b>` : ''}</span><span>${all.length} ${plural(all.length, 'ocena', 'oceny', 'ocen')}</span></div>
         ${s.pts != null ? `<div class="meter sm"><i style="width:${Math.min(100, 100 * s.pts / s.target)}%"></i></div>` : ''}</summary>
         <div class="card" style="margin-top:8px">${r.cats.map(c => `<div class="cat">${esc(c.name)}</div>${c.marks.map(m => markRow(m, r.name, c.name)).join('')}`).join('')}
         <div class="chips"><a class="chip" href="${esc(r.href)}">${I('layers')}Strona przedmiotu</a>${s.small === 'średnia' || s.small === 'średnio' ? `<button class="chip" data-calc="${esc(r.name)}">${I('chart')}Kalkulator</button>` : ''}</div></div></details>`;
@@ -3805,7 +3853,7 @@
     }
     function markRow(m, subj, cat, showSubj) {
       const row = `<div class="mk" style="--c:${subjColor(subj)}"><div class="v">${gradeShort(m.value)}</div>
-        <div class="grow"><div class="b">${esc(showSubj ? prettySubj(subj) : m.value.length > 6 ? m.value : m.desc || cat)}</div>
+        <div class="grow"><div class="b">${esc(showSubj ? prettySubj(subj) : m.value.length > 6 ? m.value : m.desc || cat)}${m.isNew ? ' <span class="pill new">NOWE</span>' : ''}</div>
         <div class="muted small">${showSubj ? esc((m.desc || cat) + ' · ') : m.value.length > 6 ? esc(m.desc) + ' · ' : ''}${esc(m.date)}${m.weight !== 1 ? ' · waga ' + m.weight : ''}</div></div>
         ${m.note ? I('down', 'sm chev') : ''}</div>`;
       return m.note ? `<details><summary>${row}</summary><div class="note" style="margin:0 0 10px">${m.note}</div></details>` : row;
@@ -3850,7 +3898,15 @@
           <div class="search">${I('search', 'sm')}<input id="gq" type="search" placeholder="Szukaj przedmiotu lub oceny" autocomplete="off"></div>
           <div id="gsortwrap" style="${view !== 'subj' ? 'display:none' : ''}">${chipRow('gs', SORTS.map(([v, label]) => ({ v, label })), sort)}</div>
           <div id="glist">${withMarks.length || without.length ? listHTML() : '<div class="empty">Brak ocen</div>'}</div>`;
-        const redraw = () => { const g = root.getElementById('glist'); g.innerHTML = listHTML(); animateIn(g); };
+        const redraw = () => { const g = root.getElementById('glist'); g.innerHTML = listHTML(); reopen(); animateIn(g); };
+        markSeen();
+        // subject cards you opened stay open when you come back (also no jump from the saved picture to the fresh screen)
+        const openKey = 'skGOpen', getOpen = () => { try { return JSON.parse(sessionStorage.getItem(openKey) || '[]'); } catch (e) { return []; } };
+        const reopen = () => { const o = getOpen(); main.querySelectorAll('#glist details[data-subj]').forEach(d => { if (o.includes(d.dataset.subj)) d.open = true; }); };
+        main.addEventListener('toggle', e => { const d = e.target; if (!d.dataset || !d.dataset.subj) return;
+          const o = getOpen().filter(x => x !== d.dataset.subj); if (d.open) o.push(d.dataset.subj);
+          try { sessionStorage.setItem(openKey, JSON.stringify(o.slice(-20))); } catch (er) {} }, true);
+        reopen();
         main.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-calc]'); if (!b) return;
           e.preventDefault(); const r = withMarks.find(x => x.name === b.dataset.calc); if (r) openCalc(root, r); });
         wireChips(root, 'gs', v => { sort = v; store.set('skGradeSort', v); redraw(); });
@@ -4135,8 +4191,10 @@
         pill = hours < 0 ? '<span class="pill">zakończone</span>'
           : `<span class="pill ${hours < 48 ? 'bad' : hours < 120 ? 'warn' : 'good'}">${esc(relTime(i.due) === TODAY ? TODAY + ' ' + hhmm(i.due) : relTime(i.due))}</span>`;
       }
-      return `<a class="box tap" href="${esc(i.href)}" style="margin-bottom:10px"><div class="in">
-        <div class="row" style="align-items:flex-start"><div class="grow ttl">${esc(i.title)}</div>${pill}</div>
+      const done = hwIsDone(i.href);
+      if (done) pill = `<span class="pill good">${I('check', 'xs')} ${L('zrobione', 'done')}</span>`;
+      return `<a class="box tap hw ${done ? 'hwdone' : ''}" href="${esc(i.href)}" style="margin-bottom:10px"><div class="in">
+        <div class="row" style="align-items:flex-start"><button class="hwchk ${done ? 'on' : ''}" data-hwtick="${esc(i.href)}" aria-label="${done ? L('Oznacz jako niezrobione', 'Mark as not done') : L('Oznacz jako zrobione', 'Mark as done')}">${I('check', 'sm')}</button><div class="grow ttl">${esc(i.title)}</div>${pill}</div>
         <div class="sub">${i.due ? L('Termin: ', 'Due: ') + esc(shortDate(i.due) + ', ' + hhmm(i.due)) : L('Dodano ', 'Added ') + esc(shortDate(i.created))}</div></div>
         <div class="strip" style="--c:${subjColor(i.subject)}"><span>${esc(prettySubj(i.subject))}</span></div></a>`;
     };
@@ -4145,7 +4203,8 @@
     let hf = open.length ? 'open' : 'all', hq = '';
     function hwHTML() {
       const nq = norm(hq);
-      const pick = { open, ended, nodue, all: open.concat(nodue, ended.slice().sort((a, b) => b.due - a.due)) }[hf] || items;
+      const byDone = a => a.slice().sort((x, y) => hwIsDone(x.href) - hwIsDone(y.href));   // what you've done goes to the bottom
+      const pick = { open: byDone(open), ended, nodue: byDone(nodue), all: byDone(open).concat(byDone(nodue), ended.slice().sort((a, b) => b.due - a.due)) }[hf] || items;
       const list = pick.filter(i => !nq || norm(i.title + ' ' + i.subject).includes(nq));
       return list.length ? list.map(card).join('') : `<div class="nores">${hf === 'open' ? I('check', 'big') + '<div>Nic do zrobienia</div>' : 'Brak zadań'}</div>`;
     }
@@ -4160,6 +4219,9 @@
         if (!items.length) return;
         const redraw = () => { const l = root.getElementById('hl'); l.innerHTML = hwHTML(); animateIn(l); };
         wireChips(root, 'hf', v => { hf = v; redraw(); });
+        main.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-hwtick]'); if (!b) return;
+          e.preventDefault(); e.stopPropagation(); const on = !hwIsDone(b.dataset.hwtick); hwSetDone(b.dataset.hwtick, on); haptic(on ? 'success' : 'light');
+          const l = root.getElementById('hl'); l.innerHTML = hwHTML(); }, true);
         root.getElementById('hq').oninput = e => { hq = e.target.value; const l = root.getElementById('hl'); l.innerHTML = hwHTML(); };
       }
     };
@@ -5696,6 +5758,12 @@
     'Data urodzenia': 'Date of birth', 'Imię': 'First name', 'Drugie imię': 'Middle name', 'Nazwisko': 'Last name', 'Adres': 'Address', 'Telefon': 'Phone',
     'Telefon komórkowy': 'Mobile phone', 'Podpięte aktualności': 'Pinned news', 'Moduły': 'Modules',
     'Adres zameldowania': 'Registered address', 'Adres zamieszkania': 'Home address', 'Usprawiedliwienia': 'Excuse requests',
+    'Nowości w apce': "What's new in the app", 'Zobacz': 'See', 'Zadania do odhaczenia': 'Tick off homework',
+    'W „Do zrobienia” i w Zadaniach domowych zaznacz zadanie jako zrobione – znika z listy. Pamięta to tylko Twój telefon.': 'In “To do” and in Homework, mark homework as done – it leaves the list. Only your phone remembers this.',
+    'Nowe oceny widać od razu': 'New grades stand out', 'Nowe oceny mają znaczek NOWE, a przedmiot pokazuje, ile ich doszło. Otwarte przedmioty zostają otwarte, gdy wracasz.': 'New grades get a NEW mark and each subject shows how many arrived. Subjects you opened stay open when you come back.',
+    'Oceny w punktach': 'Points grades', 'Kartkówka na punkty (np. 9/16) liczy się w procentach. Cel 95 punktów jest tylko dla WF.': 'A quiz scored in points (e.g. 9/16) counts as a percentage. The 95-point goal is only for PE.',
+    'Po kliknięciu od razu widzisz następny ekran – rozmyty obraz, który wyostrza się, gdy przyjdą świeże dane. Nic nie maleje pod palcem.': 'Tap and the next screen is there at once – a blurred picture that sharpens when fresh data arrives. Nothing shrinks under your finger.',
+    'Nowa wersja gotowa': 'New version ready', 'Włącz': 'Switch on',
     'Zaakceptowana': 'Accepted', 'Odrzucona': 'Rejected', 'Nowa': 'New', 'Oczekuje': 'Waiting',
     'Aparat': 'Camera', 'Galeria': 'Gallery', 'Podpis (opcjonalnie)': 'Caption (optional)', 'Kafle': 'Tiles', 'Jedna strona': 'One page', 'Przedmiot': 'Subject',
     // 5.9: Starred, notes, own tasks, settings pages, what's new, excuse texts
