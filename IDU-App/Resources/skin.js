@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.9.1
+// @version     5.9.2
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -2081,7 +2081,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.9.1';
+  const SKIN_VERSION = '5.9.2';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2851,6 +2851,8 @@
     QUIET = false;
     skipAnim = false;
     saveSnapshotSoon();
+    // one-time check that the update arrived (shown once, then never again)
+    if (store.get('skUpdTest') !== SKIN_VERSION) { store.set('skUpdTest', SKIN_VERSION); setTimeout(() => toast(root, 'TEST ✓ – ' + L('działa wersja', 'running version') + ' ' + SKIN_VERSION, 'good'), 600); }
   }
 
   const kidsList = ctx => { if (!ctx.parent) return []; try { const k = JSON.parse(store.get('skKids') || '[]'); return Array.isArray(k) ? k : []; } catch (e) { return []; } };
