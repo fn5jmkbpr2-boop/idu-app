@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.10
+// @version     5.10.1
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -2101,7 +2101,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.10';
+  const SKIN_VERSION = '5.10.1';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2193,9 +2193,9 @@
 
     // print-style pages (plans, class lists, calendar events) come without IDU's header
     const bare = !accLink && !$('input[type="password"]') && BARE_KINDS.includes(routeKind(document, location.pathname.replace(/\/+$/, '') || '/'));
-    if (!accLink && !bare) {                    // login / logged-out pages
-      snapsForget();
-      if (!loginMode()) { vp.content = 'width=1000, user-scalable=yes'; pageStyle.remove(); }
+    if (!accLink && !bare) {                    // login / logged-out / error pages
+      if ($('input[type="password"]')) snapsForget();
+      if (!loginMode()) { if ($('form')) vp.content = 'width=1000, user-scalable=yes'; pageStyle.remove(); escapeBar(); }
       return;
     }
 
@@ -2328,7 +2328,7 @@
   }
   const softable = u => u.origin === location.origin && SOFT_RE.test(u.pathname.replace(/\/+$/, '') || '/') && Date.now() - FULL_LOAD_AT < 25 * 60e3;
   function prefetch(href) {
-    try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
+    try { const u = new URL(href, location.href); if (softable(u) && !NO_PREFETCH_RE.test(u.pathname) && !ACTION_RE.test(u.pathname)) fetchPage(u.origin + u.pathname + u.search); } catch (e) {}
   }
   const shellApp = () => { const h = document.getElementById('sk-host'); return h && h.shadowRoot ? h.shadowRoot.getElementById('app') : null; };
   let curKey = location.pathname + location.search, NAV_SEQ = 0, QUIET = false, HEAD_TEXT = '', NAV_DIR = '', VEILED = '';
@@ -2463,6 +2463,67 @@
   // where "back" goes (for loading it ahead while your finger is still on the way)
   const prevHref = () => { const k = history.state && history.state.prev; return k ? (k.startsWith('/#') ? '/' : k) : ''; };
 
+  // a page IDU shows without its menu (an error, a dead end): two big buttons out – the app has no browser "back"
+  function escapeBar() {
+    if (document.getElementById('sk-escape') || !document.body) return;
+    const k = Math.max(1, (document.documentElement.clientWidth || 390) / (window.screen && screen.width || 390));
+    const h = document.createElement('div'); h.id = 'sk-escape';
+    const r = h.attachShadow({ mode: 'open' });
+    r.innerHTML = `<style>:host{all:initial;position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:2147483646;display:flex;justify-content:center;gap:10px;zoom:${k}}
+      button{border:0;border-radius:24px;padding:13px 20px;background:#1e88e5;color:#fff;font:600 16px -apple-system,system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.3)}
+      button.s{background:#2b303b}</style>${history.length > 1 ? `<button class="s" id="b">← ${L('Wstecz', 'Back')}</button>` : ''}<button id="h">${L('Do IDU', 'Back to IDU')}</button>`;
+    const b = r.getElementById('b'); if (b) b.onclick = () => history.back();
+    r.getElementById('h').onclick = () => { location.href = '/'; };
+    document.body.appendChild(h);
+  }
+  // IDU's action links ("Zapoznałem się", "Potwierdzam", "Zapoznam się później"…) are not pages: IDU's own script sends them as a form (POST/PUT).
+  // Opening one as a page ends on an error, so the skin sends them the same way. The method is read from the link or from IDU's original link on the page.
+  // (subject announcements are NOT here: their /confirm link is a normal page with its own button)
+  const ACTION_RE = /^\/informations\/\d+\/confirm$|^\/profile\/skip_display_messages_required_to_read/;
+  const rawPath = a => { const h = (a.getAttribute('href') || '').trim(); if (!h || h[0] === '#' || /^[a-z]+:/i.test(h) && !h.startsWith(location.origin)) return ''; try { const u = new URL(h, location.href); return u.origin === location.origin ? u.pathname : ''; } catch (e) { return ''; } };
+  function linkMethod(a) {
+    const path = rawPath(a); if (!path) return null;
+    const u = new URL(a.getAttribute('href'), location.href);
+    let orig = null, seen = false;
+    if (!a.hasAttribute('data-method')) Array.from(document.querySelectorAll('a[href]')).forEach(x => {
+      if (x.closest('#sk-host') || rawPath(x) !== path || x.search !== u.search) return;
+      seen = true; if (!orig && (x.hasAttribute('data-method') || x.hasAttribute('data-remote'))) orig = x; });
+    const src = a.hasAttribute('data-method') ? a : orig;
+    // IDU's own link decides; only when IDU's link isn't on the page at all, the address tells
+    const method = ((src && src.getAttribute('data-method')) || (!seen && ACTION_RE.test(path) ? 'post' : '')).toLowerCase();
+    const remote = !!(src && src.getAttribute('data-remote') === 'true');
+    if ((!method || method === 'get') && !remote) return null;
+    return { u, method: method || 'get', remote, orig, ask: (src && src.getAttribute('data-confirm')) || '' };
+  }
+  function requiredRead(root, mainEl) {
+    if (!mainEl) return;
+    const links = $$('a[href]').filter(a => !a.closest('#sk-host') && ACTION_RE.test(rawPath(a)));
+    const conf = links.find(a => /\/confirm$/.test(rawPath(a))), later = links.find(a => /skip_display/.test(rawPath(a)));
+    if (!conf && !later) return;
+    // the same two links copied into the page (chips, article text) give way to one clear card
+    mainEl.querySelectorAll('a[href]').forEach(a => { const p = rawPath(a); if (p && ((conf && p === rawPath(conf)) || (later && p === rawPath(later)))) { const box = a.parentElement; a.remove(); if (box && box.classList.contains('chips') && !box.children.length) box.remove(); } });
+    const id = (rawPath(conf || later).match(/(\d+)/) || [])[1];
+    const btn = (a, cls, def) => a ? `<a class="${cls}" href="${esc(a.getAttribute('href'))}"${a.getAttribute('data-method') ? ` data-method="${esc(a.getAttribute('data-method'))}"` : ''} style="flex:1;justify-content:center;text-align:center;margin:0">${esc(txt(a) || def)}</a>` : '';
+    const card = document.createElement('div'); card.className = 'alert'; card.style.cssText = 'align-items:flex-start;margin:6px 0 14px';
+    card.innerHTML = `${I('alert')}<div class="grow"><b>${L('Wiadomość do zapoznania się', 'A message you need to read')}</b>
+      <div class="small" style="margin-top:2px">${L('IDU pokaże resztę, gdy klikniesz jeden z przycisków.', 'IDU shows everything else once you tap one of the buttons.')}
+      ${id && location.pathname !== '/informations/' + id ? ` <a href="/informations/${id}" style="color:var(--accent);font-weight:700">${L('Przeczytaj', 'Read it')}</a>` : ''}</div>
+      <div class="btnrow" style="margin-top:10px">${btn(conf, 'btn-p', 'Zapoznałem się')}${btn(later, 'btn-s', 'Zapoznam się później')}</div></div>`;
+    mainEl.prepend(card);
+  }
+  function actLink(a, how) {
+    if (how.ask && !window.confirm(how.ask)) return;
+    if (how.remote && how.orig) { how.orig.click(); return; }            // IDU's own script answers it in place
+    haptic('light');
+    saveSnapshot(true);
+    NAV_SEQ++; const seq = NAV_SEQ; showVeil(how.u, 'fwd', a, seq);
+    setTimeout(() => { if (VEIL && NAV_SEQ === seq) cancelNav(); }, 9000);
+    const f = document.createElement('form'); f.method = 'post'; f.action = how.u.href; f.style.display = 'none';
+    const add = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; f.appendChild(i); };
+    if (how.method !== 'post') add('_method', how.method);
+    const tok = attr($('meta[name="csrf-token"]'), 'content'); if (tok) add(attr($('meta[name="csrf-param"]'), 'content') || 'authenticity_token', tok);
+    document.body.appendChild(f); f.submit();
+  }
   // a page that has to load the classic way still shows the next screen right away (if a file opens instead, the veil steps aside)
   function hardGo(href, dir, from) {
     const u = new URL(href, location.href);
@@ -2692,6 +2753,8 @@
       if (u.origin !== location.origin) return;
       if (/\/download$/.test(u.pathname)) { e.preventDefault(); haptic('light'); toast(root, 'Otwieram plik…'); location.href = u.href; return; }
       if (/^\/users\/sign_out/.test(u.pathname)) { snapsForget(); return; }
+      const how = linkMethod(a);
+      if (how) { e.preventDefault(); app.classList.remove('open'); actLink(a, how); return; }
       if (a.target === '_blank') return;
       if (u.pathname === location.pathname && u.search === location.search && u.hash) { if (VEIL) cancelNav(); return; }   // same page (#plan) – and you changed your mind about a screen still loading
       e.preventDefault();
@@ -2873,6 +2936,7 @@
       app.dataset.tab = k; ['tsearch', 'tstar'].forEach(id => { const b = root.getElementById(id); if (b) b.hidden = k !== 'start'; });   // shortcuts in the bar on Start
       const dm = root.querySelector('.dnav summary'); if (dm) dm.classList.toggle('on', !root.querySelector(`.dnav>a[data-tab="${k}"]`) && ['notes', 'pres', 'hw', 'cal', 'subjects', 'plan', 'grades'].includes(k));
     }, animate: () => { if (!skipAnim) animateIn(mainEl, slide); }, ctx });
+    requiredRead(root, mainEl);
     wireLongPress(root, mainEl);
     wireSwipeRows(root, mainEl);
     wireFavButton(root, mainEl);
@@ -4647,7 +4711,7 @@
    * ------------------------------------------------------------------ */
   function forumListPage(ctx) {
     const h1 = cleanTitle(txt($('#content h1')));
-    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href') }));
+    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href'), m: attr(a, 'data-method'), c: attr(a, 'data-confirm') }));
     const sections = $$('#content table.forum-table').map(t => {
       const head = txt($('.forum-header h4, .forum-header', t));
       const rows = $$('tr', t).filter(tr => !$('.forum-header', tr)).map(tr => {
@@ -4675,7 +4739,7 @@
       title: h1 && !/twoje fora/i.test(h1) ? h1 : 'Forum', tab: '', top: false,
       render(main) {
         main.innerHTML = `<div class="search">${I('search', 'sm')}<input id="fq" type="search" placeholder="Szukaj na forum" autocomplete="off"></div>
-          ${actions.length ? `<div class="chips" style="margin:4px 0 4px">${actions.map(a => `<a class="chip" href="${esc(a.h)}">${I(/szuk|wyszuk/i.test(a.t) ? 'search' : /nowy/i.test(a.t) ? 'plus' : 'right')}${esc(a.t)}</a>`).join('')}</div>` : ''}
+          ${actions.length ? `<div class="chips" style="margin:4px 0 4px">${actions.map(a => `<a class="chip" href="${esc(a.h)}"${a.m ? ` data-method="${esc(a.m)}"` : ''}${a.c ? ` data-confirm="${esc(a.c)}"` : ''}>${I(/szuk|wyszuk/i.test(a.t) ? 'search' : /nowy/i.test(a.t) ? 'plus' : 'right')}${esc(a.t)}</a>`).join('')}</div>` : ''}
           ${sections.map(sec => {
             const subs = sec.rows.filter(r => r.kind === 'sub');
             const threads = sec.rows.filter(r => r.kind === 'thread');
@@ -4720,7 +4784,7 @@
     const form = $('form.thread-reply, form#new_comment_form, form.new_comment');
     const ta = form ? $('textarea', form) : null;
     const submit = form ? $('input[type=submit]', form) : null;
-    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href') }));
+    const actions = $$('#content .action-button a').map(a => ({ t: txt(a), h: attr(a, 'href'), m: attr(a, 'data-method'), c: attr(a, 'data-confirm') }));
     const isComments = !!$('#comments');
     return {
       title: isComments ? 'Aktualność' : 'Forum', tab: '', top: false,
@@ -4728,7 +4792,7 @@
         main.innerHTML = `<h1 style="font-size:24px">${esc(title)}</h1>
           ${owner || actions.length ? `<div class="chips" style="margin:6px 0 10px">
             ${owner ? `<a class="chip" href="${esc(attr(owner, 'href'))}">${I('layers')}${esc(txt(owner))}</a>` : ''}
-            ${actions.map(a => `<a class="chip" href="${esc(a.h)}">${I('file')}${esc(a.t.replace(/Pokaż wszystkie załączniki do tego tematu/i, 'Załączniki'))}</a>`).join('')}</div>` : ''}
+            ${actions.map(a => `<a class="chip" href="${esc(a.h)}"${a.m ? ` data-method="${esc(a.m)}"` : ''}${a.c ? ` data-confirm="${esc(a.c)}"` : ''}>${I('file')}${esc(a.t.replace(/Pokaż wszystkie załączniki do tego tematu/i, 'Załączniki'))}</a>`).join('')}</div>` : ''}
           ${article ? `<div class="article"><div class="mbody">${article}</div></div>` : ''}
           ${isComments || posts.length ? `<div class="sec"><h2>${isComments ? 'Komentarze' : 'Posty'}${posts.length ? ' · ' + posts.length : ''}</h2></div>` : ''}
           ${posts.length ? posts.map(p => `<div class="post"><div class="av" style="background:${subjColor(p.who)}">${esc(initials(p.who))}</div>
