@@ -11,6 +11,19 @@ import JavaScriptCore
 private let homeURL = URL(string: "https://s27.idu.edu.pl/")!
 private let iduHost = "s27.idu.edu.pl"
 // The colour behind the page follows the style chosen in the skin (sent as "theme"), so light styles never flash black
+/// When this install stops working: a free Apple ID signs apps for 7 days (Sideloadly puts the date in embedded.mobileprovision).
+private enum Signing {
+    static let expires: Date? = {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .isoLatin1),
+              let start = text.range(of: "<?xml"), let end = text.range(of: "</plist>") else { return nil }
+        let xml = String(text[start.lowerBound..<end.upperBound])
+        guard let plist = try? PropertyListSerialization.propertyList(from: Data(xml.utf8), options: [], format: nil) as? [String: Any] else { return nil }
+        return plist["ExpirationDate"] as? Date
+    }()
+}
+
 private enum Theme {
     static var bg: UIColor { UIColor(hex: UserDefaults.standard.string(forKey: "themeBg") ?? "") ?? UIColor(red: 0.059, green: 0.067, blue: 0.082, alpha: 1) }
     static var light: Bool { UserDefaults.standard.bool(forKey: "themeLight") }
@@ -190,6 +203,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         let controller = webView.configuration.userContentController
         controller.removeAllUserScripts()
         controller.addUserScript(WKUserScript(source: earlyScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        if let exp = Signing.expires {   // the skin warns a few days before the app stops opening
+            controller.addUserScript(WKUserScript(source: "window.__skAppExpires=\(Int(exp.timeIntervalSince1970 * 1000));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
         if let source = source {
             controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
             loadedSkinVersion = version(of: source)

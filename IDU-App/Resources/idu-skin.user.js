@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.10.1
+// @version     5.11
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -1068,6 +1068,16 @@
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const fmtWhen = ms => { const d = new Date(ms), t0 = dayStart(new Date()), dd = Math.round((dayStart(d) - t0) / 864e5);
     return (dd === 0 ? TODAY : dd === 1 ? TOMORROW : DAY_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTH_SHORT[d.getMonth()]) + ' ' + hhmm(d); };
+  // the iPhone app (3.4+) knows when this install stops opening (free Apple ID: 7 days) – warn on Start in good time
+  const appExpires = () => +window.__skAppExpires || 0;
+  function expiryCard(mainEl) {
+    const exp = appExpires(), left = exp - Date.now();
+    if (!exp || !mainEl || left > 3 * 864e5 || left < 0) return;
+    const c = document.createElement('div'); c.className = 'alert'; c.style.cssText = 'align-items:flex-start;margin:6px 0 14px' + (left < 864e5 ? ';background:color-mix(in srgb,var(--bad) 16%,var(--card))' : '');
+    c.innerHTML = `${I('alert')}<div class="grow"><b>${L('Apka niedługo wygaśnie', 'The app expires soon')} – ${esc(fmtWhen(exp))}</b>
+      <div class="small" style="margin-top:2px">${L('Wgraj ją ponownie przez Sideloadly na tę, która jest – nie usuwaj jej, bo stracisz notatki i Ważne. Automatyczne odświeżanie w Sideloadly robi to samo za Ciebie.', 'Re-install it with Sideloadly over the current one – don\'t delete it, or your notes and Starred are gone. Sideloadly\'s automatic refresh does this for you.')}</div></div>`;
+    mainEl.prepend(c);
+  }
   let HOMEDATA = null;                     // filled by the start page: subjects, plan, feed …
   let CUR = { ctx: null, tab: '' };        // what the bottom bar shows
 
@@ -1709,7 +1719,7 @@
     const sh = openSheet(root, `<h2>Ustawienia</h2><div class="muted small" style="margin-bottom:12px">Styl: <b style="color:var(--text)">${esc(pr)}</b> · wszystko zmienisz tutaj</div>
       <div class="card" style="padding:2px 14px">${SET_PAGES.map(([k, ic, t, s]) => `<button class="srow" data-p="${k}"><div class="sic">${I(ic)}</div><div class="grow"><div class="b">${t}</div><div class="muted small">${s}</div></div>${I('right', 'sm chev')}</button>`).join('')}</div>
       <button class="btn-s" id="sreset" style="margin-top:18px;width:100%;justify-content:center;color:var(--bad)">Przywróć domyślne</button>
-      <div class="muted small" style="text-align:center;margin-top:14px;line-height:1.5">Nieoficjalna nakładka na IDU · wersja ${esc(SKIN_VERSION)}<br>Twoje dane zostają na tym urządzeniu.</div>`);
+      <div class="muted small" style="text-align:center;margin-top:14px;line-height:1.5">Nieoficjalna nakładka na IDU · wersja ${esc(SKIN_VERSION)}<br>${appExpires() ? `${L('Apka działa do', 'App works until')}: ${esc(fmtWhen(appExpires()))}<br>` : ''}Twoje dane zostają na tym urządzeniu.</div>`);
     sh.querySelectorAll('[data-p]').forEach(b => b.onclick = () => settingsPage(root, app, b.dataset.p));
     const obs = new MutationObserver(() => { if (!sh.isConnected) { obs.disconnect(); if (setDirty) { setDirty = false; softGo(location.href, false, { quiet: true }); } } });
     obs.observe(sh.parentNode, { childList: true });
@@ -2101,7 +2111,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.10.1';
+  const SKIN_VERSION = '5.11';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -3646,7 +3656,7 @@
           else if (v === 'przedmioty') { api.setTitle('Przedmioty'); api.setTab('subjects'); main.innerHTML = subjectsView(); }
           else if (v === 'wazne') { api.setTitle('Ważne'); api.setTab('fav'); main.innerHTML = favView(favFilter); }
           else if (v === 'szukaj') { api.setTitle('Szukaj'); api.setTab('search'); main.innerHTML = searchView(); }
-          else { api.setTitle('Start'); api.setTab('start'); main.innerHTML = startView(); }
+          else { api.setTitle('Start'); api.setTab('start'); main.innerHTML = startView(); expiryCard(main); }
           root.getElementById('app').classList.remove('open');
           window.scrollTo(0, 0);
           wire();
@@ -3672,7 +3682,7 @@
           await redraw(); window.scrollTo(0, 0); if (api.animate) api.animate();
           if (mode) { try { history.replaceState(history.state, '', '/#n:' + encodeURIComponent(key)); } catch (e) {} noteAddSheet(root, key, nstate.tab, mode === 'add' ? null : mode, redraw); }
         }
-        const redrawStart = () => { if ((location.hash || '#start') === '#start' || location.hash === '') { main.innerHTML = startView(); wire(); } };
+        const redrawStart = () => { if ((location.hash || '#start') === '#start' || location.hash === '') { main.innerHTML = startView(); expiryCard(main); wire(); } };
         const redrawTodo = () => { const tb = root.getElementById('todoblock'); if (tb) { tb.outerHTML = todoBlock(); wire(); } else redrawStart(); };
         window.__skTodoRedraw = redrawStart;
         function wire() {
