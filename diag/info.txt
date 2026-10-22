@@ -1,0 +1,21 @@
+curl exit 0
+HTTP/1.1 200 OK
+Server: Apache
+Content-Type: text/html; charset=utf-8
+curl exit 0
+HTTP/1.1 200 OK
+Server: Apache
+Content-Type: text/html; charset=utf-8
+app-like and Safari-like: DIFFERENT
+/assets/common_print.css?1757934545 -> asset-common_print.css 1840
+/assets/simple.css?1757934546 -> asset-simple.css 610
+/assets/simple.js?1757934546 -> asset-simple.js 113667
+total 212
+drwxr-xr-x 2 runner runner   4096 Oct 22 07:24 .
+drwxr-xr-x 6 runner runner   4096 Oct 22 07:24 ..
+-rw-r--r-- 1 runner runner   1840 Oct 22 07:24 asset-common_print.css
+-rw-r--r-- 1 runner runner    610 Oct 22 07:24 asset-simple.css
+-rw-r--r-- 1 runner runner 113667 Oct 22 07:24 asset-simple.js
+-rw-r--r-- 1 runner runner    382 Oct 22 07:24 info.txt
+-rw-r--r-- 1 runner runner  37553 Oct 22 07:24 page1.html
+-rw-r--r-- 1 runner runner  37552 Oct 22 07:24 page2.html
