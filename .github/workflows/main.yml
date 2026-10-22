@@ -1,67 +1,36 @@
-name: Build IDU app
+name: Login page check
 on:
-  workflow_dispatch:
   push:
+    branches: [diag-login]
 jobs:
-  skin:
-    # the skin goes straight to phones and browsers from this repo, so it must at least parse
+  look:
+    # one-off: what IDU's public login page (/users/sign_in) contains right now, for an app-like and a Safari-like browser
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Skin is valid JavaScript and both copies are the same
+      - name: Fetch the public login page
         run: |
-          node --check IDU-App/Resources/skin.js
-          cmp IDU-App/Resources/skin.js IDU-App/Resources/idu-skin.user.js
-          grep -q "@name        IDU Skin" IDU-App/Resources/skin.js
-
-  build:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
+          set +e
+          i=0
+          for UA in "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148" \
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1"; do
+            i=$((i+1))
+            echo "================ VARIANT $i: $UA"
+            curl -sSL --max-time 25 -A "$UA" -D h$i.txt https://s27.idu.edu.pl/users/sign_in -o p$i.html; echo "curl exit $?"
+            grep -i -E '^(HTTP|location|content-type|server|set-cookie: [^=]*)' h$i.txt | sed -E 's/(set-cookie: [^=]*)=.*/\1=…/I'
+            wc -c p$i.html
+            sed -E 's/(name="authenticity_token"[^>]*value=")[^"]*/\1…/g; s/(value="[^"]*")([^>]*name="authenticity_token")/value="…"\2/g; s/(<meta[^>]*name="csrf-token"[^>]*content=")[^"]*/\1…/g; s/(<meta[^>]*content=")[^"]*("[^>]*name="csrf-token")/\1…\2/g' p$i.html > s$i.html
+          done
+          echo "================ SAME FOR BOTH? "; cmp -s s1.html s2.html && echo yes || { echo no; diff s1.html s2.html | head -80; }
+          echo "================ PAGE (variant 1, tokens removed)"
+          cat s1.html
+          echo
+          echo "================ STYLESHEETS / SCRIPTS"
+          grep -o -E '(href|src)="[^"]+\.(css|js)[^"]*"' s1.html | sort -u
+      - name: Fetch the login page's own CSS and JS (rules about the robot check)
         run: |
-          PROJ="$(find . -name project.yml -not -path './.git/*' | head -n 1)"
-          cd "$(dirname "$PROJ")"
-          xcodegen generate
-          echo "PROJ_DIR=$PWD" >> "$GITHUB_ENV"
-
-      - name: Build widget
-        id: widget
-        continue-on-error: true
-        run: |
-          cd "$PROJ_DIR"
-          xcodebuild -project IDU.xcodeproj -target IDUWidget -configuration Release -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
-
-      - name: Build app
-        run: |
-          cd "$PROJ_DIR"
-          xcodebuild -project IDU.xcodeproj -target IDU -configuration Release -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
-
-      - name: Package .ipa
-        run: |
-          cd "$PROJ_DIR"
-          APP=build/Release-iphoneos/IDU.app
-          WIDGET=build/Release-iphoneos/IDUWidget.appex
-          if [ -d "$WIDGET" ]; then
-            mkdir -p "$APP/PlugIns"
-            cp -R "$WIDGET" "$APP/PlugIns/"
-            codesign --force --sign - --entitlements Widget/IDUWidget.entitlements "$APP/PlugIns/IDUWidget.appex"
-            echo "Widget included"
-          else
-            echo "::warning::The widget did not build - the app is packaged without it (send the 'Build widget' log)"
-          fi
-          codesign --force --sign - --entitlements IDU.entitlements "$APP"
-          mkdir -p Payload
-          cp -R "$APP" Payload/
-          zip -qr "$GITHUB_WORKSPACE/IDU.ipa" Payload
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: IDU-app
-          path: IDU.ipa
+          set +e
+          for u in $(grep -o -E '(href|src)="/[^"]+\.(css|js)[^"]*"' s1.html 2>/dev/null | sed -E 's/^(href|src)="//; s/"$//' | sort -u); do
+            echo "================ $u"
+            curl -sSL --max-time 25 "https://s27.idu.edu.pl$u" -o f.txt; wc -c f.txt
+            tr '}' '\n' < f.txt | grep -i -E 'robot|human|captcha|check|sign_in|new_user|\bh1\b|#container|\.module|remember' | head -60
+          done
