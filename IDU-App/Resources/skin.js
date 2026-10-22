@@ -2,7 +2,7 @@
 // @name        IDU Skin
 // @description Nowoczesny, mobilny wygląd dla IDU (s27.idu.edu.pl) w stylu aplikacji
 // @namespace   idu-skin
-// @version     5.11
+// @version     5.11.1
 // @match       https://s27.idu.edu.pl/*
 // @run-at      document-end
 // @grant       none
@@ -766,44 +766,73 @@
   html.sk-fb .sk-av svg{width:100%;height:100%;display:block}
   `;
 
+  // The login card is IDU's own login box, restyled where it stands. It is never moved (a captcha inside – IDU uses Cloudflare
+  // Turnstile – would reload and break) and nothing a person may need there is ever hidden: fields, ticks, captchas and their pop-ups.
+  // Only IDU's logo bar and its duplicate title are hidden (sk-lhide). Widgets are left exactly as IDU/Cloudflare draw them (sk-lfree).
   const LOGIN_CSS = `
-  html.sk-loginmode,html.sk-loginmode body{background:#0f1115!important;margin:0!important;min-width:0!important}
-  html.sk-loginmode body>*:not(#sk-login){display:none!important}
-  #sk-login{min-height:100vh;box-sizing:border-box;padding:calc(48px + env(safe-area-inset-top)) 18px 40px;color:#f2f4f8;
-    font:16px/1.45 -apple-system,BlinkMacSystemFont,sans-serif;-webkit-text-size-adjust:100%;animation:skLogin .5s cubic-bezier(.2,.85,.25,1) both}
+  html.sk-loginmode,html.sk-loginmode body{background:#0f1115!important;margin:0!important;padding:0!important;min-width:0!important;height:auto!important;min-height:100%!important;overflow:visible!important}
+  html.sk-loginmode body{display:block!important}
+  html.sk-loginmode .sk-lhide{display:none!important}
+  #sk-login,#sk-login-foot{display:block!important;box-sizing:border-box!important;color:#f2f4f8;font:16px/1.45 -apple-system,BlinkMacSystemFont,sans-serif;-webkit-text-size-adjust:100%;
+    width:auto!important;max-width:none!important;float:none!important;position:static!important;background:none!important;border:0!important;text-align:left}
+  #sk-login{padding:calc(44px + env(safe-area-inset-top)) 16px 0!important;margin:0!important;animation:skLogin .5s cubic-bezier(.2,.85,.25,1) both}
+  #sk-login-foot{padding:0 16px calc(40px + env(safe-area-inset-bottom))!important;margin:0!important}
   @keyframes skLogin{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-  #sk-login .sk-brand{text-align:center;margin-bottom:22px}
-  #sk-login .sk-legal{text-align:center;color:#9097a8;font-size:12.5px;line-height:1.45;margin:18px auto 0;max-width:360px}
-  #sk-login .sk-logo{width:76px;height:76px;border-radius:22px;margin:0 auto 14px;display:grid;place-items:center;
-    background:linear-gradient(180deg,#3d9be9,#1e5ac8);color:#fff;font:800 26px -apple-system,sans-serif;letter-spacing:.5px;
-    box-shadow:0 10px 30px rgba(30,90,200,.35)}
-  #sk-login h1{font-size:26px;margin:0 0 4px;font-weight:800}
-  #sk-login .sk-sub{color:#9097a8;font-size:15px}
-  #sk-login .sk-box{background:#1b1e26;border-radius:20px;padding:18px;max-width:440px;margin:0 auto}
-  #sk-login .sk-box *{float:none!important;position:static!important;width:auto!important;max-width:100%!important;
-    background-color:transparent!important;color:#f2f4f8!important;text-align:left!important;margin-left:0!important;margin-right:0!important;
-    box-sizing:border-box!important;font-family:inherit!important}
-  #sk-login .sk-box table,#sk-login .sk-box tbody,#sk-login .sk-box tr,#sk-login .sk-box td,#sk-login .sk-box th{display:block!important;padding:0!important;border:0!important}
-  #sk-login .sk-box h1,#sk-login .sk-box h2,#sk-login .sk-box h3,#sk-login .sk-box #top,#sk-login .sk-box #visual,#sk-login .sk-box #logo,
-    #sk-login .sk-box #change_language,#sk-login .sk-box .header,#sk-login .sk-box img[alt="IDU"]{display:none!important}
-  #sk-login .sk-box label{display:block!important;font-size:14px!important;font-weight:600!important;color:#9097a8!important;margin:12px 0 6px!important}
-  #sk-login .sk-box input[type=text],#sk-login .sk-box input[type=email],#sk-login .sk-box input[type=password]{
-    display:block!important;width:100%!important;font-size:17px!important;padding:13px 14px!important;border-radius:12px!important;
-    border:1px solid #2b303b!important;background-color:#252a34!important;color:#f2f4f8!important;-webkit-appearance:none;outline:none}
-  #sk-login .sk-box input[type=text]:focus,#sk-login .sk-box input[type=password]:focus{border-color:#3d9be9!important}
-  #sk-login .sk-box input[type=checkbox]{width:20px!important;height:20px!important;vertical-align:middle;margin:0 8px 0 0!important;accent-color:#3d9be9}
-  #sk-login .sk-box input[type=submit],#sk-login .sk-box button{display:block!important;width:100%!important;margin-top:16px!important;
-    background-color:#1e88e5!important;color:#fff!important;border:0!important;border-radius:14px!important;padding:14px!important;
-    font-size:17px!important;font-weight:700!important;-webkit-appearance:none;text-align:center!important}
-  #sk-login .sk-box input[type=submit]:active,#sk-login .sk-box button:active{opacity:.8}
-  #sk-login .sk-box a{color:#3d9be9!important;font-size:14px}
-  #sk-login .sk-box iframe{max-width:100%!important}
-  #sk-login .sk-box *:not(input):not(button):not(label):not(select){padding:0!important;margin-top:0!important;margin-bottom:0!important;
-    box-shadow:none!important;height:auto!important;min-height:0!important;border-width:0!important}
-  #sk-login .sk-box div,#sk-login .sk-box p{margin-top:6px!important}
-  #sk-login .sk-box input[type=checkbox]+label,#sk-login .sk-box label:has(input[type=checkbox]){display:inline!important;margin:0!important;color:#f2f4f8!important;font-weight:500!important;font-size:15px!important}
-  #sk-login .sk-box a{display:block;margin-top:10px!important;text-align:center!important}
+  #sk-login .sk-brand{display:block!important;text-align:center!important;margin:0 0 22px!important;padding:0!important;background:none!important;border:0!important}
+  #sk-login .sk-logo{width:76px!important;height:76px!important;border-radius:22px!important;margin:0 auto 14px!important;padding:0!important;display:grid!important;place-items:center!important;
+    position:static!important;float:none!important;background:linear-gradient(180deg,#3d9be9,#1e5ac8)!important;color:#fff!important;
+    font:800 26px/1 -apple-system,BlinkMacSystemFont,sans-serif!important;letter-spacing:.5px!important;box-shadow:0 10px 30px rgba(30,90,200,.35)!important}
+  #sk-login .sk-brand h1{display:block!important;position:static!important;float:none!important;width:auto!important;height:auto!important;margin:0 0 4px!important;padding:0!important;
+    border:0!important;background:none!important;box-shadow:none!important;text-shadow:none!important;color:#f2f4f8!important;opacity:1!important;visibility:visible!important;
+    font:800 26px/1.2 -apple-system,BlinkMacSystemFont,sans-serif!important;text-align:center!important;text-indent:0!important;text-transform:none!important;letter-spacing:normal!important;overflow:visible!important}
+  #sk-login .sk-brand h1::before,#sk-login .sk-brand h1::after,#sk-login .sk-logo::before,#sk-login .sk-logo::after{content:none!important}
+  #sk-login .sk-sub{display:block!important;color:#9097a8!important;font:15px/1.4 -apple-system,BlinkMacSystemFont,sans-serif!important;text-align:center!important;margin:0!important;padding:0!important;background:none!important}
+  #sk-login-foot .sk-legal{display:block!important;text-align:center!important;color:#9097a8!important;font:12.5px/1.45 -apple-system,BlinkMacSystemFont,sans-serif!important;margin:18px auto 0!important;max-width:360px!important;padding:0!important;background:none!important}
+  #sk-login-foot .sk-orig{display:block!important;margin:12px auto 0!important;padding:10px 8px!important;text-align:center!important;color:#3d9be9!important;font:600 13.5px/1.3 -apple-system,BlinkMacSystemFont,sans-serif!important;text-decoration:none!important;background:none!important;border:0!important}
+  /* the card = IDU's login box, where it is */
+  html.sk-loginmode .sk-lcard{position:relative!important;display:block!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;float:none!important;
+    box-sizing:border-box!important;width:calc(100% - 32px)!important;max-width:440px!important;min-width:0!important;height:auto!important;min-height:0!important;margin:0 auto!important;
+    padding:18px!important;border:0!important;border-radius:20px!important;background:#1b1e26!important;box-shadow:none!important;color:#f2f4f8!important;text-align:left!important;
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,sans-serif!important;overflow:visible!important}
+  html.sk-loginmode .sk-lup{position:static!important;display:block!important;transform:none!important;float:none!important;width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;
+    max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;top:auto!important;left:auto!important}
+  /* IDU's wrappers between the card and the form: flat, full width, no white panel */
+  html.sk-loginmode .sk-lcard .sk-lchain{position:static!important;float:none!important;width:auto!important;max-width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;
+    margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;background:none!important;color:#f2f4f8!important;text-align:left!important;
+    top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;box-sizing:border-box!important;font-family:inherit!important}
+  /* rows of the form and plain text in the card: readable on dark, one column */
+  html.sk-loginmode .sk-lcard :is(div,p,form,fieldset,table,tbody,tr,td,th,ul,ol,li,section,center):not(.sk-lfree):not(.sk-lfree *){float:none!important;margin-left:0!important;margin-right:0!important;
+    padding-left:0!important;padding-right:0!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;color:#f2f4f8!important;text-align:left!important;font-family:inherit!important}
+  html.sk-loginmode .sk-lcard :is(div,p,form,fieldset,table,tbody,tr,td,th,ul,ol,li,section,center):not(:empty):not(.sk-lfree):not(.sk-lfree *){background-color:transparent!important;background-image:none!important;box-shadow:none!important;border-color:transparent!important}
+  html.sk-loginmode .sk-lcard :is(span,small,strong,b,em,i,font,h1,h2,h3,h4,h5,h6):not(.sk-lfree):not(.sk-lfree *){float:none!important;color:#f2f4f8!important;font-family:inherit!important}
+  html.sk-loginmode .sk-lcard :is(table,tbody,tr,td,th):not(.sk-lfree *){display:block!important;padding:0!important;border:0!important;width:auto!important}
+  html.sk-loginmode .sk-lcard :is(div,p):not(.sk-lfree):not(.sk-lfree *):not(.sk-lchain){margin-top:6px!important;margin-bottom:0!important}
+  html.sk-loginmode .sk-lcard label:not(.sk-lfree *){display:block;float:none!important;width:auto!important;padding:0!important;font-size:14px!important;font-weight:600!important;color:#9097a8!important;
+    margin:12px 0 6px!important;font-family:inherit!important;text-align:left!important}
+  html.sk-loginmode .sk-lcard :is(input[type=text],input[type=email],input[type=password],input:not([type])):not(.sk-lfree *){
+    display:block!important;float:none!important;width:100%!important;max-width:100%!important;height:auto!important;font-size:17px!important;padding:13px 14px!important;border-radius:12px!important;margin:0!important;
+    border:1px solid #2b303b!important;background-color:#252a34!important;color:#f2f4f8!important;-webkit-appearance:none;outline:none;box-sizing:border-box!important;font-family:inherit!important}
+  html.sk-loginmode .sk-lcard :is(input[type=text],input[type=email],input[type=password],input:not([type])):focus{border-color:#3d9be9!important}
+  html.sk-loginmode .sk-lcard input[type=checkbox]:not(.sk-lfree *){width:20px!important;height:20px!important;vertical-align:middle;margin:0 8px 0 0!important;padding:0!important;accent-color:#3d9be9;float:none!important;flex:none}
+  html.sk-loginmode .sk-lcard :is(input[type=checkbox]+label,label:has(input[type=checkbox])):not(.sk-lfree *){display:inline!important;margin:0!important;color:#f2f4f8!important;font-weight:500!important;font-size:15px!important}
+  html.sk-loginmode .sk-lcard :is(.human-check-field,.remember-me):not(.sk-lfree){display:flex!important;align-items:center!important;flex-wrap:wrap!important;margin-top:14px!important;min-height:28px;font-size:15px!important;border:0!important}
+  html.sk-loginmode .sk-lcard .human-check-field:not(.sk-lfree){padding:12px!important;border-radius:12px!important;background:#252a34!important}
+  html.sk-loginmode .sk-lcard :is(input[type=submit],button[type=submit],button:not([type])):not(.sk-lfree *){display:block!important;float:none!important;width:100%!important;margin:16px 0 0!important;
+    background-color:#1e88e5!important;background-image:none!important;color:#fff!important;border:0!important;border-radius:14px!important;padding:14px!important;
+    font-size:17px!important;font-weight:700!important;-webkit-appearance:none;text-align:center!important;font-family:inherit!important;height:auto!important}
+  html.sk-loginmode .sk-lcard :is(input[type=submit],button):active{opacity:.8}
+  html.sk-loginmode .sk-lcard a:not(.sk-lfree *){color:#3d9be9!important;font-size:14px!important;display:block;margin-top:10px!important;text-align:center!important;background-image:none!important;padding:2px 0!important}
+  html.sk-loginmode .sk-lcard iframe{max-width:100%!important}
+  html.sk-loginmode .sk-lcard #password-recovery>br{display:none}
+  html.sk-loginmode .sk-lcard .sk-lfree{margin:14px 0 0!important;max-width:100%!important;overflow:visible!important;float:none!important}
+  /* anything else IDU puts on the page stays visible, as a quiet card */
+  html.sk-loginmode body>.sk-lextra{display:block!important;box-sizing:border-box!important;width:calc(100% - 32px)!important;max-width:440px!important;margin:12px auto 0!important;
+    padding:12px 14px!important;border-radius:14px!important;background:#1b1e26!important;color:#c9ced8!important;font:13px/1.45 -apple-system,BlinkMacSystemFont,sans-serif!important;
+    float:none!important;border:0!important;box-shadow:none!important;position:static!important;height:auto!important;min-height:0!important}
+  html.sk-loginmode body>.sk-lextra *{color:inherit!important;background-color:transparent!important;float:none!important;max-width:100%!important}
+  html.sk-loginmode body>.sk-lextra a{color:#3d9be9!important}
   #sk-login .sk-flash{max-width:440px;margin:0 auto 14px;border-radius:14px;overflow:hidden;font-size:13px}
+  #sk-login .sk-flash:empty{display:none}
   #sk-login .sk-flash *{background-color:transparent!important;color:#ffb4c2!important;text-align:left!important;width:auto!important;float:none!important;margin:0!important}
   #sk-login .sk-flash>*{background-color:rgba(240,80,110,.12)!important;padding:10px 12px!important;border:0!important;margin-bottom:6px!important;border-radius:12px}
   #sk-login .sk-flash details summary{cursor:pointer;font-weight:700;list-style:none}
@@ -920,7 +949,25 @@
     });
   }
 
-  // Login page: rebuild it as a clean phone screen around IDU's real form
+  // Login page: a clean phone screen around IDU's real form (the password goes only to IDU).
+  // IDU's login box becomes the card right where it is – it is never moved, so the Cloudflare check inside it („Potwierdź, że jesteś
+  // człowiekiem”) keeps working. Whatever IDU shows that a person may need stays on screen: a tick found outside the form moves into it
+  // (above the button), a widget stays where it is, nothing else is hidden, and if something still ends up off screen the skin steps back
+  // to IDU's own login page (there is also a link for that under the card).
+  const LOGIN_WIDGET = 'iframe,[data-sitekey],.g-recaptcha,.h-captcha,.cf-turnstile,[class*=captcha],[id*=captcha],[class*=turnstile],[id*=turnstile]';
+  const LOGIN_CHECK = 'input[type=checkbox],input[type=radio],[name*=captcha],[class*=robot],[id*=robot],[name*=robot],[class*=human],[id*=human],[name*=human],' + LOGIN_WIDGET;
+  const LOGIN_NEED = 'input:not([type=hidden]),select,textarea,button,' + LOGIN_CHECK;
+  const LOGIN_RX = /robot|captcha|człowiek|czlowiek|\bhuman\b/i;
+  const LOGIN_OURS = '#sk-login,#sk-login-foot,#sk-host,#sk-escape';
+  const LOGIN_KS = ['sk-lcard', 'sk-lup', 'sk-lchain', 'sk-lhide', 'sk-lfree', 'sk-lextra', 'sk-lkeep'];
+  const rendered = el => !!el && el.isConnected && el.getClientRects().length > 0;
+  const areaOf = el => { const r = el.getBoundingClientRect(); return r.width * r.height; };
+  const robotTextEls = root => {
+    const out = new Set(), tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n; (n = tw.nextNode());) if (LOGIN_RX.test(n.nodeValue) && n.parentElement && !n.parentElement.closest('script,style,noscript,template')) out.add(n.parentElement);
+    return Array.from(out);
+  };
+  let LOGIN = null;
   function loginMode() {
     const pw = $('input[type="password"]');
     const form = pw ? pw.closest('form') : null;
@@ -932,24 +979,120 @@
            box.parentElement.querySelectorAll('input[type="password"]').length === 1 &&
            box.parentElement.getBoundingClientRect().width < 760) box = box.parentElement;
     const flashes = $$('#flash-messages-section > *, .flash, .alert, .error, .notice, .security-notice, [class*="flash"]')
-      .filter(f => !box.contains(f) && !f.contains(box) && txt(f));
+      .filter(f => !box.contains(f) && !f.contains(box) && txt(f) && !f.querySelector(LOGIN_NEED) && !f.matches(LOGIN_CHECK))
+      .filter((f, i, all) => !all.some(g => g !== f && g.contains(f)));
+    const inFlash = el => flashes.some(f => f.contains(el));
+    const ours = el => !!el.closest(LOGIN_OURS);
+
+    // 1. what IDU shows right now that a person may need – checked again once the card is built
+    const need = Array.from(new Set($$('input:not([type=hidden]),select,textarea,button', form).concat($$(LOGIN_CHECK), robotTextEls(document.body))))
+      .filter(el => rendered(el) && !inFlash(el) && !ours(el)).map(el => ({ el, a: areaOf(el) }));
+
+    // 2. our header above, the legal note below; IDU's notices move into the header (each move leaves a marker, so it can all go back)
+    const undo = [];
+    const moveTo = (el, parent, before) => {
+      const mark = document.createComment('sk-login');
+      el.parentNode.insertBefore(mark, el);
+      parent.insertBefore(el, before || null);
+      undo.push(() => { if (mark.parentNode) mark.parentNode.replaceChild(el, mark); });
+    };
     const wrap = document.createElement('div');
     wrap.id = 'sk-login';
     wrap.innerHTML = `<div class="sk-brand"><div class="sk-logo">IDU</div><h1>${L('Zaloguj się', 'Log in')}</h1>
-      <div class="sk-sub">${esc(txt($('#school-name')) || L('Dziennik IDU', 'IDU school diary'))}</div></div><div class="sk-flash"></div><div class="sk-box"></div>
-      <div class="sk-legal">${L('Nieoficjalna nakładka – niezwiązana z IDU ani ze szkołą. Logujesz się na oficjalnej stronie IDU, hasło trafia tylko tam.', 'Unofficial skin – not affiliated with IDU or the school. You log in on the official IDU page; your password only goes there.')}${NATIVE_IDU ? '<br>' + L('Zaznacz „Zapamiętaj mnie”, żeby działały powiadomienia o ocenach i wiadomościach.', 'Tick “Remember me” to get notifications about grades and messages.') : ''}</div>`;
+      <div class="sk-sub">${esc(txt($('#school-name')) || L('Dziennik IDU', 'IDU school diary'))}</div></div><div class="sk-flash"></div>`;
+    const foot = document.createElement('div');
+    foot.id = 'sk-login-foot';
+    foot.innerHTML = `<div class="sk-legal">${L('Nieoficjalna nakładka – niezwiązana z IDU ani ze szkołą. Logujesz się na oficjalnej stronie IDU, hasło trafia tylko tam.', 'Unofficial skin – not affiliated with IDU or the school. You log in on the official IDU page; your password only goes there.')}${NATIVE_IDU ? '<br>' + L('Zaznacz „Pamiętaj mnie”, żeby działały powiadomienia o ocenach i wiadomościach.', 'Tick “Remember me” to get notifications about grades and messages.') : ''}</div>
+      <a href="#" class="sk-orig">${L('Czegoś brakuje? Pokaż oryginalną stronę logowania IDU', 'Something missing? Show IDU’s original login page')}</a>`;
     const fl = wrap.querySelector('.sk-flash');
     flashes.forEach(f => {
       if (txt(f).length > 160) {       // long notices collapse
         const d = document.createElement('details');
         d.innerHTML = `<summary>${esc(txt(f).split(/[.!]/)[0].slice(0, 70))} (rozwiń)</summary>`;
-        d.appendChild(f); fl.appendChild(d);
-      } else fl.appendChild(f);
+        fl.appendChild(d); moveTo(f, d);
+      } else moveTo(f, fl);
     });
-    wrap.querySelector('.sk-box').appendChild(box);
-    document.body.appendChild(wrap);
+    document.body.prepend(wrap);
+    document.body.appendChild(foot);
+    LOGIN = { undo, obs: null };
+    foot.querySelector('.sk-orig').onclick = e => { e.preventDefault(); undoLogin('asked'); };
+
+    // 3. the card: IDU's box in place; its wrappers go flat; widgets (captchas, frames) stay exactly as drawn
+    box.classList.add('sk-lcard');
+    for (let e = box.parentElement; e && e !== document.body; e = e.parentElement) e.classList.add('sk-lup');
+    for (let e = form; e && e !== box; e = e.parentElement) e.classList.add('sk-lchain');
+    const markWidgets = () => $$(LOGIN_WIDGET, box).forEach(w => { if (!w.closest('.sk-lfree')) w.classList.add('sk-lfree'); });
+    markWidgets();
     document.documentElement.classList.add('sk-loginmode');
+    // hidden: only IDU's logo bar and its own „Zaloguj się” title (the card has both) – never anything with a field, a tick or a robot/captcha text
+    const safeToHide = el => !el.matches(LOGIN_NEED) && !el.querySelector(LOGIN_NEED) && !robotTextEls(el).length;
+    $$('#top,#visual,#logo,#language,#change_language,img[alt="IDU"]').forEach(el => { if (!ours(el) && !el.contains(form) && safeToHide(el)) el.classList.add('sk-lhide'); });
+    $$('.header,h1,h2,h3', box).forEach(el => {
+      if (!el.contains(form) && safeToHide(el) && (el.matches('.header') || /^(zaloguj( się)?|logowanie|log ?in|sign ?in)$/i.test(txt(el)))) el.classList.add('sk-lhide');
+    });
+    $$('label', box).forEach(el => { if (!txt(el) && safeToHide(el)) el.classList.add('sk-lhide'); });     // empty labels (spacers)
+
+    // 4. a tick or a robot check outside the form: into the form, just above the button (a widget stays put – moving a frame reloads it)
+    const submit = $$('input[type=submit],button[type=submit],button:not([type])', form).filter(rendered).pop();
+    let submitRow = submit || null;
+    while (submitRow && submitRow.parentElement !== form) submitRow = submitRow.parentElement;
+    const placeChecks = () => {
+      Array.from(new Set($$(LOGIN_CHECK).concat(robotTextEls(document.body)))).forEach(el => {
+        if (!el.isConnected || form.contains(el) || !rendered(el) || inFlash(el) || ours(el) || el.closest('.sk-lkeep,.sk-lfree')) return;
+        let unit = el;     // the smallest block around it that holds nothing else of the login
+        while (unit.parentElement && unit.parentElement !== document.body && !unit.parentElement.contains(form)) unit = unit.parentElement;
+        if (unit.contains(form)) return;
+        if (unit.matches(LOGIN_WIDGET) || unit.querySelector(LOGIN_WIDGET) || txt(unit).length > 240 ||
+            $$('input:not([type=hidden]),select,textarea', unit).length > 3) { unit.classList.add('sk-lkeep'); return; }
+        moveTo(unit, form, submitRow && submitRow.parentElement === form ? submitRow : null);
+      });
+    };
+    placeChecks();
+
+    // 5. whatever else is on the page: empty bits go, anything with content stays (as a quiet card)
+    const hasStuff = el => (el.matches(LOGIN_NEED) && rendered(el)) || $$(LOGIN_NEED, el).some(rendered) || robotTextEls(el).some(rendered) ||
+      $$('img,svg,canvas,video,picture,object,embed', el).some(rendered) ||
+      (() => { const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n; (n = tw.nextNode());) { const p = n.parentElement; if (n.nodeValue.trim() && p && !p.closest('script,style,noscript,template') && rendered(p)) return true; }
+        return false; })();
+    Array.from(document.body.children).forEach(el => {
+      if (el === wrap || el === foot || el.contains(box) || /^(SCRIPT|STYLE|LINK|META|TEMPLATE|NOSCRIPT|BR)$/.test(el.tagName) || /^sk-/.test(el.id) || !rendered(el)) return;
+      if (!hasStuff(el)) { el.classList.add('sk-lhide'); return; }
+      if (!el.matches(LOGIN_NEED) && !el.querySelector(LOGIN_NEED) && /^(static|relative)$/.test(getComputedStyle(el).position)) el.classList.add('sk-lextra');
+    });
+
+    // 6. check: everything from step 1 is still on screen – if not, IDU's own page instead
+    const unhide = el => { for (let h = el.closest('.sk-lhide'); h; h = el.closest('.sk-lhide')) h.classList.remove('sk-lhide'); };
+    const lost = () => need.filter(n => n.el.isConnected && !inFlash(n.el) && (!rendered(n.el) || (n.a > 0 && areaOf(n.el) === 0)));
+    lost().forEach(n => unhide(n.el));
+    const still = lost();
+    if (still.length) { undoLogin('hidden: ' + still.map(n => n.el.tagName + (n.el.id ? '#' + n.el.id : '')).join(', ')); return true; }
+
+    // 7. IDU (or the captcha) may add things later: the same rules, as they appear
+    let t = 0;
+    const fix = () => {
+      if (!LOGIN) return;
+      $$(LOGIN_NEED).concat(robotTextEls(document.body)).forEach(el => { if (!inFlash(el) && !ours(el)) unhide(el); });
+      placeChecks(); markWidgets();
+      obs.takeRecords();
+    };
+    const obs = new MutationObserver(() => { clearTimeout(t); t = setTimeout(fix, 60); });
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden'] });
+    LOGIN.obs = obs;
     return true;
+  }
+  // back to IDU's own login page, exactly as IDU made it (zoomable, so it fits a phone)
+  function undoLogin(why) {
+    if (!LOGIN) return;
+    const was = LOGIN; LOGIN = null;
+    try { if (was.obs) was.obs.disconnect(); } catch (e) {}
+    for (let i = was.undo.length - 1; i >= 0; i--) { try { was.undo[i](); } catch (e) {} }
+    ['sk-login', 'sk-login-foot'].forEach(id => { const e = document.getElementById(id); if (e) e.remove(); });
+    $$(LOGIN_KS.map(k => '.' + k).join(',')).forEach(e => e.classList.remove(...LOGIN_KS));
+    document.documentElement.classList.remove('sk-loginmode');
+    const ps = document.getElementById('sk-page-style'); if (ps) ps.remove();
+    const vp = $('meta[name="viewport"]'); if (vp) vp.content = 'width=520, user-scalable=yes';
+    if (why) console.warn('[IDU Skin] login: IDU\'s own page –', why);
   }
 
   /* ------------------------------------------------------------------ *
@@ -2111,7 +2254,7 @@
   /* ------------------------------------------------------------------ *
    *  iPhone app bridge: vibrations, widget data, reminders
    * ------------------------------------------------------------------ */
-  const SKIN_VERSION = '5.11';
+  const SKIN_VERSION = '5.11.1';
   const HANDLERS = (() => { try { return (window.webkit && window.webkit.messageHandlers) || null; } catch (e) { return null; } })();
   const NATIVE_IDU = !!(HANDLERS && HANDLERS.idu);
   let HAPTICS = true;
@@ -2125,6 +2268,13 @@
   window.addEventListener('touchstart', () => { lastTouchAt = Date.now(); }, { passive: true, capture: true });
   onNative('skinReady', () => {
     const app = shellApp();
+    // the login page: switch at once while nothing is typed there (an empty form – so reloading can never send a login again)
+    if (!app && $('input[type="password"]')) {
+      const typed = $$('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]),textarea').some(i => i.value);
+      const inField = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if (!typed && !inField && Date.now() - lastTouchAt > 2000) native({ type: 'applySkin' });
+      return;
+    }
     const busy = Date.now() - lastTouchAt < 4000 || VEIL || !app || !canAutoRefresh();
     if (!busy) { native({ type: 'applySkin' }); return; }
     if (!app) return;
