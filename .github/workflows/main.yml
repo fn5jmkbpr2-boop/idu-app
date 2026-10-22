@@ -2,35 +2,34 @@ name: Login page check
 on:
   push:
     branches: [diag-login]
+    paths: ['.github/workflows/main.yml']
+permissions:
+  contents: write
 jobs:
   look:
     # one-off: what IDU's public login page (/users/sign_in) contains right now, for an app-like and a Safari-like browser
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch the public login page
+      - uses: actions/checkout@v4
+      - name: Fetch the public login page (tokens removed) and its own CSS/JS
         run: |
           set +e
+          mkdir -p diag; cd diag
           i=0
           for UA in "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148" \
                     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1"; do
             i=$((i+1))
-            echo "================ VARIANT $i: $UA"
-            curl -sSL --max-time 25 -A "$UA" -D h$i.txt https://s27.idu.edu.pl/users/sign_in -o p$i.html; echo "curl exit $?"
-            grep -i -E '^(HTTP|location|content-type|server|set-cookie: [^=]*)' h$i.txt | sed -E 's/(set-cookie: [^=]*)=.*/\1=…/I'
-            wc -c p$i.html
-            sed -E 's/(name="authenticity_token"[^>]*value=")[^"]*/\1…/g; s/(value="[^"]*")([^>]*name="authenticity_token")/value="…"\2/g; s/(<meta[^>]*name="csrf-token"[^>]*content=")[^"]*/\1…/g; s/(<meta[^>]*content=")[^"]*("[^>]*name="csrf-token")/\1…\2/g' p$i.html > s$i.html
+            curl -sSL --max-time 25 -A "$UA" -D h$i.txt https://s27.idu.edu.pl/users/sign_in -o raw$i.html; echo "curl exit $?" >> info.txt
+            grep -i -E '^(HTTP|location|content-type|server)' h$i.txt >> info.txt; rm -f h$i.txt
+            sed -E 's/(name="authenticity_token"[^>]*value=")[^"]*/\1x/g; s/value="[^"]*"([^>]*name="authenticity_token")/value="x"\1/g; s/(<meta[^>]*name="csrf-token"[^>]*content=")[^"]*/\1x/g; s/(<meta[^>]*content=")[^"]*("[^>]*name="csrf-token")/\1x\2/g' raw$i.html > page$i.html
+            rm -f raw$i.html
           done
-          echo "================ SAME FOR BOTH? "; cmp -s s1.html s2.html && echo yes || { echo no; diff s1.html s2.html | head -80; }
-          echo "================ PAGE (variant 1, tokens removed)"
-          cat s1.html
-          echo
-          echo "================ STYLESHEETS / SCRIPTS"
-          grep -o -E '(href|src)="[^"]+\.(css|js)[^"]*"' s1.html | sort -u
-      - name: Fetch the login page's own CSS and JS (rules about the robot check)
+          cmp -s page1.html page2.html && echo "app-like and Safari-like: same page" >> info.txt || echo "app-like and Safari-like: DIFFERENT" >> info.txt
+          for u in $(grep -o -E '(href|src)="/[^"]+\.(css|js)[^"]*"' page1.html | sed -E 's/^(href|src)="//; s/"$//' | sort -u); do
+            f=$(echo "$u" | sed -E 's/[?].*//; s#.*/##'); curl -sSL --max-time 25 "https://s27.idu.edu.pl$u" -o "asset-$f"; echo "$u -> asset-$f $(wc -c < asset-$f)" >> info.txt
+          done
+          ls -la >> info.txt
+      - name: Save it to this branch
         run: |
-          set +e
-          for u in $(grep -o -E '(href|src)="/[^"]+\.(css|js)[^"]*"' s1.html 2>/dev/null | sed -E 's/^(href|src)="//; s/"$//' | sort -u); do
-            echo "================ $u"
-            curl -sSL --max-time 25 "https://s27.idu.edu.pl$u" -o f.txt; wc -c f.txt
-            tr '}' '\n' < f.txt | grep -i -E 'robot|human|captcha|check|sign_in|new_user|\bh1\b|#container|\.module|remember' | head -60
-          done
+          git config user.name "diag"; git config user.email "diag@users.noreply.github.com"
+          git add diag && git commit -q -m "Login page snapshot" && git push -q
